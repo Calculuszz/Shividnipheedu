@@ -4,16 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
+import FloatingGhost from '@/components/FloatingGhost';
 
 // Ghost image mapping - All 7 ghosts
 const ghostImages: Record<string, string> = {
-  'ผีนางรำ': '/ghosts/ผีนางรำ.png',
-  'ผีแม่นาค': '/ghosts/ผีแม่นาค.png',
-  'แวมไพร์': '/ghosts/แวมไพร์.png',
-  'ซอมบี้': '/ghosts/ซอมบี้.png',
-  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.png',
-  'ผีปอบ': '/ghosts/ผีปอบ.png',
-  'Zatan': '/ghosts/zatan.png',
+  'ผีนางรำ': '/ghosts/ผีนางรำ.webp',
+  'ผีแม่นาค': '/ghosts/ผีแม่นาค.webp',
+  'แวมไพร์': '/ghosts/แวมไพร์.webp',
+  'ซอมบี้': '/ghosts/ซอมบี้.webp',
+  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.webp',
+  'ผีปอบ': '/ghosts/ผีปอบ.webp',
+  'Zatan': '/ghosts/zatan.webp',
 };
 
 export default function WhatGhostPage() {
@@ -34,7 +35,7 @@ export default function WhatGhostPage() {
   }> = [
     {
       q: 'คืนฮาโลวีน คุณเลือกแต่งตัวเป็นอะไร?',
-      image: '/questions/q1.png',
+      image: '/questions/q1.webp',
       options: [
         { text: 'ผีขี้เล่นถือหัวฟักทอง', value: 'A' },
         { text: 'ผีเจ้าสาวแสนเศร้าเพราะผัวทิ้ง', value: 'B' },
@@ -44,7 +45,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'เมื่อขบวน Trick or Treat เริ่มขึ้น! คุณจะ...',
-      image: '/questions/q2.png',
+      image: '/questions/q2.webp',
       options: [
         { text: 'แกล้ง Gen alpha ให้ตกใจเบา ๆ ก่อนให้ขนม', value: 'A' },
         { text: 'ฉีกยิ้มอันอ่อนโยนและยื่นลูกอมให้', value: 'B' },
@@ -54,7 +55,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'เสียงประตูบ้านผีสิงดังเอี๊ยด... คุณจะทำยังไง?',
-      image: '/questions/q3.png',
+      image: '/questions/q3.webp',
       options: [
         { text: 'ผลักประตูเข้าหาผีในบ้านเลย', value: 'A' },
         { text: 'ยืนดูสถานการณ์ก่อน แล้วค่อย ๆ เดินตามแสงเทียน', value: 'B' },
@@ -64,7 +65,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'ในงานฮาโลวีนมีประกวดชุดผี คุณมั่นใจว่าคุณจะ',
-      image: '/questions/q4.png',
+      image: '/questions/q4.webp',
       options: [
         { text: 'ชุดของฉันต้องตลก ตลก หัวเราะน้ำตาเล็ดทั้งงาน', value: 'A' },
         { text: 'ชุดของฉันต้องมีเรื่องราวเศร้า ๆ ที่จะต้องเป็นตำนาน', value: 'B' },
@@ -74,7 +75,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'หากมีเพื่อนโดน "ผีในบ้านสิง" เล่นงาน คุณจะ...',
-      image: '/questions/q5.png',
+      image: '/questions/q5.webp',
       options: [
         { text: 'หัวเราะก่อน แล้วค่อยช่วยเพื่อนที่โดนหลอก', value: 'A' },
         { text: 'วิ่งไปปลอบผีด้วยความเป็นห่วง', value: 'B' },
@@ -84,7 +85,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'ของตกแต่งฮาโลวีนที่คุณชอบที่สุดคือ...',
-      image: '/questions/q6.png',
+      image: '/questions/q6.webp',
       options: [
         { text: 'ฟักทองหัวเราะถือ tung tung tung sahur', value: 'A' },
         { text: 'เทียนและกลีบดอกไม้', value: 'B' },
@@ -94,7 +95,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'คืนนี้มีหนังผีฉายกลางแปลง คุณจะเลือกดูเรื่องไหน?',
-      image: '/questions/q7.png',
+      image: '/questions/q7.webp',
       options: [
         { text: 'Friday 13', value: 'A' },
         { text: 'พี่มาก พระโขนง', value: 'B' },
@@ -104,7 +105,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'ถ้าคุณได้ขับรถผ่านสุสานตอนเที่ยงคืน...',
-      image: '/questions/q8.png',
+      image: '/questions/q8.webp',
       options: [
         { text: 'เปิดเพลงหลอนแล้วถ่ายคลิปลงสตอรี่ เช็คอิน', value: 'A' },
         { text: 'เปิดเพลงเบา ๆ แล้วภาวนาให้ถึงบ้านโดยไม่มีอะไรตามมา', value: 'B' },
@@ -114,7 +115,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'กลิ่นไหนที่คุณรู้สึกว่า "ฮาโลวีนมาก"',
-      image: '/questions/q9.png',
+      image: '/questions/q9.webp',
       options: [
         { text: 'กลิ่นขนมอบใหม่ ๆ', value: 'A' },
         { text: 'กลิ่นเทียนไขผสมกลีบดอกไม้', value: 'B' },
@@ -124,7 +125,7 @@ export default function WhatGhostPage() {
     },
     {
       q: 'ถ้าได้เป็น "ผีในตำนานจุฬา" สักคืน คุณอยากเป็นแบบไหน?',
-      image: '/questions/q10.png',
+      image: '/questions/q10.webp',
       options: [
         { text: 'ผีแสบ ๆ หลอกแล้วหัวเราะด้วยความสะใจ', value: 'A' },
         { text: 'ผีสุดเศร้ารอใครสักคนที่จริงใจ', value: 'B' },
@@ -349,7 +350,7 @@ export default function WhatGhostPage() {
   };
 
   if (!isLoggedIn) {
-    return <LoadingScreen message="กำลังโหลด..." />;
+    return <LoadingScreen message="กำลังเรียกวิญญาณมาตั้งคำถาม..." />;
   }
 
   if (navigating) {
@@ -357,7 +358,7 @@ export default function WhatGhostPage() {
   }
 
   if (loadingResult) {
-    return <LoadingScreen message="กำลังคำนวณผล..." />;
+    return <LoadingScreen message="กำลังส่องดูว่าคุณเป็นผีตนไหน..." />;
   }
 
   return (
@@ -394,7 +395,7 @@ export default function WhatGhostPage() {
           <div className="w-full max-w-2xl">
             {showResult ? (
               // Result View
-              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange rounded-lg p-4 sm:p-8 text-center">
+              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange hand-cut p-4 sm:p-8 text-center">
                 <h2 className="text-xl sm:text-4xl font-bold text-halloween-orange mb-3 sm:mb-6 font-iannnnn-owl">
                   คุณคือ... {calculateResult().name}!
                 </h2>
@@ -441,13 +442,13 @@ export default function WhatGhostPage() {
               </div>
             ) : (
               // Question View
-              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange rounded-lg p-3 sm:p-5">
+              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange hand-cut p-3 sm:p-5">
                 {loadingQuestion || !imageLoaded ? (
                   // Loading animation within quiz card
                   <div className="flex flex-col items-center justify-center py-12 sm:py-20">
-                    <div className="animate-spin h-12 w-12 sm:h-16 sm:w-16 border-4 border-halloween-orange border-t-transparent rounded-full"></div>
+                    <FloatingGhost className="w-14 sm:w-20" />
                     <p className="mt-4 text-halloween-cream text-sm sm:text-lg font-iannnnn-owl">
-                      {loadingQuestion ? 'กำลังโหลดคำถามถัดไป...' : 'กำลังโหลดรูปภาพ...'}
+                      {loadingQuestion ? 'ผีกำลังคิดคำถามข้อต่อไป...' : 'กำลังเสกรูปขึ้นมา...'}
                     </p>
                   </div>
                 ) : (

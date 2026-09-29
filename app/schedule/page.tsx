@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function SchedulePage() {
   const router = useRouter();
@@ -20,9 +21,7 @@ export default function SchedulePage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-halloween-dark">
-        <p className="text-halloween-cream text-xl">กำลังโหลด...</p>
-      </div>
+      <LoadingScreen message="กำลังเปิดตารางเวลาผีออกอาละวาด..." />
     );
   }
 
@@ -60,7 +59,7 @@ export default function SchedulePage() {
           <div className="w-full max-w-5xl space-y-6">
             {/* Page Title */}
             <div className="text-center mb-8">
-              <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center">
+              <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center -rotate-2">
                 Event Schedule
               </h2>
               <div className="inline-flex items-center gap-3 text-halloween-cream bg-halloween-charcoal/80 px-6 py-3 rounded-full border-2 border-halloween-orange/50">
@@ -76,7 +75,7 @@ export default function SchedulePage() {
 
             <div className="grid md:grid-cols-2 gap-5 px-4">
               {/* Main Stage Schedule - Clean Timeline */}
-              <div className="bg-linear-to-br from-halloween-purple/25 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-purple/40 rounded-xl p-5 shadow-xl">
+              <div className="bg-linear-to-br from-halloween-purple/25 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-purple/40 hand-cut p-5 shadow-xl">
                 <div className="mb-4 pb-3 border-b-2 border-halloween-purple/30">
                   <h2 className="text-2xl font-black text-halloween-cream tracking-tight">
                     MAIN STAGE
@@ -129,7 +128,7 @@ export default function SchedulePage() {
               </div>
 
               {/* Activities - Bold Cards */}
-              <div className="bg-linear-to-br from-halloween-orange/20 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-orange/40 rounded-xl p-5 shadow-xl">
+              <div className="bg-linear-to-br from-halloween-orange/20 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-orange/40 hand-cut p-5 shadow-xl">
                 <div className="mb-4 pb-3 border-b-2 border-halloween-orange/30">
                   <h2 className="text-2xl font-black text-halloween-cream tracking-tight text-center font-iannnnn-owl">
                     กิจกรรมภายในงาน
@@ -219,7 +218,7 @@ export default function SchedulePage() {
                   width={800}
                   height={1200}
                   className="w-full h-auto max-h-[75vh] object-contain rounded-lg"
-                  quality={95}
+                  quality={75}
                 />
               </div>
             </div>

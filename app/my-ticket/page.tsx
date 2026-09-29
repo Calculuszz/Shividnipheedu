@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import { supabase } from '@/lib/supabase';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function MyTicketPage() {
   const router = useRouter();
@@ -54,9 +55,7 @@ export default function MyTicketPage() {
 
   if (!userData) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-halloween-dark">
-        <p className="text-halloween-cream text-xl font-iannnnn-owl">กำลังโหลด...</p>
-      </div>
+      <LoadingScreen message="กำลังพิมพ์ตั๋วเข้างานให้..." />
     );
   }
 
@@ -91,7 +90,7 @@ export default function MyTicketPage() {
         {/* Centered Content */}
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-md">
-            <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange rounded-lg p-6 sm:p-8 text-center relative">
+            <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange hand-cut p-6 sm:p-8 text-center relative">
               {/* Check-in Status Badge */}
               {userData.attended && (
                 <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 z-10">

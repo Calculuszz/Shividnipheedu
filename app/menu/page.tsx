@@ -5,19 +5,20 @@ import { useRouter } from 'next/navigation';
 import EventName from '@/components/EventName';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
+import Doodle, { type DoodleName } from '@/components/Doodle';
 
 // Ghost image mapping - All 7 ghosts
 const ghostImages: Record<string, string> = {
-  'ผีนางรำ': '/ghosts/ผีนางรำ.png',
-  'ผีแม่นาค': '/ghosts/ผีแม่นาค.png',
-  'แวมไพร์': '/ghosts/แวมไพร์.png',
-  'ซอมบี้': '/ghosts/ซอมบี้.png',
-  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.png',
-  'ผีปอบ': '/ghosts/ผีปอบ.png',
-  'Zatan': '/ghosts/zatan.png',
+  'ผีนางรำ': '/ghosts/ผีนางรำ.webp',
+  'ผีแม่นาค': '/ghosts/ผีแม่นาค.webp',
+  'แวมไพร์': '/ghosts/แวมไพร์.webp',
+  'ซอมบี้': '/ghosts/ซอมบี้.webp',
+  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.webp',
+  'ผีปอบ': '/ghosts/ผีปอบ.webp',
+  'Zatan': '/ghosts/zatan.webp',
 };
 
-const defaultGhostImage = '/ghosts/default.png';
+const defaultGhostImage = '/ghosts/default.webp';
 
 export default function MenuPage() {
   const router = useRouter();
@@ -51,17 +52,17 @@ export default function MenuPage() {
   };
 
   if (!userData) {
-    return <LoadingScreen message="กำลังโหลด..." />;
+    return <LoadingScreen message="กำลังตามหาตัวคุณในบัญชีผี..." />;
   }
 
   if (navigating) {
     return <LoadingScreen />;
   }
 
-  const menuItems = [
-    { title: 'My Ticket', path: '/my-ticket', icon: '🎫' },
-    { title: 'Event Map', path: '/event-map', icon: '🗺️' },
-    { title: 'Schedule', path: '/schedule', icon: '📅' },
+  const menuItems: { title: string; path: string; icon: DoodleName; tilt: string }[] = [
+    { title: 'My Ticket', path: '/my-ticket', icon: 'pumpkin', tilt: '-rotate-1' },
+    { title: 'Event Map', path: '/event-map', icon: 'broom', tilt: 'rotate-1' },
+    { title: 'Schedule', path: '/schedule', icon: 'moon', tilt: '-rotate-[0.5deg]' },
   ];
 
   return (
@@ -96,14 +97,15 @@ export default function MenuPage() {
 
         {/* Header */}
         <div className="text-center shrink-0">
-          <h1 className="display-font text-3xl sm:text-4xl text-halloween-orange">
+          <h1 className="display-font text-3xl sm:text-4xl text-halloween-orange -rotate-2">
             <EventName withYear={false} />
           </h1>
         </div>
 
         {/* Ghost Display Section */}
         <div className="shrink-0 flex justify-center w-full">
-          <div className="w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[340px] bg-halloween-charcoal/90 border-2 border-halloween-orange rounded-lg flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 lg:p-5">
+          <div className="w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[340px] relative bg-halloween-charcoal/90 border-2 border-halloween-orange hand-cut flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 lg:p-5">
+            <Doodle name="web" className="absolute -top-3 -right-3 w-16 opacity-80 rotate-6" />
             {/* Ghost Image */}
             <div className="w-full flex items-center justify-center mb-2 sm:mb-3 pt-2 sm:pt-3">
               <Image
@@ -128,7 +130,7 @@ export default function MenuPage() {
                   onClick={() => handleNavigate('/what-ghost')}
                   className="bg-halloween-purple hover:bg-halloween-orange border-2 border-halloween-orange text-halloween-cream hover:text-halloween-dark font-bold text-xs sm:text-sm md:text-base px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full transition-all active:scale-95 shadow-lg flex items-center gap-1.5 sm:gap-2"
                 >
-                  <span>👻</span>
+                  <Doodle name="ghost" className="w-5 sm:w-6 -rotate-6" />
                   <span className="font-iannnnn-owl">เล่นอีกครั้ง</span>
                 </button>
               </>
@@ -144,8 +146,8 @@ export default function MenuPage() {
                   className="bg-halloween-purple hover:bg-halloween-orange border-2 border-halloween-orange text-halloween-cream hover:text-halloween-dark font-bold text-xs sm:text-sm md:text-base px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full transition-all active:scale-95 shadow-lg flex items-center gap-1.5 sm:gap-2 relative"
                 >
                   {/* Notification Dot */}
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-red-600 rounded-full"></span>
-                  <span>👻</span>
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-halloween-moon rounded-full animate-pulse"></span>
+                  <Doodle name="ghost" className="w-5 sm:w-6 -rotate-6" />
                   <span>Let's Find Out!</span>
                 </button>
               </>
@@ -160,10 +162,10 @@ export default function MenuPage() {
               <button
                 key={item.path}
                 onClick={() => handleNavigate(item.path)}
-                className="w-full bg-halloween-charcoal/90 hover:bg-halloween-orange/90 border-2 border-halloween-orange rounded-lg p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 transition-all active:scale-98 group"
+                className={`w-full bg-halloween-charcoal/90 hover:bg-halloween-orange/90 border-2 border-halloween-orange hand-cut ${item.tilt} hover:rotate-0 p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 transition-all active:scale-98 group`}
               >
-                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl group-hover:scale-110 transition-transform shrink-0">
-                  {item.icon}
+                <span className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-6 transition-transform shrink-0">
+                  <Doodle name={item.icon} className="max-w-full max-h-full w-auto h-auto" />
                 </span>
                 <span className="text-sm sm:text-base md:text-lg lg:text-lg font-bold text-halloween-cream group-hover:text-halloween-dark text-left flex-1">
                   {item.title}

@@ -1,5 +1,6 @@
 import BackButton from '@/components/BackButton';
 import Link from 'next/link';
+import Doodle from '@/components/Doodle';
 
 export default function GamePage() {
   return (
@@ -24,9 +25,10 @@ export default function GamePage() {
           <div className="space-y-4">
             <Link
               href="/login"
-              className="block w-full bg-halloween-orange hover:bg-halloween-red text-halloween-dark font-bold text-lg px-8 py-4 rounded-lg border-2 border-halloween-bone transition-all active:scale-95 shadow-lg"
+              className="block w-full bg-halloween-orange hover:bg-halloween-red text-halloween-dark font-bold text-lg px-8 py-4 rounded-lg border-2 border-halloween-bone transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
             >
-              👻 Start Quiz (Login Required)
+              <Doodle name="ghost" className="w-7 -rotate-6" />
+              Start Quiz (Login Required)
             </Link>
 
             <p className="text-halloween-gray text-sm">

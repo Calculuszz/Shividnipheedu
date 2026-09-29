@@ -6,6 +6,8 @@ import "./globals.css";
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  // Only the student ID on My Ticket uses it, so don't make every page download it up front
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -26,7 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="th">
+      <head>
+        {/* Start fetching the body and heading fonts before the CSS asks for them */}
+        <link rel="preload" href="/fonts/fc-iconic-regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/monster-fiesta.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       <body
         className={`${geistMono.variable} antialiased`}
       >

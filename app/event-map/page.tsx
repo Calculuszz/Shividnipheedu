@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function EventMapPage() {
   const router = useRouter();
@@ -19,9 +20,7 @@ export default function EventMapPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-halloween-dark">
-        <p className="text-halloween-cream text-xl font-iannnnn-owl">กำลังโหลด...</p>
-      </div>
+      <LoadingScreen message="กำลังกางแผนที่ป่าช้า..." />
     );
   }
 
@@ -56,13 +55,13 @@ export default function EventMapPage() {
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6">
-          <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center">
+          <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center -rotate-2">
             The Haunted Carnival Map
           </h2>
 
           {/* Event Information */}
           <div className="w-full max-w-6xl lg:max-w-4xl mb-4 sm:mb-6">
-            <div className="bg-linear-to-br from-halloween-charcoal/90 to-halloween-dark/90 rounded-xl p-5 sm:p-7 border-2 border-halloween-orange/30 shadow-lg shadow-halloween-orange/10">
+            <div className="bg-linear-to-br from-halloween-charcoal/90 to-halloween-dark/90 hand-cut p-5 sm:p-7 border-2 border-halloween-orange/30 shadow-lg shadow-halloween-orange/10">
               <div className="text-halloween-cream flex flex-col md:flex-row gap-5 md:gap-8 lg:gap-10 justify-center items-center md:items-start">
                 <div className="flex items-start gap-3 w-full md:w-auto md:flex-1 md:justify-end">
                   <div className="bg-halloween-orange/20 p-2.5 rounded-lg shrink-0">
@@ -103,7 +102,7 @@ export default function EventMapPage() {
               width={1200}
               height={1200}
               className="w-full h-auto rounded-lg"
-              quality={95}
+              quality={75}
               priority
               unoptimized
             />

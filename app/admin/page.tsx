@@ -6,6 +6,8 @@ import jsQR from 'jsqr';
 import BackButton from '@/components/BackButton';
 import EventName from '@/components/EventName';
 import FieldError from '@/components/FieldError';
+import FloatingGhost from '@/components/FloatingGhost';
+import Doodle from '@/components/Doodle';
 import Sponsors from '@/components/Sponsors';
 
 // Force dynamic rendering (don't prerender at build time)
@@ -35,7 +37,7 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
-      setFieldError('กรุณากรอกรหัสผ่าน');
+      setFieldError('ยังไม่ได้ใส่รหัสผ่านเลยนะ');
       return;
     }
 
@@ -53,11 +55,11 @@ export default function AdminPage() {
         setIsAuthenticated(true);
         setError('');
       } else {
-        setError('รหัสผ่านไม่ถูกต้อง');
+        setError('รหัสผิด ประตูห้องผียังไม่ยอมเปิด');
       }
     } catch (err) {
       console.error(err);
-      setError('เกิดข้อผิดพลาด');
+      setError('สัญญาณหลอนหาย ลองใหม่อีกทีนะ');
     }
   };
 
@@ -435,7 +437,12 @@ function AttendanceTable() {
   ];
 
   if (loading) {
-    return <div className="text-halloween-cream text-center font-iannnnn-owl">กำลังโหลด...</div>;
+    return (
+      <div className="py-12 text-center">
+        <FloatingGhost className="w-16" />
+        <p className="mt-4 text-halloween-cream font-iannnnn-owl">กำลังเปิดสมุดรายชื่อผี...</p>
+      </div>
+    );
   }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -572,6 +579,16 @@ function AttendanceTable() {
               </tr>
             </thead>
             <tbody>
+              {registrations.length === 0 && (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-12 text-center">
+                    <Doodle name="tombstone" className="mx-auto w-20 -rotate-6 opacity-80" />
+                    <p className="mt-3 text-halloween-cream font-iannnnn-owl">
+                      {searchQuery ? 'ไม่เจอรหัสนี้ในสมุดรายชื่อผี ลองพิมพ์ใหม่ดูนะ' : 'ยังไม่มีใครลงทะเบียนเลย เงียบเหมือนป่าช้า'}
+                    </p>
+                  </td>
+                </tr>
+              )}
               {registrations.map((reg, index) => (
                 <tr
                   key={reg.id}

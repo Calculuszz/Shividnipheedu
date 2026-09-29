@@ -109,12 +109,12 @@ export async function POST(request: Request) {
         // 23505 = unique violation (student already registered)
         if (error.code === '23505') {
           return NextResponse.json(
-            { error: 'รหัสนิสิตนี้ลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ' },
+            { error: 'รหัสนี้ลงทะเบียนไว้แล้ว ผีจำคุณได้! กลับไปเข้าสู่ระบบได้เลย' },
             { status: 409 }
           );
         }
         return NextResponse.json(
-          { error: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+          { error: 'ผีทำข้อมูลหล่นหาย ลองกดยืนยันอีกครั้งนะ' },
           { status: 500 }
         );
       }
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     } catch (supabaseError) {
       console.error('❌ Supabase exception:', supabaseError);
       return NextResponse.json(
-        { error: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+        { error: 'ผีทำข้อมูลหล่นหาย ลองกดยืนยันอีกครั้งนะ' },
         { status: 500 }
       );
     }

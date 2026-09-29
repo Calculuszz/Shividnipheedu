@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EventName from '@/components/EventName';
+import Doodle from '@/components/Doodle';
+import FloatingGhost from '@/components/FloatingGhost';
 import Image from 'next/image';
 
 type FormData = {
@@ -109,31 +111,31 @@ export default function RegistrationPage() {
     const newErrors: Partial<Record<keyof FormData | 'interestedActivities', string>> = {};
 
     if (!formData.studentId.trim()) {
-      newErrors.studentId = 'กรุณากรอกรหัสนิสิต';
+      newErrors.studentId = 'ยังไม่ได้ใส่รหัสนิสิตเลยนะ';
     }
     if (!formData.email.trim()) {
-      newErrors.email = 'กรุณากรอกอีเมล';
+      newErrors.email = 'ขออีเมลด้วยนะ ไว้ส่งตั๋วกับข่าวงานให้';
     }
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'กรุณากรอกชื่อ-นามสกุล';
+      newErrors.fullName = 'ผีอยากรู้จักคุณ ใส่ชื่อ-นามสกุลด้วยนะ';
     }
     if (!formData.faculty) {
-      newErrors.faculty = 'กรุณาเลือกคณะ';
+      newErrors.faculty = 'เลือกคณะด้วยนะ';
     }
     if (!formData.gender) {
-      newErrors.gender = 'กรุณาเลือกเพศ';
+      newErrors.gender = 'เลือกเพศด้วยนะ (ไม่อยากบอกก็เลือก “ไม่ต้องการระบุ” ได้)';
     }
     if (!formData.year) {
-      newErrors.year = 'กรุณาเลือกชั้นปี';
+      newErrors.year = 'เลือกชั้นปีด้วยนะ';
     }
     if (!formData.referralSource) {
-      newErrors.referralSource = 'กรุณาเลือกช่องทางรับรู้งาน';
+      newErrors.referralSource = 'บอกหน่อยว่ารู้จักงานนี้จากไหน';
     }
     if (formData.interestedActivities.length === 0) {
-      newErrors.interestedActivities = 'กรุณาเลือกกิจกรรมที่สนใจอย่างน้อย 1 กิจกรรม';
+      newErrors.interestedActivities = 'เลือกกิจกรรมที่อยากลองอย่างน้อย 1 อย่างนะ';
     }
     if (!formData.transportation) {
-      newErrors.transportation = 'กรุณาเลือกวิธีการเดินทาง';
+      newErrors.transportation = 'เดินทางมายังไง บอกหน่อยนะ';
     }
 
     setErrors(newErrors);
@@ -149,7 +151,7 @@ export default function RegistrationPage() {
   const handleSubmit = async () => {
     // Validate PDPA consent
     if (!pdpaConsent) {
-      setErrors({ pdpa: 'กรุณายอมรับข้อตกลง PDPA' });
+      setErrors({ pdpa: 'ติ๊กยอมรับ PDPA ก่อนนะ ถึงจะไปต่อได้' });
       return;
     }
 
@@ -173,11 +175,11 @@ export default function RegistrationPage() {
       } else {
         const errorData = await response.json();
         console.error('❌ Registration failed:', errorData);
-        setSubmitError('การลงทะเบียนล้มเหลว: ' + (errorData.error || 'เกิดข้อผิดพลาด'));
+        setSubmitError(errorData.error || 'ผีทำข้อมูลหล่นหาย ลองกดยืนยันอีกครั้งนะ');
       }
     } catch (error) {
       console.error('❌ Registration error:', error);
-      setSubmitError('เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง');
+      setSubmitError('สัญญาณหลอนหาย ลองเช็คเน็ตแล้วกดยืนยันอีกทีนะ');
     } finally {
       setLoading(false);
     }
@@ -187,10 +189,10 @@ export default function RegistrationPage() {
     <div className="gradient-background min-h-screen px-4 py-8 sm:py-12">
       {/* Full-screen Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin h-16 w-16 border-4 border-halloween-orange border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-halloween-cream text-lg">กำลังส่งข้อมูล...</p>
+        <div role="status" aria-live="polite" className="fixed inset-0 bg-halloween-dark/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center px-6">
+            <FloatingGhost className="w-24 sm:w-28" />
+            <p className="mt-5 text-halloween-cream text-lg">ผีกำลังจดชื่อคุณลงบัญชี...</p>
           </div>
         </div>
       )}
@@ -198,7 +200,7 @@ export default function RegistrationPage() {
       <div className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto pb-8">
         {/* Step 1: Event Details */}
         {step === 1 && (
-          <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-6 sm:p-8 lg:p-10 xl:p-12">
+          <div className="relative bg-halloween-charcoal border-2 border-halloween-orange hand-cut p-6 sm:p-8 lg:p-10 xl:p-12">
             {/* Back to Login Button */}
             <button
               onClick={() => router.push('/')}
@@ -221,7 +223,8 @@ export default function RegistrationPage() {
               <span className="text-sm sm:text-base font-semibold">Back</span>
             </button>
 
-            <h1 className="display-font text-3xl sm:text-4xl lg:text-5xl xl:text-6xl text-halloween-orange mb-5 sm:mb-6 lg:mb-8 text-center">
+            <Doodle name="bat" className="doodle-bob absolute -top-6 right-4 w-16 sm:w-20 [--tilt:12deg]" />
+            <h1 className="display-font text-3xl sm:text-4xl lg:text-5xl xl:text-6xl text-halloween-orange mb-5 sm:mb-6 lg:mb-8 text-center -rotate-2">
               <EventName />
             </h1>
 
@@ -243,7 +246,7 @@ export default function RegistrationPage() {
 
               <p className="text-sm sm:text-base lg:text-lg xl:text-xl leading-relaxed">
                 เตรียมตัวให้พร้อม... เพราะความสนุกครั้งนี้มาพร้อมเสียงกรี๊ด ความหลอน
-                และเซอร์ไพรส์สุดขนหัวลุก! 💀✨
+                และเซอร์ไพรส์สุดขนหัวลุก!
               </p>
 
                 <div className="flex items-start gap-2 lg:gap-3 mt-3 sm:mt-4 lg:mt-5 text-halloween-bone">
@@ -260,15 +263,36 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              <div className="bg-halloween-dark p-4 sm:p-5 lg:p-6 xl:p-8 rounded-lg border border-halloween-purple mt-4 sm:mt-5 lg:mt-6">
-                <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-halloween-orange mb-3 sm:mb-4 lg:mb-5">
-                  🕸️ กิจกรรมที่คุณต้องลอง
+              <div className="bg-halloween-dark p-4 sm:p-5 lg:p-6 xl:p-8 hand-cut border border-halloween-purple mt-4 sm:mt-5 lg:mt-6">
+                <h2 className="flex items-center gap-2 text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-halloween-orange mb-3 sm:mb-4 lg:mb-5">
+                  <Doodle name="web" className="w-8 sm:w-9 opacity-90" />
+                  กิจกรรมที่คุณต้องลอง
                 </h2>
                 <ul className="space-y-2 lg:space-y-3 text-sm sm:text-base lg:text-lg xl:text-xl text-halloween-bone">
-                  <li>🎬 หนังกลางแปลงสุดหลอน</li>
-                  <li>🏚️ บ้านผีสิงที่แค่เดินผ่านก็ใจสั่น</li>
-                  <li>💃 โชว์สุดพิเศษ</li>
-                  <li>🛍️ ร้านค้านิสิตมากมาย</li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <Doodle name="moon" className="max-w-full max-h-full w-auto h-auto -rotate-6" />
+                    </span>
+                    หนังกลางแปลงสุดหลอน
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <Doodle name="tombstone" className="max-w-full max-h-full w-auto h-auto rotate-3" />
+                    </span>
+                    บ้านผีสิงที่แค่เดินผ่านก็ใจสั่น
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <Doodle name="witch-hat" className="max-w-full max-h-full w-auto h-auto -rotate-3" />
+                    </span>
+                    โชว์สุดพิเศษ
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <Doodle name="potion" className="max-w-full max-h-full w-auto h-auto rotate-6" />
+                    </span>
+                    ร้านค้านิสิตมากมาย
+                  </li>
                 </ul>
               </div>
 
@@ -307,7 +331,7 @@ export default function RegistrationPage() {
 
         {/* Step 2: Form */}
         {step === 2 && (
-          <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-6 sm:p-8">
+          <div className="bg-halloween-charcoal border-2 border-halloween-orange hand-cut p-6 sm:p-8">
             {/* Back to Login Button */}
             <button
               onClick={() => router.push('/')}
@@ -589,7 +613,7 @@ export default function RegistrationPage() {
 
         {/* Step 3: PDPA */}
         {step === 3 && (
-          <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-6 sm:p-8">
+          <div className="bg-halloween-charcoal border-2 border-halloween-orange hand-cut p-6 sm:p-8">
             {/* Back to Login Button */}
             <button
               onClick={() => router.push('/')}

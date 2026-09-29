@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingScreen from '@/components/LoadingScreen';
 import FieldError from '@/components/FieldError';
+import Doodle from '@/components/Doodle';
+import FloatingGhost from '@/components/FloatingGhost';
 
 function LoginForm() {
   const router = useRouter();
@@ -24,7 +26,7 @@ function LoginForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentId.trim()) {
-      setFieldError('กรุณากรอกรหัสนิสิต');
+      setFieldError('ยังไม่ได้ใส่รหัสนิสิตเลยนะ');
       return;
     }
     setLoading(true);
@@ -44,11 +46,15 @@ function LoginForm() {
         localStorage.setItem('userData', JSON.stringify(data.user));
         router.push('/menu');
       } else {
-        setError(data.error || 'Student ID not found');
+        setError(
+          response.status === 404
+            ? 'ผีหาชื่อคุณไม่เจอ ลองเช็ครหัสนิสิตอีกทีนะ'
+            : 'ประตูติดขัดนิดหน่อย ลองใหม่อีกครั้งนะ'
+        );
       }
     } catch (err) {
       console.error(err);
-      setError('An error occurred. Please try again');
+      setError('สัญญาณหลอนหาย ลองเช็คเน็ตแล้วกดใหม่อีกทีนะ');
     } finally {
       setLoading(false);
     }
@@ -61,18 +67,19 @@ function LoginForm() {
   return (
     <>
       {/* Full-screen Loading Overlay */}
-      {loading && <LoadingScreen message="Logging in..." />}
+      {loading && <LoadingScreen message="กำลังเปิดประตูเข้างาน..." />}
 
       <div className="w-full">
-        <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-2xl p-5 shadow-2xl">
-            <h2 className="display-font text-3xl text-halloween-orange mb-4 text-center">
+        <div className="relative bg-halloween-charcoal border-2 border-halloween-orange hand-cut p-5 shadow-2xl">
+            <Doodle name="pumpkin" className="absolute -top-8 -left-2 w-14 -rotate-12" />
+            <h2 className="display-font text-3xl text-halloween-orange mb-4 text-center -rotate-2">
               Login
             </h2>
 
             {/* Reminder Message */}
             <div className="bg-halloween-purple/20 border-2 border-halloween-purple rounded-xl p-3 mb-4">
               <div className="flex items-start gap-2 sm:gap-3">
-                <span className="text-xl sm:text-2xl shrink-0">💡</span>
+                <Doodle name="ghost" className="w-8 shrink-0 -rotate-6" />
                 <div className="text-left">
                   <p className="text-halloween-cream text-sm sm:text-base font-iannnnn-owl leading-snug">
                     <span className="font-bold text-halloween-orange">หมายเหตุ:</span> หากคุณยังไม่ได้ลงทะเบียน กรุณาลงทะเบียนก่อนเข้าสู่ระบบ
@@ -167,11 +174,11 @@ export default function Home() {
         <header className="mb-5 text-center">
           {/* eslint-disable @next/next/no-img-element */}
           <div className="flex w-full items-center justify-evenly partner-strip px-4 py-2.5 mb-4">
-            <img src="/brand/partners/smo.webp" alt="SMO Student Union Chulalongkorn Business School" className="h-8 w-auto" />
+            <img src="/brand/partners/smo.webp" alt="SMO Student Union Chulalongkorn Business School" width={190} height={96} className="h-8 w-auto" />
             <span className="h-8 w-px partner-divider" aria-hidden="true" />
-            <img src="/brand/partners/esc-color.svg" alt="กวศ." className="h-8 w-auto" />
+            <img src="/brand/partners/esc-color.svg" alt="กวศ." width={1000} height={1461} className="h-8 w-auto" />
             <span className="h-8 w-px partner-divider" aria-hidden="true" />
-            <img src="/brand/partners/nitade.webp" alt="คณะนิเทศศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย" className="h-8 w-auto" />
+            <img src="/brand/partners/nitade.webp" alt="คณะนิเทศศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย" width={149} height={96} className="h-8 w-auto" />
           </div>
           {/* eslint-enable @next/next/no-img-element */}
           <h1 className="mb-3">
@@ -179,6 +186,9 @@ export default function Home() {
             <img
               src="/brand/logo.webp"
               alt="SHIVIDNI PHEEDU"
+              width={720}
+              height={531}
+              fetchPriority="high"
               className="pheedu-logo mx-auto w-[88%] h-auto"
             />
           </h1>
@@ -193,14 +203,26 @@ export default function Home() {
         {/* Auth Section */}
         <Suspense fallback={
           <div className="w-full max-w-sm mx-auto">
-            <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-6 sm:p-8 shadow-2xl text-center">
-              <div className="animate-spin h-8 w-8 border-4 border-halloween-orange border-t-transparent rounded-full mx-auto"></div>
-              <p className="mt-4 text-halloween-cream">Loading...</p>
+            <div className="bg-halloween-charcoal border-2 border-halloween-orange hand-cut p-6 sm:p-8 shadow-2xl text-center">
+              <FloatingGhost className="w-16" />
+              <p className="mt-4 text-halloween-cream">ผีกำลังเดินมา แป๊บนึงนะ...</p>
             </div>
           </div>
         }>
           <LoginForm />
         </Suspense>
+
+        <p className="mt-6 text-center text-xs text-halloween-gray/70">
+          ภาพประกอบโดย{' '}
+          <a href="https://www.freepik.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-halloween-cream">
+            Freepik
+          </a>
+          {' · '}ฟอนต์หัวข้อจาก{' '}
+          <a href="http://www.onlinewebfonts.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-halloween-cream">
+            Web Fonts
+          </a>{' '}
+          (CC BY 4.0)
+        </p>
       </div>
     </main>
   );
