@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import EventName from '@/components/EventName';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -65,7 +66,7 @@ export default function MenuPage() {
 
   return (
     <div className="image-background min-h-screen relative overflow-hidden">
-      <div className="absolute inset-0 bg-black/40 pointer-events-none" aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" aria-hidden="true"></div>
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col overflow-hidden">
@@ -95,8 +96,8 @@ export default function MenuPage() {
 
         {/* Header */}
         <div className="text-center shrink-0">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl font-bold text-white">
-            SHIVIDTIDPHEE
+          <h1 className="display-font text-3xl sm:text-4xl text-halloween-orange">
+            <EventName withYear={false} />
           </h1>
         </div>
 
@@ -133,7 +134,7 @@ export default function MenuPage() {
               </>
             ) : (
               <>
-                <p className="text-sm sm:text-base md:text-lg text-white font-medium mb-2 sm:mb-2.5">
+                <p className="text-sm sm:text-base md:text-lg text-halloween-cream font-medium mb-2 sm:mb-2.5">
                   What Ghost Am I?
                 </p>
                 {/* Button - Different style when not played yet */}

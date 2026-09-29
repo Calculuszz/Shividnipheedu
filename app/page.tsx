@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingScreen from '@/components/LoadingScreen';
+import FieldError from '@/components/FieldError';
 
 function LoginForm() {
   const router = useRouter();
@@ -10,6 +11,7 @@ function LoginForm() {
   const [studentId, setStudentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -21,6 +23,10 @@ function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!studentId.trim()) {
+      setFieldError('กรุณากรอกรหัสนิสิต');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -57,18 +63,18 @@ function LoginForm() {
       {/* Full-screen Loading Overlay */}
       {loading && <LoadingScreen message="Logging in..." />}
 
-      <div className="w-full max-w-md mx-auto px-4 sm:px-0">
-        <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-4 sm:p-6 shadow-2xl">
-            <h2 className="text-xl sm:text-2xl font-bold text-halloween-orange mb-3 sm:mb-4 text-center">
+      <div className="w-full">
+        <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-2xl p-5 shadow-2xl">
+            <h2 className="display-font text-3xl text-halloween-orange mb-4 text-center">
               Login
             </h2>
 
             {/* Reminder Message */}
-            <div className="bg-halloween-purple/20 border-2 border-halloween-purple rounded-lg p-3 mb-3 sm:mb-4">
+            <div className="bg-halloween-purple/20 border-2 border-halloween-purple rounded-xl p-3 mb-4">
               <div className="flex items-start gap-2 sm:gap-3">
                 <span className="text-xl sm:text-2xl shrink-0">💡</span>
                 <div className="text-left">
-                  <p className="text-halloween-cream text-xs sm:text-sm font-iannnnn-owl leading-relaxed">
+                  <p className="text-halloween-cream text-sm sm:text-base font-iannnnn-owl leading-snug">
                     <span className="font-bold text-halloween-orange">หมายเหตุ:</span> หากคุณยังไม่ได้ลงทะเบียน กรุณาลงทะเบียนก่อนเข้าสู่ระบบ
                   </p>
                 </div>
@@ -77,9 +83,9 @@ function LoginForm() {
 
             {/* Success Message */}
             {showSuccess && (
-              <div className="mb-3 bg-green-900/50 border border-green-600 rounded p-2">
-                <div className="flex items-center gap-2 text-xs text-green-400">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <div role="status" className="mb-4 bg-halloween-moon/15 border border-halloween-moon rounded-xl p-3">
+                <div className="flex items-center gap-2 text-sm sm:text-base text-halloween-moon">
+                  <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span className="font-iannnnn-owl">ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ</span>
@@ -87,11 +93,11 @@ function LoginForm() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
+            <form onSubmit={handleLogin} noValidate className="space-y-4">
               <div>
                 <label
                   htmlFor="studentId"
-                  className="block text-sm text-halloween-cream font-bold mb-1.5"
+                  className="block text-base text-halloween-cream font-bold mb-2"
                 >
                   Student ID
                 </label>
@@ -99,16 +105,26 @@ function LoginForm() {
                   type="text"
                   id="studentId"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  className="w-full bg-halloween-dark border-2 border-halloween-purple rounded px-3 py-2 text-halloween-cream text-base focus:border-halloween-orange focus:outline-none transition-colors"
+                  onChange={(e) => {
+                    setStudentId(e.target.value);
+                    setFieldError('');
+                  }}
+                  className={`w-full bg-halloween-dark border-2 rounded-lg px-4 py-3 text-halloween-cream text-base focus:border-halloween-orange focus:outline-none transition-colors ${
+                    fieldError ? 'border-halloween-error' : 'border-halloween-purple'
+                  }`}
                   placeholder="Enter your student ID"
+                  inputMode="numeric"
+                  autoComplete="username"
+                  enterKeyHint="go"
                   required
+                  aria-invalid={!!fieldError}
                   suppressHydrationWarning
                 />
+                {fieldError && <FieldError message={fieldError} />}
               </div>
 
               {error && (
-                <div className="bg-halloween-red border border-halloween-orange rounded p-2 text-halloween-cream text-sm text-center">
+                <div role="alert" className="bg-halloween-error/15 border border-halloween-error rounded-lg p-2.5 text-halloween-error text-sm text-center font-iannnnn-owl">
                   {error}
                 </div>
               )}
@@ -116,23 +132,23 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-halloween-orange hover:bg-halloween-red text-halloween-dark font-bold text-base sm:text-lg py-2.5 sm:py-3 rounded-lg transition-colors disabled:opacity-50 active:scale-95"
+                className="display-font w-full bg-halloween-orange hover:bg-halloween-red text-halloween-dark text-xl py-3 rounded-lg transition-colors disabled:opacity-50 active:scale-95"
                 suppressHydrationWarning
               >
                 Login
               </button>
             </form>
 
-            <div className="my-3 sm:my-4 flex items-center">
+            <div className="my-4 flex items-center">
               <div className="flex-1 border-t border-halloween-purple"></div>
-              <span className="px-3 text-halloween-gray text-xs">or</span>
+              <span className="px-3 text-halloween-gray text-sm sm:text-base">or</span>
               <div className="flex-1 border-t border-halloween-purple"></div>
             </div>
 
             <button
               type="button"
               onClick={handleRegister}
-              className="w-full text-halloween-orange hover:text-halloween-red font-semibold text-sm transition-colors underline text-center font-iannnnn-owl"
+              className="w-full text-halloween-orange hover:text-halloween-red font-semibold text-base transition-colors underline text-center font-iannnnn-owl"
               suppressHydrationWarning
             >
               ลงทะเบียนที่นี่
@@ -145,28 +161,38 @@ function LoginForm() {
 
 export default function Home() {
   return (
-    <main className="gradient-background h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-12 py-4 overflow-hidden">
-      <div className="w-full max-w-4xl mx-auto">
+    <main className="theme-pheedu min-h-dvh flex flex-col items-center justify-center px-5 py-6 sm:px-8">
+      <div className="w-full max-w-sm mx-auto">
         {/* Header Section */}
-        <header className="mb-3 sm:mb-4 md:mb-5 lg:mb-6 text-center px-2">
-          <p className="text-xs sm:text-sm text-halloween-moon mb-2 sm:mb-3 tracking-wide sm:tracking-widest uppercase">
-            VIDVAxBANSHI
-          </p>
-          <h1 className="title-font text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-halloween-bone mb-2 sm:mb-3 md:mb-4 haunted-text leading-tight">
-            <span className="block sm:inline">SHIVID</span>
-            <span className="block sm:inline">TIDPHEE</span>
+        <header className="mb-5 text-center">
+          {/* eslint-disable @next/next/no-img-element */}
+          <div className="flex w-full items-center justify-evenly partner-strip px-4 py-2.5 mb-4">
+            <img src="/brand/partners/smo.webp" alt="SMO Student Union Chulalongkorn Business School" className="h-8 w-auto" />
+            <span className="h-8 w-px partner-divider" aria-hidden="true" />
+            <img src="/brand/partners/esc-color.svg" alt="กวศ." className="h-8 w-auto" />
+            <span className="h-8 w-px partner-divider" aria-hidden="true" />
+            <img src="/brand/partners/nitade.webp" alt="คณะนิเทศศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย" className="h-8 w-auto" />
+          </div>
+          {/* eslint-enable @next/next/no-img-element */}
+          <h1 className="mb-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo.webp"
+              alt="SHIVIDNI PHEEDU"
+              className="pheedu-logo mx-auto w-[88%] h-auto"
+            />
           </h1>
-          <p className="text-xs sm:text-sm md:text-base text-halloween-gray italic">
-            13th January 2026 | 16:00 - 21:00
+          <p className="text-sm text-halloween-gray italic">
+            22nd October 2026 | 16:00 - 21:00
           </p>
-          <p className="text-xs sm:text-sm md:text-base text-halloween-gray italic">
+          <p className="text-sm text-halloween-gray italic">
             Larngear, Faculty of Engineering
           </p>
         </header>
 
         {/* Auth Section */}
         <Suspense fallback={
-          <div className="w-full max-w-md mx-auto">
+          <div className="w-full max-w-sm mx-auto">
             <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-6 sm:p-8 shadow-2xl text-center">
               <div className="animate-spin h-8 w-8 border-4 border-halloween-orange border-t-transparent rounded-full mx-auto"></div>
               <p className="mt-4 text-halloween-cream">Loading...</p>

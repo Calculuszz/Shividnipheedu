@@ -29,7 +29,7 @@ export default function SchedulePage() {
   return (
     <div className="image-background min-h-screen relative overflow-hidden">
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60 pointer-events-none" aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" aria-hidden="true"></div>
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col overflow-hidden">
@@ -60,7 +60,7 @@ export default function SchedulePage() {
           <div className="w-full max-w-5xl space-y-6">
             {/* Page Title */}
             <div className="text-center mb-8">
-              <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 text-center">
+              <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center">
                 Event Schedule
               </h2>
               <div className="inline-flex items-center gap-3 text-halloween-cream bg-halloween-charcoal/80 px-6 py-3 rounded-full border-2 border-halloween-orange/50">
@@ -68,7 +68,7 @@ export default function SchedulePage() {
                   <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <div>
-                  <p className="font-bold text-lg font-iannnnn-owl">13 มกราคม 2569</p>
+                  <p className="font-bold text-lg font-iannnnn-owl">22 ตุลาคม 2569</p>
                   <p className="text-sm text-halloween-orange font-iannnnn-owl">16:00 - 21:00 น.</p>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export default function SchedulePage() {
               {/* Main Stage Schedule - Clean Timeline */}
               <div className="bg-linear-to-br from-halloween-purple/25 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-purple/40 rounded-xl p-5 shadow-xl">
                 <div className="mb-4 pb-3 border-b-2 border-halloween-purple/30">
-                  <h2 className="text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-2xl font-black text-halloween-cream tracking-tight">
                     MAIN STAGE
                   </h2>
                   <p className="text-halloween-cream text-xs font-bold mt-1 uppercase tracking-widest">Performance Schedule</p>
@@ -101,11 +101,11 @@ export default function SchedulePage() {
                     >
                       <div className="shrink-0 pt-0.5">
                         <div className="bg-halloween-orange px-2.5 py-1 rounded-md">
-                          <span className="font-black text-white text-xs">{item.time}</span>
+                          <span className="font-black text-halloween-cream text-xs">{item.time}</span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-bold text-sm group-hover:text-halloween-orange transition-colors">
+                        <p className="text-halloween-cream font-bold text-sm group-hover:text-halloween-orange transition-colors">
                           {item.event}
                         </p>
                         {(item.type || item.artist || item.title) && (
@@ -131,7 +131,7 @@ export default function SchedulePage() {
               {/* Activities - Bold Cards */}
               <div className="bg-linear-to-br from-halloween-orange/20 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-orange/40 rounded-xl p-5 shadow-xl">
                 <div className="mb-4 pb-3 border-b-2 border-halloween-orange/30">
-                  <h2 className="text-2xl font-black text-white tracking-tight text-center font-iannnnn-owl">
+                  <h2 className="text-2xl font-black text-halloween-cream tracking-tight text-center font-iannnnn-owl">
                     กิจกรรมภายในงาน
                   </h2>
                   <p className="text-halloween-orange text-xs font-bold mt-1 uppercase tracking-widest text-center">Available All Night</p>
@@ -151,7 +151,7 @@ export default function SchedulePage() {
                       <div className="absolute top-2 right-2 bg-halloween-orange/20 px-2 py-0.5 rounded-full">
                         <span className="text-halloween-orange text-[10px] font-black tracking-wider">{activity.tag}</span>
                       </div>
-                      <p className="text-white font-bold text-base pr-16 group-hover:text-halloween-orange transition-colors font-iannnnn-owl">
+                      <p className="text-halloween-cream font-bold text-base pr-16 group-hover:text-halloween-orange transition-colors font-iannnnn-owl">
                         {activity.name}
                       </p>
                     </div>
@@ -203,7 +203,7 @@ export default function SchedulePage() {
           <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setShowMovieModal(false)}
-              className="absolute -top-8 right-0 sm:-top-10 sm:right-0 text-white hover:text-halloween-orange transition-colors z-10"
+              className="absolute -top-8 right-0 sm:-top-10 sm:right-0 text-halloween-cream hover:text-halloween-orange transition-colors z-10"
               type="button"
               aria-label="Close movie modal"
             >

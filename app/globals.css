@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  /* SHIVIDTIDPHEE Poster Color Palette - Dark Moody Tones */
-  --halloween-dark: #0a0a0f;
-  --halloween-charcoal: #1a1a24;
-  --halloween-muted-red: #4a2830;
-  --halloween-dusty-orange: #8b6f47;
-  --halloween-faded-purple: #3d3550;
-  --halloween-slate-blue: #2c3542;
-  --halloween-ash-gray: #6b6b7a;
-  --halloween-bone: #d4cfc0;
-  --halloween-cream: #eae5d8;
-  --halloween-moon: #b8b8c8;
-  --halloween-fog: rgba(200, 200, 220, 0.1);
+  /* SHIVIDNI PHEEDU palette: #f5eee6 cream, #bbd03c lime, #ea7b29 orange, #4a3167 purple, #24033a plum */
+  --halloween-dark: #1a0229;
+  --halloween-charcoal: #24033a;
+  --halloween-muted-red: #bbd03c;
+  --halloween-dusty-orange: #ea7b29;
+  --halloween-faded-purple: #4a3167;
+  --halloween-slate-blue: #3a1f55;
+  --halloween-ash-gray: #b3a3c9;
+  --halloween-bone: #f5eee6;
+  --halloween-cream: #f5eee6;
+  --halloween-moon: #bbd03c;
+  --halloween-fog: rgba(245, 238, 230, 0.08);
+  /* Error: coral red leaning off the palette orange, so it never reads as the lime 'success' */
+  --halloween-error: #ff6b5b;
 
   --background: var(--halloween-dark);
   --foreground: var(--halloween-cream);
@@ -21,9 +23,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: 'FC Iconic', system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-iannnnn-owl: var(--font-iannnnn-owl);
 
   /* Custom Halloween colors */
   --color-halloween-dark: var(--halloween-dark);
@@ -36,14 +37,86 @@
   --color-halloween-bone: var(--halloween-bone);
   --color-halloween-cream: var(--halloween-cream);
   --color-halloween-moon: var(--halloween-moon);
+  --color-halloween-error: var(--halloween-error);
+}
+
+/* ===== Fonts ===== */
+@font-face {
+  font-family: 'FC Iconic';
+  src: url('/fonts/fc-iconic-regular.ttf') format('truetype');
+  size-adjust: 118%;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FC Iconic';
+  src: url('/fonts/fc-iconic-bold.ttf') format('truetype');
+  size-adjust: 118%;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monster Fiesta';
+  src: url('/fonts/monster-fiesta.woff2') format('woff2');
+  font-display: swap;
 }
 
 body {
   background-color: var(--halloween-dark);
   color: var(--foreground);
-  font-family: 'Georgia', serif;
+  font-family: 'FC Iconic', system-ui, sans-serif;
   min-height: 100vh;
   position: relative;
+}
+
+/* Thai text used to be set in iannnnn OWL; FC Iconic replaces it everywhere */
+.font-iannnnn-owl {
+  font-family: 'FC Iconic', system-ui, sans-serif;
+}
+
+/* Visible keyboard focus for links and buttons */
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--halloween-moon);
+  outline-offset: 3px;
+}
+
+/* Inputs keep their border highlight, plus a soft ring for keyboard users */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px rgba(234, 123, 41, 0.35);
+}
+
+/* Dropdowns: custom chevron with breathing room instead of the native arrow hugging the edge */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  padding-right: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23ea7b29' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1.1rem;
+  cursor: pointer;
+}
+
+/* Open list: readable on the dark theme, selected row highlighted in orange */
+select option {
+  background-color: #24033a;
+  color: #f5eee6;
+}
+
+select option:checked {
+  background-color: #ea7b29;
+  color: #1a0229;
+}
+
+select option:disabled {
+  color: #b3a3c9;
 }
 
 /* Haunted atmosphere with fog effect */
@@ -76,32 +149,51 @@ body > * {
   z-index: 2;
 }
 
-.gradient-background {
-  background:
-    radial-gradient(circle at 20% 20%, rgba(61, 53, 80, 0.45), transparent 60%),
-    radial-gradient(circle at 80% 10%, rgba(139, 111, 71, 0.18), transparent 55%),
-    linear-gradient(140deg, #090610 0%, #1f1430 40%, #0b0b15 100%);
-  background-attachment: fixed;
-}
-
+/* Plum night background shared by every page */
+.theme-pheedu,
+.gradient-background,
 .image-background {
-  background-image: url('/background.png');
-  background-size: cover;
-  background-position: center;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgba(74, 49, 103, 0.9), transparent 60%),
+    radial-gradient(circle at 12% 88%, rgba(234, 123, 41, 0.16), transparent 45%),
+    radial-gradient(circle at 90% 8%, rgba(187, 208, 60, 0.1), transparent 40%),
+    linear-gradient(180deg, #2c0a45 0%, #24033a 55%, #16011f 100%);
   background-attachment: fixed;
 }
 
-/* Gothic Halloween Title Font */
+.display-font {
+  font-family: 'Monster Fiesta', 'FC Iconic', cursive;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.pheedu-logo {
+  filter: drop-shadow(0 0 28px rgba(187, 208, 60, 0.25)) drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+}
+
+/* Page titles */
 .title-font {
-  font-family: var(--font-nosifer), var(--font-creepster), cursive;
-  letter-spacing: 0.05em;
+  font-family: 'Monster Fiesta', 'FC Iconic', cursive;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
 }
 
 /* Haunted text effects */
 .haunted-text {
   text-shadow:
-    0 0 10px rgba(139, 111, 71, 0.5),
-    0 0 20px rgba(61, 53, 80, 0.3),
+    0 0 12px rgba(187, 208, 60, 0.35),
+    0 0 24px rgba(234, 123, 41, 0.25),
     2px 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Cream strip behind partner logos so their brand colors stay readable */
+.partner-strip {
+  background: #f5eee6;
+  border-radius: 9999px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.partner-divider {
+  background: rgba(74, 49, 103, 0.3);
 }

@@ -63,72 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Submit to Google Form FIRST (so we don't lose data if other steps fail)
-    // Note: Google Form has 3 sections with page breaks - need to include pageHistory
-    try {
-      const googleFormUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeSD3EX-743HNy2G9TYPY5BizQbP0X-tBItd6-lrjoKn0PRWw/formResponse';
-
-      const formData = new URLSearchParams();
-
-      // IMPORTANT: For multi-page forms, we need to indicate we visited all pages
-      // pageHistory tells Google Forms which pages we "visited" (0 = page 1, 1 = page 2, 2 = page 3)
-      formData.append('pageHistory', '0,1,2');
-
-      // Section 1: Email
-      formData.append('emailAddress', email);
-
-      // Section 2: Other information
-      formData.append('entry.966966796', studentId);
-      formData.append('entry.1596303195', fullName);
-      formData.append('entry.1164151850', faculty);
-      formData.append('entry.138725306', gender);
-      formData.append('entry.67458640', year);
-      formData.append('entry.104884751', referralSource);
-
-      // For checkbox fields, append each selection separately
-      if (Array.isArray(interestedActivities)) {
-        interestedActivities.forEach(activity => {
-          formData.append('entry.1000212024', activity);
-        });
-      }
-
-      formData.append('entry.1313112095', transportation);
-
-      // Section 3: PDPA Consent
-      formData.append('entry.756888526', 'ข้าพเจ้ายอมรับและยินยอม');
-
-      console.log('📝 Submitting to Google Form with data:', {
-        email: email,
-        studentId: studentId,
-        fullName: fullName,
-        faculty: faculty,
-        gender: gender,
-        year: year,
-        referralSource: referralSource,
-        interestedActivities: Array.isArray(interestedActivities) ? interestedActivities : [],
-        transportation: transportation,
-        pdpaConsent: 'ข้าพเจ้ายอมรับและยินยอม'
-      });
-
-      // Debug: Log the exact form data being sent
-      console.log('📤 Raw form data:', formData.toString());
-
-      await fetch(googleFormUrl, {
-        method: 'POST',
-        body: formData,
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-
-      console.log('✅ Google Form submitted successfully (note: mode is no-cors, so we cannot verify response)');
-    } catch (googleFormError) {
-      console.error('❌ Google Form submission failed:', googleFormError);
-      // Don't fail completely - continue with other steps
-    }
-
-    // 2. Generate QR code
+    // 1. Generate QR code
     const qrData = `SHIVIDTIDPHEE-${studentId}-${Date.now()}`;
     let qrCodeDataUrl = '';
 
@@ -137,8 +72,8 @@ export async function POST(request: Request) {
         width: 400,
         margin: 2,
         color: {
-          dark: '#8b6f47',
-          light: '#0a0a0f',
+          dark: '#24033a',
+          light: '#f5eee6',
         },
       });
       console.log('✅ QR Code generated');
@@ -146,7 +81,7 @@ export async function POST(request: Request) {
       console.error('❌ QR Code error:', qrError);
     }
 
-    // 3. Insert into Supabase
+    // 2. Insert into Supabase (the only copy of the data, so a failure must stop the registration)
     try {
       const { data, error } = await supabase
         .from('registrations')
@@ -171,15 +106,28 @@ export async function POST(request: Request) {
       if (error) {
         console.error('❌ Supabase error:', error);
         console.error('Supabase error details:', JSON.stringify(error, null, 2));
-        // Don't fail completely - data is already in Google Form
-      } else {
-        console.log('✅ Supabase insert successful', data);
+        // 23505 = unique violation (student already registered)
+        if (error.code === '23505') {
+          return NextResponse.json(
+            { error: 'รหัสนิสิตนี้ลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ' },
+            { status: 409 }
+          );
+        }
+        return NextResponse.json(
+          { error: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+          { status: 500 }
+        );
       }
+      console.log('✅ Supabase insert successful', data);
     } catch (supabaseError) {
       console.error('❌ Supabase exception:', supabaseError);
+      return NextResponse.json(
+        { error: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+        { status: 500 }
+      );
     }
 
-    // 4. Send confirmation email
+    // 3. Send confirmation email
     // Note: Sends in background. Email errors are logged but don't block registration.
     const emailHtml = `
         <!DOCTYPE html>
@@ -206,8 +154,8 @@ export async function POST(request: Request) {
               }
               .header {
                 text-align: center;
-                background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-                color: #ffffff;
+                background-color: #24033a;
+                color: #bbd03c;
                 font-size: 28px;
                 font-weight: bold;
                 padding: 30px 20px;
@@ -218,7 +166,7 @@ export async function POST(request: Request) {
                 padding: 40px 30px;
               }
               .content h2 {
-                color: #ff6b35;
+                color: #ea7b29;
                 margin-top: 0;
                 font-size: 24px;
               }
@@ -233,7 +181,7 @@ export async function POST(request: Request) {
                 background-color: #f9f9f9;
                 padding: 30px;
                 border-radius: 8px;
-                border: 2px solid #ff6b35;
+                border: 2px solid #4a3167;
               }
               .qr-code p {
                 margin: 10px 0;
@@ -247,21 +195,21 @@ export async function POST(request: Request) {
                 border-radius: 8px;
               }
               .info-box {
-                background-color: #fff3e0;
-                border-left: 4px solid #ff6b35;
+                background-color: #f5eee6;
+                border-left: 4px solid #ea7b29;
                 border-radius: 5px;
                 padding: 20px;
                 margin: 25px 0;
                 color: #2d2d2d;
               }
               .info-box strong {
-                color: #d84315;
+                color: #4a3167;
                 font-size: 16px;
               }
               .login-link {
                 display: inline-block;
-                background-color: #ff6b35;
-                color: #ffffff !important;
+                background-color: #ea7b29;
+                color: #24033a !important;
                 padding: 12px 30px;
                 text-decoration: none;
                 border-radius: 6px;
@@ -278,17 +226,17 @@ export async function POST(request: Request) {
                 border-top: 1px solid #e0e0e0;
               }
               .footer a {
-                color: #ff6b35;
+                color: #ea7b29;
                 text-decoration: none;
               }
             </style>
           </head>
           <body>
             <div class="container">
-              <div class="header">🎃 SHIVIDTIDPHEE 2025 🎃</div>
+              <div class="header">🎃 SHIVIDNI PHEEDU 2026 🎃</div>
               <div class="content">
                 <h2>สวัสดีคุณ ${fullName}!</h2>
-                <p>ขอบคุณที่ลงทะเบียนเข้าร่วมงาน SHIVIDTIDPHEE 2025 🎉</p>
+                <p>ขอบคุณที่ลงทะเบียนเข้าร่วมงาน SHIVIDNI PHEEDU 2026 🎉</p>
                 <p>การลงทะเบียนของคุณเสร็จสมบูรณ์แล้ว คุณสามารถเข้าสู่ระบบด้วยรหัสนิสิตของคุณได้แล้ว!</p>
 
                 <div class="info-box">
@@ -298,7 +246,7 @@ export async function POST(request: Request) {
 
                 ${qrCodeDataUrl ? `
                   <div class="qr-code">
-                    <p><strong style="color: #ff6b35; font-size: 18px;">QR Code สำหรับเช็คอิน</strong></p>
+                    <p><strong style="color: #ea7b29; font-size: 18px;">QR Code สำหรับเช็คอิน</strong></p>
                     <p style="color: #666666; font-size: 14px;">กรุณาแสดง QR Code นี้เมื่อเข้างาน</p>
                     <img src="cid:qrcode" alt="QR Code สำหรับเช็คอิน" />
                   </div>
@@ -308,9 +256,9 @@ export async function POST(request: Request) {
               </div>
               <div class="footer">
                 <p>ติดตามข่าวสารเพิ่มเติมได้ที่<br/>
-                Instagram: <a href="https://instagram.com/shividtidphee" target="_blank">@shividtidphee</a></p>
+                Instagram: <a href="https://instagram.com/shividni.pheedu" target="_blank">@shividni.pheedu</a></p>
                 <p style="font-size: 12px; color: #999999; margin-top: 15px;">
-                  คณะพาณิชยศาสตร์และการบัญชี X คณะวิศวกรรมศาสตร์
+                  คณะพาณิชยศาสตร์และการบัญชี X คณะวิศวกรรมศาสตร์ X คณะนิเทศศาสตร์
                 </p>
               </div>
             </div>
@@ -321,7 +269,7 @@ export async function POST(request: Request) {
     // Send email in background (don't block the response)
     sendEmail({
       to: email,
-      subject: 'ยืนยันการลงทะเบียน SHIVIDTIDPHEE 2025',
+      subject: 'ยืนยันการลงทะเบียน SHIVIDNI PHEEDU 2026',
       html: emailHtml,
       attachments: qrCodeDataUrl ? [{
         filename: 'qrcode.png',

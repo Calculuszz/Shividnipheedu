@@ -363,7 +363,7 @@ export default function WhatGhostPage() {
   return (
     <div className="image-background min-h-screen relative overflow-hidden">
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60 pointer-events-none" aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" aria-hidden="true"></div>
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col px-3 py-3 sm:px-6 sm:py-6">
@@ -386,7 +386,7 @@ export default function WhatGhostPage() {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          <span className="text-xs sm:text-base font-semibold">Back</span>
+          <span className="text-sm sm:text-base font-semibold">Back</span>
         </button>
 
         {/* Quiz Content */}

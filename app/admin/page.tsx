@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import jsQR from 'jsqr';
 import BackButton from '@/components/BackButton';
+import EventName from '@/components/EventName';
+import FieldError from '@/components/FieldError';
 import Sponsors from '@/components/Sponsors';
 
 // Force dynamic rendering (don't prerender at build time)
@@ -27,10 +29,15 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('attendance');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!password) {
+      setFieldError('กรุณากรอกรหัสผ่าน');
+      return;
+    }
 
     try {
       // Server-side password verification for security
@@ -63,11 +70,11 @@ export default function AdminPage() {
             <h1 className="text-4xl font-bold text-halloween-orange mb-2">
               Admin Access
             </h1>
-            <p className="text-halloween-gray">SHIVIDTIDPHEE 2025</p>
+            <p className="display-font"><EventName /></p>
           </div>
 
           <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg p-8">
-            <form onSubmit={handleLogin} className="space-y-6" suppressHydrationWarning>
+            <form onSubmit={handleLogin} noValidate className="space-y-6" suppressHydrationWarning>
               <div>
                 <label className="block text-halloween-cream font-bold mb-2 font-iannnnn-owl">
                   รหัสผ่าน
@@ -76,16 +83,23 @@ export default function AdminPage() {
                   key="admin-password-input"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-halloween-dark border-2 border-halloween-purple rounded px-4 py-3 text-halloween-cream focus:border-halloween-orange focus:outline-none font-iannnnn-owl"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldError('');
+                  }}
+                  className={`w-full bg-halloween-dark border-2 rounded px-4 py-3 text-halloween-cream focus:border-halloween-orange focus:outline-none font-iannnnn-owl ${
+                    fieldError ? 'border-halloween-error' : 'border-halloween-purple'
+                  }`}
                   placeholder="กรอกรหัสผ่าน"
                   required
+                  aria-invalid={!!fieldError}
                   suppressHydrationWarning
                 />
+                {fieldError && <FieldError message={fieldError} />}
               </div>
 
               {error && (
-                <div className="bg-halloween-red border border-halloween-orange rounded p-3 text-halloween-cream text-center font-iannnnn-owl">
+                <div className="bg-halloween-error/15 border border-halloween-error rounded p-3 text-halloween-error text-center font-iannnnn-owl">
                   {error}
                 </div>
               )}
@@ -131,7 +145,7 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={() => setIsAuthenticated(false)}
-              className="bg-halloween-red hover:bg-halloween-orange text-halloween-cream px-4 py-2 rounded transition-colors font-iannnnn-owl"
+              className="bg-halloween-red hover:bg-halloween-orange text-halloween-dark px-4 py-2 rounded transition-colors font-iannnnn-owl"
             >
               ออกจากระบบ
             </button>
@@ -158,6 +172,8 @@ function AttendanceTable() {
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [playedGameCount, setPlayedGameCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const itemsPerPage = 50;
 
   useEffect(() => {
@@ -310,6 +326,93 @@ function AttendanceTable() {
     }
   };
 
+  const exportToExcel = async () => {
+    setExporting(true);
+    setExportError('');
+
+    try {
+      // Supabase caps each request at 1000 rows, so page through everything
+      const pageSize = 1000;
+      const allRows: Record<string, unknown>[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('registrations')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        allRows.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+      }
+
+      const formatDate = (value: unknown) =>
+        value
+          ? new Date(String(value)).toLocaleString('th-TH', {
+              timeZone: 'Asia/Bangkok',
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })
+          : '';
+
+      const ExcelJS = (await import('exceljs')).default;
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('รายชื่อผู้ลงทะเบียน', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+      });
+
+      sheet.columns = [
+        { header: 'ลำดับ', key: 'no', width: 8 },
+        { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
+        { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
+        { header: 'อีเมล', key: 'email', width: 30 },
+        { header: 'คณะ', key: 'department', width: 28 },
+        { header: 'เพศ', key: 'gender', width: 14 },
+        { header: 'ชั้นปี', key: 'year', width: 10 },
+        { header: 'ช่องทางรับรู้งาน', key: 'referral_source', width: 22 },
+        { header: 'กิจกรรมที่สนใจ', key: 'interested_activities', width: 36 },
+        { header: 'การเดินทาง', key: 'transportation', width: 20 },
+        { header: 'ผลเกมผี', key: 'ghost_result', width: 18 },
+        { header: 'เช็คอินแล้ว', key: 'attended', width: 12 },
+        { header: 'เวลาเช็คอิน', key: 'attended_at', width: 22 },
+        { header: 'เวลาลงทะเบียน', key: 'created_at', width: 22 },
+      ];
+
+      allRows.forEach((row, index) => {
+        sheet.addRow({
+          ...row,
+          no: index + 1,
+          student_id: String(row.student_id ?? ''),
+          attended: row.attended ? 'ใช่' : 'ไม่',
+          attended_at: formatDate(row.attended_at),
+          created_at: formatDate(row.created_at),
+        });
+      });
+
+      const header = sheet.getRow(1);
+      header.font = { bold: true, color: { argb: 'FFF5EEE6' } };
+      header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3167' } };
+      header.alignment = { vertical: 'middle' };
+      sheet.autoFilter = { from: 'A1', to: 'N1' };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `SHIVIDNI-PHEEDU-2026-registrations-${today}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting registrations:', error);
+      setExportError('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleColumn = (column: string) => {
     setHiddenColumns((prev) => {
       const newSet = new Set(prev);
@@ -435,7 +538,19 @@ function AttendanceTable() {
               ล้างการค้นหา
             </button>
           )}
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={exporting || totalCount === 0}
+            className="ml-auto flex items-center gap-2 bg-halloween-moon hover:bg-halloween-orange text-halloween-dark px-4 py-2 rounded font-bold font-iannnnn-owl transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            {exporting ? 'กำลังเตรียมไฟล์...' : 'ดาวน์โหลด Excel'}
+          </button>
         </div>
+        {exportError && <FieldError message={exportError} />}
       </div>
 
       <div className="bg-halloween-charcoal border-2 border-halloween-orange rounded-lg overflow-hidden">
@@ -849,7 +964,7 @@ function QRScanner() {
               เปิดกล้อง
             </button>
             {cameraError && (
-              <div className="mt-4 p-4 bg-halloween-red border border-halloween-orange rounded-lg text-halloween-cream text-center max-w-sm font-iannnnn-owl">
+              <div className="mt-4 p-4 bg-halloween-error/15 border border-halloween-error rounded-lg text-halloween-error text-center max-w-sm font-iannnnn-owl">
                 {cameraError}
               </div>
             )}
@@ -877,7 +992,7 @@ function QRScanner() {
             <button
               type="button"
               onClick={stopCamera}
-              className="absolute top-4 right-4 bg-halloween-red hover:bg-halloween-orange text-halloween-cream px-4 py-2 rounded-lg font-bold shadow-lg font-iannnnn-owl"
+              className="absolute top-4 right-4 bg-halloween-red hover:bg-halloween-orange text-halloween-dark px-4 py-2 rounded-lg font-bold shadow-lg font-iannnnn-owl"
             >
               ปิดกล้อง
             </button>
@@ -891,7 +1006,7 @@ function QRScanner() {
               className={`w-full max-w-sm p-8 rounded-lg text-center shadow-2xl border-4 ${
                 result.success
                   ? 'bg-green-600 text-white border-green-400'
-                  : 'bg-halloween-red text-halloween-cream border-halloween-orange'
+                  : 'bg-halloween-error text-halloween-dark border-halloween-orange'
               }`}
             >
               <div className="text-3xl font-bold mb-2 font-iannnnn-owl">{result.message}</div>
@@ -936,7 +1051,7 @@ function QRScanner() {
               เปิดกล้อง
             </button>
             {cameraError && (
-              <div className="mt-4 p-4 bg-halloween-red border border-halloween-orange rounded-lg text-halloween-cream text-center max-w-md font-iannnnn-owl">
+              <div className="mt-4 p-4 bg-halloween-error/15 border border-halloween-error rounded-lg text-halloween-error text-center max-w-md font-iannnnn-owl">
                 {cameraError}
               </div>
             )}
@@ -1033,7 +1148,7 @@ function QRScanner() {
             className={`max-w-md w-full mx-4 p-8 rounded-lg text-center shadow-2xl border-4 ${
               result.success
                 ? 'bg-green-600 text-white border-green-400'
-                : 'bg-halloween-red text-halloween-cream border-halloween-orange'
+                : 'bg-halloween-error text-halloween-dark border-halloween-orange'
             }`}
           >
             <div className="text-3xl font-bold mb-2 font-iannnnn-owl">{result.message}</div>

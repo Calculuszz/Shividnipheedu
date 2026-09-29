@@ -96,21 +96,12 @@ Then update the dashboard page to display these images.
 ## Admin Access
 
 - URL: `/admin`
-- Password: `halloween2025` (change in `.env.local`)
+- Password: set `ADMIN_PASSWORD` in `.env.local` (and in the Vercel dashboard for production)
 
-## Google Form Integration
+## Exporting Registrations
 
-To backup registrations to Google Form:
-
-1. Create a Google Form with the same fields
-2. Get the prefill URL
-3. Update `app/api/register/route.ts` with the prefill URL logic
-
-Example:
-```typescript
-const googleFormUrl = `https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse?entry.XXX=${studentId}&entry.YYY=${fullName}...`;
-await fetch(googleFormUrl, { method: 'POST' });
-```
+Supabase is the single source of truth for registrations. In `/admin` → Attendance Table,
+click **ดาวน์โหลด Excel** to download every registration as an `.xlsx` file.
 
 ## Deployment to Vercel
 

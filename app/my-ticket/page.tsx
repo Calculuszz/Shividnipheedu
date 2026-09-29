@@ -43,8 +43,8 @@ export default function MyTicketPage() {
         width: 400,
         margin: 2,
         color: {
-          dark: '#c17850',
-          light: '#1a0f0f',
+          dark: '#ea7b29',
+          light: '#1a0229',
         },
       }).then((url) => setQrCodeUrl(url));
     };
@@ -63,7 +63,7 @@ export default function MyTicketPage() {
   return (
     <div className="image-background min-h-screen relative overflow-hidden">
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60 pointer-events-none" aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" aria-hidden="true"></div>
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col p-4 sm:p-6">
@@ -95,7 +95,7 @@ export default function MyTicketPage() {
               {/* Check-in Status Badge */}
               {userData.attended && (
                 <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className="bg-green-600 text-white px-6 py-2 rounded-full border-4 border-halloween-charcoal shadow-lg flex items-center gap-2">
+                  <div className="bg-halloween-red text-halloween-dark px-6 py-2 rounded-full border-4 border-halloween-charcoal shadow-lg flex items-center gap-2">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                     </svg>
@@ -104,7 +104,7 @@ export default function MyTicketPage() {
                 </div>
               )}
 
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6">
+              <h2 className="display-font text-3xl sm:text-4xl md:text-5xl text-halloween-orange mb-4 sm:mb-6">
                 My Ticket
               </h2>
 
