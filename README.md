@@ -142,37 +142,6 @@ Colors are defined as tokens in [`app/globals.css`](app/globals.css) and exposed
 | Error | `#ff6b5b` | Validation and error messages |
 
 Fonts: **FC Iconic** for body and Thai text, **Monster Fiesta** for display headings.
-
----
-
-## Email (optional)
-
-The confirmation email is sent through Gmail SMTP. To enable it:
-
-1. Turn on 2-Step Verification for the Gmail account
-2. Create an App Password (Google Account → Security → App passwords)
-3. Set `GMAIL_USER` and `GMAIL_APP_PASSWORD`
-
-A free Gmail account can send about 500 emails per day. If emails are disabled or fail, registration still succeeds and attendees can always open their QR code from **My Ticket**.
-
----
-
-## Deployment (Vercel)
-
-1. Import this repository in Vercel (**Add New → Project**)
-2. Add the environment variables from the table above
-3. Deploy. Every push to `main` redeploys automatically
-
----
-
-## Before going live
-
-- [ ] Archive or clear last event's rows from `registrations`
-- [ ] Set a strong `ADMIN_PASSWORD` in Vercel
-- [ ] Update Event Map and Event Schedule content for 2026
-- [ ] Run one full test: register → email → login → My Ticket → scan at `/admin`
-- [ ] Confirm font licenses (Monster Fiesta requires attribution)
-
 ---
 
 **Contact:** Instagram [@shividni.pheedu](https://www.instagram.com/shividni.pheedu/)
