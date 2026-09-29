@@ -1,155 +1,180 @@
-# SHIVIDTIDPHEE 2025 - Halloween Event Website
+# SHIVIDNI PHEEDU 2026
 
-Halloween event website with registration, quiz game, QR check-in system, and admin dashboard.
+Official website for **SHIVIDNI PHEEDU 2026**, a Halloween event co-hosted by the Faculty of Commerce and Accountancy, the Faculty of Engineering, and the Faculty of Communication Arts, Chulalongkorn University.
+
+Attendees register, receive a QR ticket, and explore the event from their phones. Staff check people in by scanning QR codes and can export the full attendee list to Excel.
+
+---
 
 ## Features
 
-### For Attendees
-- **Registration**: 3-step registration form with PDPA consent
-- **Email Confirmation**: Automatic email with QR code ticket
-- **User Dashboard**: Login with student ID to access:
-  - QR Code for check-in
-  - Ghost Quiz (10 questions, 7 ghost type results)
-  - Event Map
-  - Event Schedule
+### For attendees
 
-### For Admins
-- **Admin Dashboard**: Password-protected admin panel with:
-  - Real-time attendance table
-  - Column show/hide functionality
-  - QR Code scanner for check-in
-  - iPhone Safari compatible
+| Feature | Description |
+| --- | --- |
+| **Registration** | 3-step form (event info → personal details → PDPA consent) with inline validation |
+| **Email confirmation** | Confirmation email with the QR ticket attached (optional, see [Email](#email-optional)) |
+| **Student ID login** | Log in with a student ID, no password needed |
+| **My Ticket** | QR code for check-in plus live check-in status |
+| **Ghost Quiz** | 10 questions, 7 ghost type results |
+| **Event Map** | Venue map and student vendor booth list *(content not yet updated for 2026)* |
+| **Event Schedule** | Main stage timeline and performances *(content not yet updated for 2026)* |
 
-## Tech Stack
+### For staff (`/admin`)
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: Supabase (PostgreSQL)
-- **QR Code**: qrcode, html5-qrcode
-- **Email**: Resend
-- **Deployment**: Vercel
+- Password-protected dashboard
+- Real-time attendance table with search and stats (registered / checked in / played quiz)
+- Camera QR scanner for check-in (works on iPhone Safari)
+- **Download Excel**: exports every registration to `.xlsx`
 
-## Setup Instructions
+---
 
-### 1. Database Setup (Supabase)
+## Tech stack
 
-1. Go to your Supabase project: https://urvwkdhoyciaedujwzhj.supabase.co
-2. Navigate to SQL Editor
-3. Run the SQL script from `supabase/schema.sql`
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Styling | Tailwind CSS 4, FC Iconic + Monster Fiesta fonts |
+| Database | Supabase (PostgreSQL + Realtime) |
+| QR codes | `qrcode` (generate), `jsqr` (scan) |
+| Excel export | `exceljs` (loaded on demand in the browser) |
+| Email | Nodemailer via Gmail SMTP |
+| Hosting | Vercel |
 
-### 2. Email Setup (Resend)
+---
 
-1. Sign up for Resend: https://resend.com
-2. Get your API key
-3. Add to `.env.local`:
-   ```
-   RESEND_API_KEY=your_resend_api_key
-   ```
+## Getting started
 
-### 3. Environment Variables
+### Prerequisites
 
-Already configured in `.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_PASSWORD` (default: halloween2025)
+- Node.js 20+
+- [pnpm](https://pnpm.io)
+- A Supabase project
 
-Optional:
-- `NEXT_PUBLIC_SITE_URL` (for email links, defaults to localhost:3000)
-- `RESEND_API_KEY` (for sending emails)
-
-### 4. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### 5. Run Development Server
+### 2. Set up the database
+
+In the Supabase dashboard, open **SQL Editor** and run [`supabase/complete-schema.sql`](supabase/complete-schema.sql). This creates the `registrations` table, indexes and policies.
+
+### 3. Configure environment variables
+
+Create `.env.local` in the project root:
+
+```bash
+# Supabase (Dashboard → Project Settings → API)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Admin dashboard password
+ADMIN_PASSWORD=choose-a-strong-password
+
+# Optional: confirmation emails
+GMAIL_USER=your-account@gmail.com
+GMAIL_APP_PASSWORD=your-16-char-app-password
+
+# Optional: base URL for the login link in emails
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-side key, never expose to the client |
+| `ADMIN_PASSWORD` | ✅ | Always set this in production |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | ➖ | Without them, registration still works but no email is sent |
+| `NEXT_PUBLIC_SITE_URL` | ➖ | Falls back to the Vercel production domain, then `http://localhost:3000` |
+
+### 4. Run the dev server
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-### 6. Add Event Images
-
-Place your event images in the `public` folder:
-- `public/event-map.jpg` - Event layout map
-- `public/event-schedule.jpg` - Event schedule
-
-Then update the dashboard page to display these images.
-
-## Pages Structure
-
-```
-/                    - Home page with event info
-/registration        - 3-step registration form (isolated, no nav)
-/login              - Student login page (isolated, no nav)
-/dashboard          - User dashboard (4 tabs: QR, Quiz, Map, Schedule)
-/admin              - Admin dashboard (attendance table + QR scanner)
-/game               - Public ghost quiz (accessible from main nav)
-/layout             - Public event map
-/schedule           - Public event schedule
-```
-
-## Admin Access
-
-- URL: `/admin`
-- Password: set `ADMIN_PASSWORD` in `.env.local` (and in the Vercel dashboard for production)
-
-## Exporting Registrations
-
-Supabase is the single source of truth for registrations. In `/admin` → Attendance Table,
-click **ดาวน์โหลด Excel** to download every registration as an `.xlsx` file.
-
-## Deployment to Vercel
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy!
-
-## Database Schema
-
-### registrations table
-
-- `id` (UUID, primary key)
-- `created_at` (timestamp)
-- `first_name` (text)
-- `last_name` (text)
-- `email` (text, unique)
-- `student_id` (text)
-- `department` (text)
-- `qr_code` (text, unique)
-- `attended` (boolean, default false)
-- `attended_at` (timestamp, nullable)
-
-## Customization
-
-### Theme Colors (in `app/globals.css`)
-
-- `--halloween-dark`: #1a0f0f (background)
-- `--halloween-charcoal`: #2d2424 (cards)
-- `--halloween-orange`: #c17850 (primary)
-- `--halloween-purple`: #6b5b7a (accent)
-- `--halloween-cream`: #f5f1e8 (text)
-
-### Ghost Quiz Results
-
-Edit the `ghostTypes` object in `app/dashboard/page.tsx` to customize:
-- Ghost names
-- Descriptions
-- Themes
-- Add images if needed
-
-## Support
-
-For issues or questions:
-- IG: @shividtidphee
-- Email: Contact event organizers
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-Built with ❤️ for SHIVIDTIDPHEE 2025
-คณะพาณิชยศาสตร์และการบัญชี X คณะวิศวกรรมศาสตร์ X คณะนิเทศศาสตร์
+## Project structure
+
+```
+app/
+├── page.tsx              # Home: login with student ID
+├── registration/         # 3-step registration form
+├── menu/                 # Attendee hub after login
+├── my-ticket/            # QR ticket + check-in status
+├── what-ghost/           # Ghost Quiz
+├── event-map/            # Venue map + vendor booths
+├── schedule/             # Event schedule
+├── admin/                # Staff dashboard (attendance, scanner, Excel export)
+├── api/
+│   ├── register/         # Create registration, generate QR, send email
+│   ├── login/            # Student ID lookup
+│   ├── admin/login/      # Admin password check
+│   └── save-ghost-result/
+├── layout.tsx            # Metadata, icons, fonts
+└── globals.css           # Theme tokens and shared styles
+components/               # EventName, FieldError, BackButton, LoadingScreen, …
+lib/                      # Supabase client, email helper
+public/brand/             # Event logo and partner logos
+supabase/                 # Database schema
+```
+
+---
+
+## Theme
+
+Colors are defined as tokens in [`app/globals.css`](app/globals.css) and exposed to Tailwind as `halloween-*` utilities.
+
+| Token | Hex | Used for |
+| --- | --- | --- |
+| Plum | `#24033a` | Background, cards |
+| Purple | `#4a3167` | Borders, secondary surfaces |
+| Orange | `#ea7b29` | Primary actions, headings |
+| Lime | `#bbd03c` | Accents, success states |
+| Cream | `#f5eee6` | Text |
+| Error | `#ff6b5b` | Validation and error messages |
+
+Fonts: **FC Iconic** for body and Thai text, **Monster Fiesta** for display headings.
+
+---
+
+## Email (optional)
+
+The confirmation email is sent through Gmail SMTP. To enable it:
+
+1. Turn on 2-Step Verification for the Gmail account
+2. Create an App Password (Google Account → Security → App passwords)
+3. Set `GMAIL_USER` and `GMAIL_APP_PASSWORD`
+
+A free Gmail account can send about 500 emails per day. If emails are disabled or fail, registration still succeeds and attendees can always open their QR code from **My Ticket**.
+
+---
+
+## Deployment (Vercel)
+
+1. Import this repository in Vercel (**Add New → Project**)
+2. Add the environment variables from the table above
+3. Deploy. Every push to `main` redeploys automatically
+
+---
+
+## Before going live
+
+- [ ] Archive or clear last event's rows from `registrations`
+- [ ] Set a strong `ADMIN_PASSWORD` in Vercel
+- [ ] Update Event Map and Event Schedule content for 2026
+- [ ] Run one full test: register → email → login → My Ticket → scan at `/admin`
+- [ ] Confirm font licenses (Monster Fiesta requires attribution)
+
+---
+
+**Contact:** Instagram [@shividni.pheedu](https://www.instagram.com/shividni.pheedu/)
+
+คณะพาณิชยศาสตร์และการบัญชี × คณะวิศวกรรมศาสตร์ × คณะนิเทศศาสตร์ · จุฬาลงกรณ์มหาวิทยาลัย

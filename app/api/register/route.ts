@@ -127,6 +127,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Login link for the email: explicit setting > this Vercel project's production domain > local dev
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : 'http://localhost:3000');
+
     // 3. Send confirmation email
     // Note: Sends in background. Email errors are logged but don't block registration.
     const emailHtml = `
@@ -241,7 +248,7 @@ export async function POST(request: Request) {
 
                 <div class="info-box">
                   <strong>รหัสนิสิตของคุณ:</strong> ${studentId}<br/><br/>
-                  <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://shividtidphee.vercel.app'}" class="login-link">เข้าสู่ระบบที่นี่</a>
+                  <a href="${siteUrl}" class="login-link">เข้าสู่ระบบที่นี่</a>
                 </div>
 
                 ${qrCodeDataUrl ? `
