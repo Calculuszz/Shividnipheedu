@@ -158,7 +158,7 @@ export default function AdminPage() {
       {/* Content */}
       <div className="container mx-auto px-4 py-8">
         {activeTab === 'attendance' && <AttendanceTable />}
-        {activeTab === 'scanner' && <QRScanner />}
+        {activeTab === 'scanner' && <QRScanner onExit={() => setActiveTab('attendance')} />}
       </div>
     </div>
   );
@@ -662,9 +662,11 @@ function AttendanceTable() {
 }
 
 // QR Scanner Component
-function QRScanner() {
+function QRScanner({ onExit }: { onExit: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Mirrors mediaStream so cleanup on unmount can stop the camera (state would be stale there)
+  const streamRef = useRef<MediaStream | null>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; name?: string } | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -723,7 +725,7 @@ function QRScanner() {
     setCameraError(null);
 
     // Stop any existing stream
-    if (mediaStream) {
+    if (streamRef.current) {
       stopCamera();
     }
 
@@ -772,7 +774,8 @@ function QRScanner() {
       // Try to get the stream with primary constraints
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log("Successfully got stream with primary constraints.");
-      setMediaStream(stream);
+      streamRef.current = stream;
+          setMediaStream(stream);
       setScanning(true);
 
     } catch (err: any) {
@@ -784,6 +787,7 @@ function QRScanner() {
         try {
           const stream = await navigator.mediaDevices.getUserMedia(desktopConstraints);
           console.log("Successfully got stream with fallback constraints.");
+          streamRef.current = stream;
           setMediaStream(stream);
           setScanning(true);
         } catch (fallbackErr: any) {
@@ -821,16 +825,23 @@ function QRScanner() {
       scanIntervalRef.current = null;
     }
 
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop());
-      setMediaStream(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
+    setMediaStream(null);
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
 
     setScanning(false);
+  };
+
+  // Closing the camera on mobile also leaves the full-screen scanner and returns to the dashboard
+  const closeScanner = () => {
+    stopCamera();
+    onExit();
   };
 
   // Scan QR code from video feed
@@ -985,6 +996,13 @@ function QRScanner() {
                 {cameraError}
               </div>
             )}
+            <button
+              type="button"
+              onClick={closeScanner}
+              className="mt-4 w-full max-w-sm border-2 border-halloween-purple text-halloween-cream hover:border-halloween-orange font-bold py-3 rounded-lg transition-colors font-iannnnn-owl"
+            >
+              กลับหน้า Dashboard
+            </button>
           </div>
         ) : (
           <div className="relative w-full h-full">
@@ -1005,10 +1023,10 @@ function QRScanner() {
               </div>
             )}
 
-            {/* Close button */}
+            {/* Close button: stop camera and go back to the dashboard */}
             <button
               type="button"
-              onClick={stopCamera}
+              onClick={closeScanner}
               className="absolute top-4 right-4 bg-halloween-red hover:bg-halloween-orange text-halloween-dark px-4 py-2 rounded-lg font-bold shadow-lg font-iannnnn-owl"
             >
               ปิดกล้อง

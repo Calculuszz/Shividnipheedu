@@ -168,19 +168,24 @@ function LoginForm() {
 
 export default function Home() {
   return (
-    <main className="theme-pheedu min-h-dvh flex flex-col items-center justify-center px-5 py-6 sm:px-8">
+    <main className="theme-pheedu min-h-dvh flex flex-col">
+      {/* Organiser strip pinned to the top edge of the screen */}
+      {/* eslint-disable @next/next/no-img-element */}
+      <div className="partner-bar w-full">
+        <div className="mx-auto flex max-w-sm items-center justify-evenly px-5 py-3">
+          <img src="/brand/partners/smo.webp" alt="SMO Student Union Chulalongkorn Business School" width={190} height={96} className="h-8 w-auto" />
+          <span className="h-8 w-px partner-divider" aria-hidden="true" />
+          <img src="/brand/partners/esc-color.svg" alt="กวศ." width={1000} height={1461} className="h-8 w-auto" />
+          <span className="h-8 w-px partner-divider" aria-hidden="true" />
+          <img src="/brand/partners/nitade.webp" alt="คณะนิเทศศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย" width={149} height={96} className="h-8 w-auto" />
+        </div>
+      </div>
+      {/* eslint-enable @next/next/no-img-element */}
+
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-6 sm:px-8">
       <div className="w-full max-w-sm mx-auto">
         {/* Header Section */}
         <header className="mb-5 text-center">
-          {/* eslint-disable @next/next/no-img-element */}
-          <div className="flex w-full items-center justify-evenly partner-strip px-4 py-2.5 mb-4">
-            <img src="/brand/partners/smo.webp" alt="SMO Student Union Chulalongkorn Business School" width={190} height={96} className="h-8 w-auto" />
-            <span className="h-8 w-px partner-divider" aria-hidden="true" />
-            <img src="/brand/partners/esc-color.svg" alt="กวศ." width={1000} height={1461} className="h-8 w-auto" />
-            <span className="h-8 w-px partner-divider" aria-hidden="true" />
-            <img src="/brand/partners/nitade.webp" alt="คณะนิเทศศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย" width={149} height={96} className="h-8 w-auto" />
-          </div>
-          {/* eslint-enable @next/next/no-img-element */}
           <h1 className="mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -223,6 +228,7 @@ export default function Home() {
           </a>{' '}
           (CC BY 4.0)
         </p>
+      </div>
       </div>
     </main>
   );

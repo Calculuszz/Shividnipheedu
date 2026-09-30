@@ -245,3 +245,10 @@ body > * {
     animation: none;
   }
 }
+
+/* Partner strip docked to the top edge on the home page */
+.partner-bar {
+  background: #f5eee6;
+  border-radius: 0 0 28px 28px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
