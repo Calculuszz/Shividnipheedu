@@ -240,10 +240,10 @@ export async function POST(request: Request) {
           </head>
           <body>
             <div class="container">
-              <div class="header">🎃 SHIVIDNI PHEEDU 2026 🎃</div>
+              <div class="header">🎃 SHIVIDNI PHEEDU 🎃</div>
               <div class="content">
                 <h2>สวัสดีคุณ ${fullName}!</h2>
-                <p>ขอบคุณที่ลงทะเบียนเข้าร่วมงาน SHIVIDNI PHEEDU 2026 🎉</p>
+                <p>ขอบคุณที่ลงทะเบียนเข้าร่วมงาน SHIVIDNI PHEEDU 🎉</p>
                 <p>การลงทะเบียนของคุณเสร็จสมบูรณ์แล้ว คุณสามารถเข้าสู่ระบบด้วยรหัสนิสิตของคุณได้แล้ว!</p>
 
                 <div class="info-box">
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
     // Send email in background (don't block the response)
     sendEmail({
       to: email,
-      subject: 'ยืนยันการลงทะเบียน SHIVIDNI PHEEDU 2026',
+      subject: 'ยืนยันการลงทะเบียน SHIVIDNI PHEEDU',
       html: emailHtml,
       attachments: qrCodeDataUrl ? [{
         filename: 'qrcode.png',

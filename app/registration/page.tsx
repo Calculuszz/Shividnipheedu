@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EventName from '@/components/EventName';
-import Doodle from '@/components/Doodle';
+import Doodle, { type DoodleName } from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
 import Image from 'next/image';
 
@@ -55,7 +55,17 @@ const REFERRAL_SOURCES = [
   'อื่นๆ'
 ];
 
-const ACTIVITIES = ['โชว์เปิดงาน', 'ตลาดขายของ', 'บ้านผีสิง', 'หนังกลางแปลง'];
+// Highlights shown on the intro step (same list as the Instagram announcement)
+const EVENT_HIGHLIGHTS: { label: string; icon: DoodleName; tilt: string }[] = [
+  { label: 'บ้านผีสิง', icon: 'tombstone', tilt: 'rotate-3' },
+  { label: 'Escape Room', icon: 'skull', tilt: '-rotate-6' },
+  { label: 'หนังกลางแปลง', icon: 'moon', tilt: '-rotate-6' },
+  { label: 'การแสดงสุดพิเศษจากทั้ง 3 คณะ', icon: 'witch-hat', tilt: '-rotate-3' },
+  { label: 'ร้านค้านิสิตอีกมากมาย', icon: 'potion', tilt: 'rotate-6' },
+];
+
+// Form checkboxes use the same activities as the intro list, so the two never drift apart
+const ACTIVITIES = EVENT_HIGHLIGHTS.map((item) => item.label);
 
 const TRANSPORTATION = [
   'BTS / MRT',
@@ -230,23 +240,17 @@ export default function RegistrationPage() {
 
             <div className="text-halloween-cream space-y-3 sm:space-y-4 lg:space-y-5 mb-6 sm:mb-8 lg:mb-10">
               <p className="text-sm sm:text-base lg:text-lg xl:text-xl leading-relaxed">
-                ครั้งแรกของ งานฮาโลวีนสุดหลอนแต่โคตรมันส์จาก{' '}
-                <span className="text-halloween-orange font-bold">
-                  &quot;คณะพาณิชยศาสตร์และการบัญชี&quot;
-                </span>{' '}
-                X{' '}
-                <span className="text-halloween-orange font-bold">
-                  &quot;คณะวิศวกรรมศาสตร์&quot;
-                </span>{' '}
-                X{' '}
-                <span className="text-halloween-orange font-bold">
-                  &quot;คณะนิเทศศาสตร์&quot;
-                </span>
+                <span className="font-bold text-halloween-moon">Halloween ปีนี้ไม่เหมือนเดิม!</span>{' '}
+                ครั้งแรกของการรวมตัวจาก 3 คณะ{' '}
+                <span className="text-halloween-orange font-bold">พาณิชยศาสตร์และการบัญชี</span> ×{' '}
+                <span className="text-halloween-orange font-bold">วิศวกรรมศาสตร์</span> ×{' '}
+                <span className="text-halloween-orange font-bold">นิเทศศาสตร์</span>{' '}
+                ที่จะพาทุกคนมาเจอกับค่ำคืนสุดพิเศษที่เต็มไปด้วยความสนุกและความลึกลับ
               </p>
 
               <p className="text-sm sm:text-base lg:text-lg xl:text-xl leading-relaxed">
-                เตรียมตัวให้พร้อม... เพราะความสนุกครั้งนี้มาพร้อมเสียงกรี๊ด ความหลอน
-                และเซอร์ไพรส์สุดขนหัวลุก!
+                เตรียมตัวให้พร้อม แล้วมาพบกันในค่ำคืนที่{' '}
+                <span className="font-bold text-halloween-orange">มีมากกว่าผี!</span>
               </p>
 
                 <div className="flex items-start gap-2 lg:gap-3 mt-3 sm:mt-4 lg:mt-5 text-halloween-bone">
@@ -269,30 +273,14 @@ export default function RegistrationPage() {
                   กิจกรรมที่คุณต้องลอง
                 </h2>
                 <ul className="space-y-2 lg:space-y-3 text-sm sm:text-base lg:text-lg xl:text-xl text-halloween-bone">
-                  <li className="flex items-center gap-3">
-                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
-                      <Doodle name="moon" className="max-w-full max-h-full w-auto h-auto -rotate-6" />
-                    </span>
-                    หนังกลางแปลงสุดหลอน
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
-                      <Doodle name="tombstone" className="max-w-full max-h-full w-auto h-auto rotate-3" />
-                    </span>
-                    บ้านผีสิงที่แค่เดินผ่านก็ใจสั่น
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
-                      <Doodle name="witch-hat" className="max-w-full max-h-full w-auto h-auto -rotate-3" />
-                    </span>
-                    โชว์สุดพิเศษ
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="w-7 h-7 flex items-center justify-center shrink-0">
-                      <Doodle name="potion" className="max-w-full max-h-full w-auto h-auto rotate-6" />
-                    </span>
-                    ร้านค้านิสิตมากมาย
-                  </li>
+                  {EVENT_HIGHLIGHTS.map((item) => (
+                    <li key={item.label} className="flex items-center gap-3">
+                      <span className="w-7 h-7 flex items-center justify-center shrink-0">
+                        <Doodle name={item.icon} className={`max-w-full max-h-full w-auto h-auto ${item.tilt}`} />
+                      </span>
+                      {item.label}
+                    </li>
+                  ))}
                 </ul>
               </div>
 

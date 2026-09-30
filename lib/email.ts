@@ -24,7 +24,7 @@ export interface SendEmailOptions {
 export async function sendEmail(options: SendEmailOptions) {
   try {
     const info = await transporter.sendMail({
-      from: `"SHIVIDNI PHEEDU 2026" <${process.env.GMAIL_USER}>`,
+      from: `"SHIVIDNI PHEEDU" <${process.env.GMAIL_USER}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,

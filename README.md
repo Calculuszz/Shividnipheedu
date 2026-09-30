@@ -1,6 +1,6 @@
-# SHIVIDNI PHEEDU 2026
+# SHIVIDNI PHEEDU
 
-Official website for **SHIVIDNI PHEEDU 2026**, a Halloween event co-hosted by the Faculty of Commerce and Accountancy, the Faculty of Engineering, and the Faculty of Communication Arts, Chulalongkorn University.
+Official website for **SHIVIDNI PHEEDU**, a Halloween event co-hosted by the Faculty of Commerce and Accountancy, the Faculty of Engineering, and the Faculty of Communication Arts, Chulalongkorn University.
 
 Attendees register, receive a QR ticket, and explore the event from their phones. Staff check people in by scanning QR codes and can export the full attendee list to Excel.
 
@@ -17,8 +17,8 @@ Attendees register, receive a QR ticket, and explore the event from their phones
 | **Student ID login** | Log in with a student ID, no password needed |
 | **My Ticket** | QR code for check-in plus live check-in status |
 | **Ghost Quiz** | 10 questions, 7 ghost type results |
-| **Event Map** | Venue map and student vendor booth list *(content not yet updated for 2026)* |
-| **Event Schedule** | Main stage timeline and performances *(content not yet updated for 2026)* |
+| **Event Map** | Venue map and student vendor booth list *(content not yet updated for this event)* |
+| **Event Schedule** | Main stage timeline and performances *(content not yet updated for this event)* |
 
 ### For staff (`/admin`)
 

@@ -404,7 +404,7 @@ function AttendanceTable() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `SHIVIDNI-PHEEDU-2026-registrations-${today}.xlsx`;
+      link.download = `SHIVIDNI-PHEEDU-registrations-${today}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {

@@ -98,7 +98,7 @@ export default function MenuPage() {
         {/* Header */}
         <div className="text-center shrink-0">
           <h1 className="display-font text-3xl sm:text-4xl text-halloween-orange -rotate-2">
-            <EventName withYear={false} />
+            <EventName />
           </h1>
         </div>
 
