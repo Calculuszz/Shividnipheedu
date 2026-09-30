@@ -1,5 +1,5 @@
 -- ============================================
--- SHIVIDTIDPHEE 2025 - Complete Database Schema
+-- SHIVIDNI PHEEDU 2026 - Complete Database Schema
 -- ============================================
 -- This is the complete, consolidated schema for the registrations system.
 -- Run this in your Supabase SQL Editor to set up everything.

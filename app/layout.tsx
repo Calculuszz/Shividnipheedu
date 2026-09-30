@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SHIVIDNI PHEEDU 2026",
+  title: "Shividnipheedu",
   description: "SHIVIDNI PHEEDU Halloween Event - Games, Schedule, and Registration",
   icons: {
     icon: [

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Generate QR code
-    const qrData = `SHIVIDTIDPHEE-${studentId}-${Date.now()}`;
+    const qrData = `SHIVIDNIPHEEDU-${studentId}-${Date.now()}`;
     let qrCodeDataUrl = '';
 
     try {
