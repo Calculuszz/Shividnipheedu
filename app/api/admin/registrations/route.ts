@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET ?mode=all                      -> every row (Excel export)
 // GET ?mode=recent                   -> last 20 check-ins (scanner sidebar)
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return unauthorized();
+  if (!isAdminRequest(request, 'registration')) return unauthorized();
 
   const url = new URL(request.url);
   const mode = url.searchParams.get('mode') || 'page';
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
 
 // PATCH { id, attended } -> manual check-in toggle from the table
 export async function PATCH(request: Request) {
-  if (!isAdminRequest(request)) return unauthorized();
+  if (!isAdminRequest(request, 'registration')) return unauthorized();
 
   try {
     const { id, attended } = await request.json();

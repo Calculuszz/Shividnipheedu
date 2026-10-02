@@ -71,8 +71,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Admin dashboard password
-ADMIN_PASSWORD=choose-a-strong-password
+# Staff passwords, one per group (the password decides which dashboard opens)
+ADMIN_PASSWORD=choose-a-strong-password            # registration team (/admin)
+ADMIN_PASSWORD_ESCAPE_ROOM=another-strong-password  # /admin/escape-room
+ADMIN_PASSWORD_HAUNTED_HOUSE=a-third-password       # /admin/haunted-house
 
 # Optional: confirmation emails
 GMAIL_USER=your-account@gmail.com
@@ -87,7 +89,8 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-side key, never expose to the client |
-| `ADMIN_PASSWORD` | ✅ | Always set this in production |
+| `ADMIN_PASSWORD` | ✅ | Registration team password. Always set this in production |
+| `ADMIN_PASSWORD_ESCAPE_ROOM` / `ADMIN_PASSWORD_HAUNTED_HOUSE` | ➖ | Escape Room / Haunted House staff. Each password must be different |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | ➖ | Without them, registration still works but no email is sent |
 | `NEXT_PUBLIC_SITE_URL` | ➖ | Falls back to the Vercel production domain, then `http://localhost:3000` |
 

@@ -66,8 +66,15 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Escape Room / Haunted House passwords lead to their own pages
+        if (data.role !== 'registration') {
+          window.location.replace(data.home);
+          return;
+        }
         setIsAuthenticated(true);
         setError('');
+      } else if (response.status === 429) {
+        setError('ลองผิดหลายครั้งเกินไป รอสักครู่แล้วลองใหม่นะ');
       } else {
         setError('รหัสผิด ประตูห้องผียังไม่ยอมเปิด');
       }

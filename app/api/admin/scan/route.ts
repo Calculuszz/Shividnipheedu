@@ -4,7 +4,7 @@ import { isAdminRequest, unauthorized } from '@/lib/adminAuth';
 
 // POST { qr } -> { status: 'not_found' | 'already' | 'checked_in', row? }
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return unauthorized();
+  if (!isAdminRequest(request, 'registration')) return unauthorized();
 
   try {
     const { qr } = await request.json();
