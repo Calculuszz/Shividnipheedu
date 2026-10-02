@@ -10,7 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Server-side client with service role key (only use on server)
+// Server-side client with service role key (only use on server).
+// Tables have no anon policies, so without this key the API routes can't read or write.
+if (typeof window === 'undefined' && !supabaseServiceKey) {
+  console.warn('SUPABASE_SERVICE_ROLE_KEY is missing: API routes will not be able to access the database.');
+}
+
 export const supabaseAdmin = createClient(
   supabaseUrl,
   supabaseServiceKey || supabaseAnonKey

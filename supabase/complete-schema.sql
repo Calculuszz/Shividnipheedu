@@ -58,24 +58,9 @@ ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 -- 4. CREATE POLICIES
 -- ============================================
 
--- Allow public inserts (for registration)
-CREATE POLICY "Allow public insert" ON registrations
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
--- Allow public select (for QR verification and login)
-CREATE POLICY "Allow public select" ON registrations
-  FOR SELECT
-  TO anon
-  USING (true);
-
--- Allow public updates (for attendance marking)
-CREATE POLICY "Allow public update" ON registrations
-  FOR UPDATE
-  TO anon
-  USING (true)
-  WITH CHECK (true);
+-- No policies on purpose: the browser (anon key) gets no access at all.
+-- All reads/writes go through the Next.js API routes with the service role key
+-- (supabaseAdmin), which bypasses RLS. See supabase/lockdown-registrations.sql.
 
 -- ============================================
 -- 5. VERIFICATION QUERY

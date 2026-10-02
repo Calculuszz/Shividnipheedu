@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +14,11 @@ export async function POST(request: Request) {
     }
 
     // Update the user's ghost result
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('registrations')
       .update({ ghost_result: ghostResult })
       .eq('student_id', studentId)
-      .select()
+      .select('student_id')
       .single();
 
     if (error) {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Save ghost result error:', error);
     return NextResponse.json(

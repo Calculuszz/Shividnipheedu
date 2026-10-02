@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
 import jsQR from 'jsqr';
 import BackButton from '@/components/BackButton';
 import EventName from '@/components/EventName';
@@ -26,6 +25,21 @@ type Registration = {
 };
 
 type TabType = 'attendance' | 'scanner';
+
+// Admin data goes through server routes (httpOnly session cookie); the browser
+// never queries the registrations table directly.
+async function adminFetch(url: string, init?: RequestInit) {
+  const response = await fetch(url, { ...init, credentials: 'same-origin' });
+  if (response.status === 401) {
+    // Session expired: back to the password screen
+    window.location.reload();
+    throw new Error('Unauthorized');
+  }
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json();
+}
+
+const POLL_MS = 5000;
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -146,7 +160,10 @@ export default function AdminPage() {
             </div>
             <button
               type="button"
-              onClick={() => setIsAuthenticated(false)}
+              onClick={async () => {
+                await fetch('/api/admin/login', { method: 'DELETE' }).catch(() => {});
+                setIsAuthenticated(false);
+              }}
               className="bg-halloween-red hover:bg-halloween-orange text-halloween-dark px-4 py-2 rounded transition-colors font-iannnnn-owl"
             >
               ออกจากระบบ
@@ -181,99 +198,32 @@ function AttendanceTable() {
   useEffect(() => {
     fetchRegistrations();
 
-    // Optimized: Only update the changed row instead of refetching everything
-    const channel = supabase
-      .channel('registrations-changes')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'registrations' },
-        (payload) => {
-          // Update only the changed record
-          setRegistrations((prev) =>
-            prev.map((reg) =>
-              reg.id === payload.new.id ? (payload.new as Registration) : reg
-            )
-          );
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'registrations' },
-        () => {
-          // Refetch on new registration
-          fetchRegistrations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Keep the table fresh while it's open (other scanners check people in)
+    const timer = setInterval(fetchRegistrations, POLL_MS);
+    return () => clearInterval(timer);
   }, [currentPage, searchQuery]);
 
   const fetchRegistrations = async () => {
     try {
-      let query = supabase.from('registrations').select('*', { count: 'exact' });
-
-      // Apply search filter if exists
-      if (searchQuery.trim()) {
-        query = query.ilike('student_id', `%${searchQuery.trim()}%`);
-      }
-
-      // Get total count with filter
-      const { count } = await query;
-      setTotalCount(count || 0);
-
-      // Get checked-in count
-      let checkedInQuery = supabase
-        .from('registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('attended', true);
-
-      if (searchQuery.trim()) {
-        checkedInQuery = checkedInQuery.ilike('student_id', `%${searchQuery.trim()}%`);
-      }
-
-      const { count: attendedCount } = await checkedInQuery;
-      setCheckedInCount(attendedCount || 0);
-
-      // Get played game count (users with ghost_result not null)
-      let playedGameQuery = supabase
-        .from('registrations')
-        .select('*', { count: 'exact', head: true })
-        .not('ghost_result', 'is', null);
-
-      if (searchQuery.trim()) {
-        playedGameQuery = playedGameQuery.ilike('student_id', `%${searchQuery.trim()}%`);
-      }
-
-      const { count: playedCount } = await playedGameQuery;
-      setPlayedGameCount(playedCount || 0);
+      const params = new URLSearchParams({
+        mode: 'page',
+        page: String(currentPage),
+        pageSize: String(itemsPerPage),
+        search: searchQuery.trim(),
+      });
+      const data = await adminFetch(`/api/admin/registrations?${params}`);
+      setTotalCount(data.total);
+      setCheckedInCount(data.checkedIn);
+      setPlayedGameCount(data.played);
 
       // Reset to page 1 if search changes and current page is out of bounds
-      const maxPage = Math.ceil((count || 0) / itemsPerPage);
+      const maxPage = Math.ceil(data.total / itemsPerPage);
       if (currentPage > maxPage && maxPage > 0) {
         setCurrentPage(1);
         return;
       }
 
-      // Fetch paginated data
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      let dataQuery = supabase.from('registrations').select('*');
-
-      // Apply search filter
-      if (searchQuery.trim()) {
-        dataQuery = dataQuery.ilike('student_id', `%${searchQuery.trim()}%`);
-      }
-
-      const { data, error } = await dataQuery
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      setRegistrations(data || []);
+      setRegistrations(data.rows);
     } catch (error) {
       console.error('Error fetching registrations:', error);
     } finally {
@@ -299,13 +249,11 @@ function AttendanceTable() {
     setCheckedInCount((prev) => (!currentStatus ? prev + 1 : prev - 1));
 
     try {
-      const { error } = await supabase
-        .from('registrations')
-        .update({
-          attended: !currentStatus,
-          attended_at: !currentStatus ? new Date().toISOString() : null,
-        })
-        .eq('id', id);
+      const error = await adminFetch('/api/admin/registrations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, attended: !currentStatus }),
+      }).then(() => null, (e) => e);
 
       if (error) {
         // Revert optimistic updates on error
@@ -333,19 +281,9 @@ function AttendanceTable() {
     setExportError('');
 
     try {
-      // Supabase caps each request at 1000 rows, so page through everything
-      const pageSize = 1000;
-      const allRows: Record<string, unknown>[] = [];
-      for (let from = 0; ; from += pageSize) {
-        const { data, error } = await supabase
-          .from('registrations')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        allRows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-      }
+      const { rows: allRows } = (await adminFetch('/api/admin/registrations?mode=all')) as {
+        rows: Record<string, unknown>[];
+      };
 
       const formatDate = (value: unknown) =>
         value
@@ -685,39 +623,19 @@ function QRScanner({ onExit }: { onExit: () => void }) {
 
   // Subscribe to real-time attendance updates
   useEffect(() => {
-    // Fetch initial recent attendees
+    // Recent check-ins from every scanner, refreshed while the scanner is open
     const fetchRecentAttendees = async () => {
-      const { data } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('attended', true)
-        .order('attended_at', { ascending: false })
-        .limit(20);
-
-      if (data) setRecentAttendees(data);
+      try {
+        const data = await adminFetch('/api/admin/registrations?mode=recent');
+        setRecentAttendees(data.rows);
+      } catch (error) {
+        console.error('Error fetching recent attendees:', error);
+      }
     };
 
     fetchRecentAttendees();
-
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('scanner-attendance')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'registrations', filter: 'attended=eq.true' },
-        (payload) => {
-          setRecentAttendees((prev) => {
-            const newAttendee = payload.new as Registration;
-            // Add to top and keep only 20
-            return [newAttendee, ...prev.filter(a => a.id !== newAttendee.id)].slice(0, 20);
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const timer = setInterval(fetchRecentAttendees, POLL_MS);
+    return () => clearInterval(timer);
   }, []);
 
   // Request camera permission and start scanning
@@ -879,20 +797,20 @@ function QRScanner({ onExit }: { onExit: () => void }) {
     setProcessing(true);
 
     try {
-      // Optimistic update: Update directly using QR code (indexed column)
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('qr_code', decodedText)
-        .single();
+      const scan = await adminFetch('/api/admin/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr: decodedText }),
+      });
+      const data = scan.row as Registration | undefined;
 
-      if (error || !data) {
+      if (scan.status === 'not_found' || !data) {
         // QR not found - silently ignore and continue scanning
         setProcessing(false);
         return;
       }
 
-      if (data.attended) {
+      if (scan.status === 'already') {
         setResult({
           success: false,
           message: `${data.full_name} เช็คอินแล้ว`,
@@ -902,24 +820,8 @@ function QRScanner({ onExit }: { onExit: () => void }) {
         return;
       }
 
-      // Update using QR code directly (faster, uses index)
-      const { error: updateError } = await supabase
-        .from('registrations')
-        .update({
-          attended: true,
-          attended_at: new Date().toISOString(),
-        })
-        .eq('qr_code', decodedText)
-        .eq('attended', false); // Double-check to prevent race conditions
-
-      if (updateError) throw updateError;
-
-      // Immediately update the recent attendees list with full data
-      const updatedAttendee: Registration = {
-        ...data,
-        attended: true,
-        attended_at: new Date().toISOString()
-      };
+      // Server already marked the check-in (only if it wasn't checked in yet)
+      const updatedAttendee: Registration = data;
 
       // Optimistically update the list - add to top immediately
       setRecentAttendees((prev) => {

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
-import { supabase } from '@/lib/supabase';
 import LoadingScreen from '@/components/LoadingScreen';
 
 export default function MyTicketPage() {
@@ -21,15 +20,16 @@ export default function MyTicketPage() {
         return;
       }
 
-      // Fetch fresh data from Supabase to get latest attended status
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('student_id', studentId)
-        .single();
+      // Fetch fresh data (via the server) to get latest attended status
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+      }).catch(() => null);
+      const data = response && response.ok ? (await response.json()).user : null;
 
-      if (error || !data) {
-        console.error('Error fetching user data:', error);
+      if (!data) {
+        console.error('Error fetching user data');
         router.push('/');
         return;
       }
