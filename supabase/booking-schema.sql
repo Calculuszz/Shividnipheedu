@@ -9,11 +9,12 @@
 -- or write anything here. All reads/writes go through Next.js API routes using the
 -- service role key (supabaseAdmin), and every seat-changing action goes through the
 -- booking_* functions below, which lock the round row so two teams can never take
--- the same seats.
+-- the same seats. Staff log in with a per-group password (registration /
+-- escape_room / haunted_house) checked by the Next.js server, not by this database.
 --
 -- Times are timestamptz everywhere. Seed with an explicit +07 offset.
--- Run in the Supabase SQL Editor. Safe to re-run (drops nothing, uses IF NOT EXISTS
--- / OR REPLACE).
+-- Run in the Supabase SQL Editor. Safe to re-run: tables use IF NOT EXISTS, views
+-- and functions are dropped and recreated (they hold no data).
 -- ============================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
@@ -26,6 +27,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 CREATE TABLE IF NOT EXISTS booking_activities (
   id TEXT PRIMARY KEY,                                   -- 'escape_room', 'haunted_house'
   name TEXT NOT NULL,
+  room_name TEXT,                                        -- shown on the landing, ticket and My booking
+  details_md TEXT,                                       -- theme and story, Markdown
+  rules_md TEXT,                                         -- room rules page, Markdown
+  health_notice TEXT,                                    -- health & safety, Markdown
   team_min INT NOT NULL DEFAULT 1 CHECK (team_min >= 1),
   team_max INT NOT NULL DEFAULT 1,
   online_seats INT NOT NULL CHECK (online_seats >= 0),   -- default per round
@@ -61,7 +66,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   activity_id TEXT NOT NULL REFERENCES booking_activities(id),
   round_id UUID NOT NULL REFERENCES booking_rounds(id),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled')),
-  notes TEXT,
+  notes TEXT,                                            -- special restrictions (optional)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -86,8 +91,9 @@ CREATE TABLE IF NOT EXISTS booking_players (
   pdpa_accepted_at TIMESTAMPTZ NOT NULL,
   rules_accepted_at TIMESTAMPTZ NOT NULL,
   checked_in_at TIMESTAMPTZ,
-  checked_in_by TEXT,                                    -- staff email
+  checked_in_by TEXT,                                    -- staff group that checked them in
   cancelled_at TIMESTAMPTZ,                              -- set for cancelled and removed
+  released_notified_at TIMESTAMPTZ,                      -- "your seat was released" email sent
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (booking_id, position)
 );
@@ -103,22 +109,27 @@ CREATE TABLE IF NOT EXISTS booking_walkins (
   phone TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'queued'
     CHECK (status IN ('queued', 'checked_in', 'left')),
-  created_by TEXT,                                       -- staff email
+  created_by TEXT,                                       -- staff group
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   checked_in_at TIMESTAMPTZ
 );
 
--- Google accounts allowed into the booking admin.
-CREATE TABLE IF NOT EXISTS booking_admins (
-  email TEXT PRIMARY KEY,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- Upgrades for databases created from an earlier version of this file.
+ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS room_name TEXT;
+ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS details_md TEXT;
+ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS rules_md TEXT;
+ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS health_notice TEXT;
+ALTER TABLE booking_players ADD COLUMN IF NOT EXISTS released_notified_at TIMESTAMPTZ;
+-- Staff log in with group passwords now, not Google accounts.
+DROP TABLE IF EXISTS booking_admins;
 
 -- ============================================
 -- 2. INDEXES
 -- ============================================
 
 -- 1 person = 1 round per activity. Cancelled/removed rows don't block re-booking.
+-- A released player still holds this index slot, which is fine: booking closes
+-- before event day, and walk-ins live in their own table.
 CREATE UNIQUE INDEX IF NOT EXISTS booking_players_one_per_activity
   ON booking_players (activity_id, student_id)
   WHERE status IN ('booked', 'checked_in');
@@ -143,14 +154,19 @@ ALTER TABLE booking_rounds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE booking_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE booking_walkins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE booking_admins ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- 4. VIEWS (security_invoker: the anon key sees nothing through them either)
 -- ============================================
 
+-- Dropped first because booking_players_live expands p.*, and new table columns
+-- would otherwise make CREATE OR REPLACE fail.
+DROP VIEW IF EXISTS booking_round_availability;
+DROP VIEW IF EXISTS booking_players_live;
+DROP VIEW IF EXISTS booking_round_times;
+
 -- Round times with activity defaults applied.
-CREATE OR REPLACE VIEW booking_round_times WITH (security_invoker = on) AS
+CREATE VIEW booking_round_times WITH (security_invoker = on) AS
 SELECT
   r.id,
   r.activity_id,
@@ -169,7 +185,7 @@ FROM booking_rounds r
 JOIN booking_activities a ON a.id = r.activity_id;
 
 -- Players with the time-based 'released' status filled in.
-CREATE OR REPLACE VIEW booking_players_live WITH (security_invoker = on) AS
+CREATE VIEW booking_players_live WITH (security_invoker = on) AS
 SELECT
   p.*,
   t.round_no,
@@ -184,15 +200,16 @@ FROM booking_players p
 JOIN booking_round_times t ON t.id = p.round_id;
 
 -- Seats per round, for the round list, dashboard and walk-in desk.
--- walkin_left = walk-in seats + released + cancelled after booking closed - walk-ins already in.
-CREATE OR REPLACE VIEW booking_round_availability WITH (security_invoker = on) AS
+-- walkin_left = fixed walk-in seats + released + cancelled after online booking closed
+--               - walk-ins already in. Online seats nobody booked stay empty.
+CREATE VIEW booking_round_availability WITH (security_invoker = on) AS
 SELECT
   c.*,
   CASE
     WHEN c.closed THEN 'closed'
     WHEN NOW() >= c.ends_at THEN 'ended'
     WHEN NOW() >= c.starts_at THEN 'in_progress'
-    WHEN c.booking_closes_at IS NOT NULL AND NOW() > c.booking_closes_at THEN
+    WHEN c.booking_closed THEN
       CASE WHEN c.walkin_left > 0 THEN 'walkin_available' ELSE 'full' END
     WHEN c.online_left <= 0 THEN 'full'
     ELSE 'available'
@@ -200,6 +217,7 @@ SELECT
 FROM (
   SELECT
     t.*,
+    b.booking_closed,
     s.online_taken,
     t.online_cap - s.online_taken AS online_left,
     s.checked_in,
@@ -209,6 +227,9 @@ FROM (
     w.walkin_queued,
     t.walkin_cap + s.released + s.cancelled_late - w.walkin_in AS walkin_left
   FROM booking_round_times t
+  CROSS JOIN LATERAL (
+    SELECT t.booking_closes_at IS NOT NULL AND NOW() > t.booking_closes_at AS booking_closed
+  ) b
   CROSS JOIN LATERAL (
     SELECT
       COUNT(*) FILTER (WHERE p.status IN ('booked', 'checked_in')) AS online_taken,
@@ -238,7 +259,14 @@ FROM (
 -- ROUND_NOT_FOUND, ROUND_CLOSED, BOOKING_NOT_OPEN, BOOKING_CLOSED, TEAM_SIZE,
 -- INVALID_PLAYER, DUPLICATE_IN_TEAM:<sid>, ALREADY_BOOKED:<sid>, NOT_ENOUGH_SEATS:<left>,
 -- NOT_FOUND, NOT_LEADER, SAME_ROUND, TOO_LATE, NOT_CANCELLABLE, CANNOT_REMOVE_LEADER,
--- CHECKIN_NOT_OPEN, CHECKIN_CLOSED, ALREADY_CHECKED_IN
+-- CHECKIN_NOT_OPEN, CHECKIN_CLOSED, ALREADY_CHECKED_IN, TRY_AGAIN, TOO_EARLY
+--
+-- Functions that return people for emails return {full_name, email} objects; the API
+-- sends one email per person and never passes another person's code to the browser.
+
+-- Signatures that changed since the first version.
+DROP FUNCTION IF EXISTS booking_check_in(UUID, TEXT);
+DROP FUNCTION IF EXISTS booking_add_walkin(UUID, TEXT, TEXT, TEXT, TEXT);
 
 -- Personal code like 'SVP-7K3QX9'. No 0/O/1/I/L to avoid misreading.
 CREATE OR REPLACE FUNCTION booking_new_code()
@@ -258,7 +286,9 @@ BEGIN
 END;
 $$;
 
--- Is this student already holding a seat (online or walk-in) under the activity's scope?
+-- Is this student holding a seat (online or walk-in) under the activity's scope?
+-- A released online seat (missed check-in) no longer counts, so that person can
+-- still come as a walk-in.
 CREATE OR REPLACE FUNCTION booking_student_taken(p_activity_id TEXT, p_student_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -266,10 +296,10 @@ STABLE
 SET search_path = public
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM booking_players p
+    SELECT 1 FROM booking_players_live p
     JOIN booking_activities a ON a.id = p_activity_id
     WHERE p.student_id = p_student_id
-      AND p.status IN ('booked', 'checked_in')
+      AND p.live_status IN ('booked', 'checked_in')
       AND (a.one_per_person_scope = 'global' OR p.activity_id = p_activity_id)
   ) OR EXISTS (
     SELECT 1 FROM booking_walkins w
@@ -278,6 +308,44 @@ AS $$
       AND w.status IN ('queued', 'checked_in')
       AND (a.one_per_person_scope = 'global' OR w.activity_id = p_activity_id)
   );
+$$;
+
+-- Lock the player's round, then the player row, and return the player id.
+-- Callers re-read the row after this, so a check-in or cancel that committed while
+-- we waited is seen. Same lock order as booking_book_team (round first) so the
+-- two can't deadlock.
+CREATE OR REPLACE FUNCTION booking_lock_by_code(p_code TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_round UUID;
+  v_id UUID;
+BEGIN
+  FOR attempt IN 1..3 LOOP
+    SELECT round_id INTO v_round FROM booking_players WHERE code = p_code;
+    IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
+    PERFORM 1 FROM booking_rounds WHERE id = v_round FOR UPDATE;
+    SELECT id INTO v_id FROM booking_players WHERE code = p_code AND round_id = v_round FOR UPDATE;
+    IF FOUND THEN RETURN v_id; END IF;
+    -- The team moved to another round between the two reads; go again.
+  END LOOP;
+  RAISE EXCEPTION 'TRY_AGAIN';
+END;
+$$;
+
+-- {full_name, email} of the team's current active leader, or NULL.
+CREATE OR REPLACE FUNCTION booking_leader_contact(p_booking_id UUID)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object('id', id, 'full_name', full_name, 'email', email)
+  FROM booking_players
+  WHERE booking_id = p_booking_id AND is_leader AND status IN ('booked', 'checked_in')
+  LIMIT 1;
 $$;
 
 -- Book a whole team. p_players: [{student_id, full_name, phone, email, pdpa, rules}, ...]
@@ -353,6 +421,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'booking_id', v_booking,
+    'round_id', p_round_id,
     'players', (
       SELECT jsonb_agg(jsonb_build_object(
         'full_name', full_name, 'email', email, 'code', code, 'is_leader', is_leader
@@ -367,7 +436,8 @@ END;
 $$;
 
 -- Leader moves the whole team. Allowed until booking closes, only into a round with room.
--- Returns {round_id, players:[{full_name,email,code}]} for the "round changed" email.
+-- Returns {round_id, players:[{full_name,email,code}]} for the "round changed" email
+-- (code is included so the email can repeat each person's own QR).
 CREATE OR REPLACE FUNCTION booking_change_round(p_leader_code TEXT, p_new_round_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -375,37 +445,41 @@ SET search_path = public
 AS $$
 DECLARE
   leader booking_players%ROWTYPE;
-  b bookings%ROWTYPE;
   nr booking_round_times%ROWTYPE;
+  v_old_round UUID;
   n INT;
   taken INT;
 BEGIN
-  SELECT * INTO leader FROM booking_players
-  WHERE code = p_leader_code AND is_leader AND status = 'booked';
-  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
-  SELECT * INTO b FROM bookings WHERE id = leader.booking_id;
-  IF b.round_id = p_new_round_id THEN RAISE EXCEPTION 'SAME_ROUND'; END IF;
+  SELECT round_id INTO v_old_round FROM booking_players WHERE code = p_leader_code;
+  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
+  IF v_old_round = p_new_round_id THEN RAISE EXCEPTION 'SAME_ROUND'; END IF;
 
   -- Lock both rounds in a fixed order so two teams swapping rounds can't deadlock.
-  PERFORM 1 FROM booking_rounds WHERE id IN (b.round_id, p_new_round_id) ORDER BY id FOR UPDATE;
+  PERFORM 1 FROM booking_rounds WHERE id IN (v_old_round, p_new_round_id) ORDER BY id FOR UPDATE;
 
-  SELECT * INTO nr FROM booking_round_times WHERE id = p_new_round_id AND activity_id = b.activity_id;
+  -- Re-read under the lock: the leader may have cancelled or been replaced meanwhile.
+  SELECT * INTO leader FROM booking_players WHERE code = p_leader_code FOR UPDATE;
+  IF leader.round_id <> v_old_round THEN RAISE EXCEPTION 'TRY_AGAIN'; END IF;
+  IF NOT leader.is_leader OR leader.status <> 'booked' THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
+
+  SELECT * INTO nr FROM booking_round_times WHERE id = p_new_round_id AND activity_id = leader.activity_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'ROUND_NOT_FOUND'; END IF;
   IF nr.booking_closes_at IS NOT NULL AND NOW() > nr.booking_closes_at THEN RAISE EXCEPTION 'TOO_LATE'; END IF;
   IF nr.closed OR NOW() >= nr.checkin_opens_at THEN RAISE EXCEPTION 'ROUND_CLOSED'; END IF;
 
-  SELECT COUNT(*) INTO n FROM booking_players WHERE booking_id = b.id AND status IN ('booked', 'checked_in');
+  SELECT COUNT(*) INTO n FROM booking_players WHERE booking_id = leader.booking_id AND status IN ('booked', 'checked_in');
   SELECT COUNT(*) INTO taken FROM booking_players WHERE round_id = p_new_round_id AND status IN ('booked', 'checked_in');
   IF taken + n > nr.online_cap THEN RAISE EXCEPTION 'NOT_ENOUGH_SEATS:%', GREATEST(nr.online_cap - taken, 0); END IF;
 
-  UPDATE bookings SET round_id = p_new_round_id, updated_at = NOW() WHERE id = b.id;
-  UPDATE booking_players SET round_id = p_new_round_id WHERE booking_id = b.id;
+  UPDATE bookings SET round_id = p_new_round_id, updated_at = NOW() WHERE id = leader.booking_id;
+  UPDATE booking_players SET round_id = p_new_round_id WHERE booking_id = leader.booking_id;
 
   RETURN jsonb_build_object(
+    'booking_id', leader.booking_id,
     'round_id', p_new_round_id,
     'players', (
       SELECT jsonb_agg(jsonb_build_object('full_name', full_name, 'email', email, 'code', code) ORDER BY position)
-      FROM booking_players WHERE booking_id = b.id AND status IN ('booked', 'checked_in')
+      FROM booking_players WHERE booking_id = leader.booking_id AND status IN ('booked', 'checked_in')
     )
   );
 END;
@@ -438,79 +512,115 @@ END;
 $$;
 
 -- Anyone cancels their own seat, until check-in closes.
+-- Returns everything the emails need:
+--   cancelled  -> "you cancelled your seat"
+--   new_leader -> "you are the new team leader" (only when the leader cancelled)
+--   leader     -> "a member cancelled" (only when a member cancelled)
 CREATE OR REPLACE FUNCTION booking_cancel_seat(p_code TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 DECLARE
+  v_id UUID;
   p booking_players_live%ROWTYPE;
   new_leader UUID;
 BEGIN
-  SELECT * INTO p FROM booking_players_live WHERE code = p_code;
-  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
-  PERFORM 1 FROM booking_rounds WHERE id = p.round_id FOR UPDATE;
+  v_id := booking_lock_by_code(p_code);
+  SELECT * INTO p FROM booking_players_live WHERE id = v_id;
   IF p.status <> 'booked' THEN RAISE EXCEPTION 'NOT_CANCELLABLE'; END IF;
   IF NOW() > p.checkin_closes_at THEN RAISE EXCEPTION 'TOO_LATE'; END IF;
 
   UPDATE booking_players SET status = 'cancelled', cancelled_at = NOW(), is_leader = FALSE WHERE id = p.id;
   new_leader := booking_fix_team(p.booking_id);
 
-  RETURN jsonb_build_object('booking_id', p.booking_id, 'new_leader_id', new_leader);
+  RETURN jsonb_build_object(
+    'booking_id', p.booking_id,
+    'round_id', p.round_id,
+    'was_leader', p.is_leader,
+    'cancelled', jsonb_build_object('full_name', p.full_name, 'email', p.email),
+    'new_leader', CASE WHEN new_leader IS NOT NULL THEN booking_leader_contact(p.booking_id) END,
+    'leader', CASE WHEN NOT p.is_leader THEN booking_leader_contact(p.booking_id) END
+  );
 END;
 $$;
 
 -- Leader cancels everyone who hasn't checked in yet, until check-in closes.
+-- Returns {players:[{full_name,email}]} for the "team cancelled" email, plus
+-- new_leader if someone who already checked in is left holding the team.
 CREATE OR REPLACE FUNCTION booking_cancel_team(p_leader_code TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 DECLARE
+  v_id UUID;
   leader booking_players_live%ROWTYPE;
-  v_count INT;
+  v_players JSONB;
+  new_leader UUID;
 BEGIN
-  SELECT * INTO leader FROM booking_players_live WHERE code = p_leader_code AND is_leader AND status = 'booked';
-  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
-  PERFORM 1 FROM booking_rounds WHERE id = leader.round_id FOR UPDATE;
+  v_id := booking_lock_by_code(p_leader_code);
+  SELECT * INTO leader FROM booking_players_live WHERE id = v_id;
+  IF NOT leader.is_leader OR leader.status <> 'booked' THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
   IF NOW() > leader.checkin_closes_at THEN RAISE EXCEPTION 'TOO_LATE'; END IF;
 
-  UPDATE booking_players SET status = 'cancelled', cancelled_at = NOW(), is_leader = FALSE
-  WHERE booking_id = leader.booking_id AND status = 'booked';
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  PERFORM booking_fix_team(leader.booking_id);
+  WITH c AS (
+    UPDATE booking_players SET status = 'cancelled', cancelled_at = NOW(), is_leader = FALSE
+    WHERE booking_id = leader.booking_id AND status = 'booked'
+    RETURNING position, full_name, email
+  )
+  SELECT jsonb_agg(jsonb_build_object('full_name', full_name, 'email', email) ORDER BY position)
+  INTO v_players FROM c;
+  new_leader := booking_fix_team(leader.booking_id);
 
-  RETURN jsonb_build_object('booking_id', leader.booking_id, 'cancelled', v_count);
+  RETURN jsonb_build_object(
+    'booking_id', leader.booking_id,
+    'round_id', leader.round_id,
+    'cancelled', jsonb_array_length(v_players),
+    'players', v_players,
+    'new_leader', CASE WHEN new_leader IS NOT NULL THEN booking_leader_contact(leader.booking_id) END
+  );
 END;
 $$;
 
 -- Leader removes one member (not themselves), until check-in closes.
+-- Returns {removed:{full_name,email}} for the "you were removed" email.
 CREATE OR REPLACE FUNCTION booking_remove_member(p_leader_code TEXT, p_player_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 DECLARE
+  v_id UUID;
   leader booking_players_live%ROWTYPE;
   target booking_players%ROWTYPE;
 BEGIN
-  SELECT * INTO leader FROM booking_players_live WHERE code = p_leader_code AND is_leader AND status = 'booked';
-  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
-  PERFORM 1 FROM booking_rounds WHERE id = leader.round_id FOR UPDATE;
+  v_id := booking_lock_by_code(p_leader_code);
+  SELECT * INTO leader FROM booking_players_live WHERE id = v_id;
+  IF NOT leader.is_leader OR leader.status <> 'booked' THEN RAISE EXCEPTION 'NOT_LEADER'; END IF;
   IF NOW() > leader.checkin_closes_at THEN RAISE EXCEPTION 'TOO_LATE'; END IF;
 
-  SELECT * INTO target FROM booking_players WHERE id = p_player_id AND booking_id = leader.booking_id;
+  -- Same team = same round, which is already locked.
+  SELECT * INTO target FROM booking_players
+  WHERE id = p_player_id AND booking_id = leader.booking_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
   IF target.id = leader.id THEN RAISE EXCEPTION 'CANNOT_REMOVE_LEADER'; END IF;
   IF target.status <> 'booked' THEN RAISE EXCEPTION 'NOT_CANCELLABLE'; END IF;
 
   UPDATE booking_players SET status = 'removed', cancelled_at = NOW() WHERE id = target.id;
-  RETURN jsonb_build_object('booking_id', leader.booking_id, 'removed_id', target.id);
+  RETURN jsonb_build_object(
+    'booking_id', leader.booking_id,
+    'round_id', leader.round_id,
+    'removed_id', target.id,
+    'removed', jsonb_build_object('full_name', target.full_name, 'email', target.email)
+  );
 END;
 $$;
 
 -- Staff check-in (by QR -> code, or search -> player id), only inside the check-in window.
-CREATE OR REPLACE FUNCTION booking_check_in(p_player_id UUID, p_staff_email TEXT)
+-- p_activity_id is the staff group's activity, so escape room staff can't check in
+-- haunted house players by mistake.
+CREATE OR REPLACE FUNCTION booking_check_in(p_player_id UUID, p_activity_id TEXT, p_staff TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 SET search_path = public
@@ -518,16 +628,23 @@ AS $$
 DECLARE
   p booking_players_live%ROWTYPE;
 BEGIN
-  SELECT * INTO p FROM booking_players_live WHERE id = p_player_id;
+  SELECT * INTO p FROM booking_players_live WHERE id = p_player_id AND activity_id = p_activity_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
   IF p.status = 'checked_in' THEN RAISE EXCEPTION 'ALREADY_CHECKED_IN'; END IF;
   IF p.status <> 'booked' THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
   IF NOW() < p.checkin_opens_at THEN RAISE EXCEPTION 'CHECKIN_NOT_OPEN'; END IF;
   IF NOW() > p.checkin_closes_at THEN RAISE EXCEPTION 'CHECKIN_CLOSED'; END IF;
 
+  -- The status guard re-checks under the row lock, so a cancel that committed
+  -- after our read wins and we report it instead of checking in a cancelled seat.
   UPDATE booking_players
-  SET status = 'checked_in', checked_in_at = NOW(), checked_in_by = p_staff_email
+  SET status = 'checked_in', checked_in_at = NOW(), checked_in_by = p_staff
   WHERE id = p.id AND status = 'booked';
+  IF NOT FOUND THEN
+    SELECT * INTO p FROM booking_players_live WHERE id = p_player_id;
+    IF p.status = 'checked_in' THEN RAISE EXCEPTION 'ALREADY_CHECKED_IN'; END IF;
+    RAISE EXCEPTION 'NOT_FOUND';
+  END IF;
 
   RETURN jsonb_build_object('player_id', p.id, 'full_name', p.full_name, 'round_no', p.round_no);
 END;
@@ -535,7 +652,7 @@ $$;
 
 -- Staff adds a walk-in. Seat free now = checked in straight away; otherwise queued.
 CREATE OR REPLACE FUNCTION booking_add_walkin(
-  p_round_id UUID, p_student_id TEXT, p_full_name TEXT, p_phone TEXT, p_staff_email TEXT
+  p_round_id UUID, p_student_id TEXT, p_full_name TEXT, p_phone TEXT, p_staff TEXT
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -550,11 +667,16 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'ROUND_NOT_FOUND'; END IF;
   SELECT * INTO r FROM booking_round_availability WHERE id = p_round_id;
   IF r.closed OR NOW() >= r.ends_at THEN RAISE EXCEPTION 'ROUND_CLOSED'; END IF;
+  IF COALESCE(p_student_id, '') !~ '^[0-9]{10}$'
+     OR COALESCE(btrim(p_full_name), '') = ''
+     OR COALESCE(btrim(p_phone), '') = '' THEN
+    RAISE EXCEPTION 'INVALID_PLAYER';
+  END IF;
   IF booking_student_taken(r.activity_id, p_student_id) THEN RAISE EXCEPTION 'ALREADY_BOOKED:%', p_student_id; END IF;
 
   v_status := CASE WHEN r.walkin_left > 0 THEN 'checked_in' ELSE 'queued' END;
   INSERT INTO booking_walkins (activity_id, round_id, student_id, full_name, phone, status, created_by, checked_in_at)
-  VALUES (r.activity_id, p_round_id, p_student_id, btrim(p_full_name), btrim(p_phone), v_status, p_staff_email,
+  VALUES (r.activity_id, p_round_id, p_student_id, btrim(p_full_name), btrim(p_phone), v_status, p_staff,
           CASE WHEN v_status = 'checked_in' THEN NOW() END)
   RETURNING id INTO v_id;
 
@@ -589,36 +711,107 @@ BEGIN
 END;
 $$;
 
+-- "Your seat was released" emails. Released is computed from the clock, so something
+-- has to poll: the staff dashboard route (or a cron) calls this, gets the players
+-- whose check-in just closed, and sends the emails. Each player is returned once;
+-- SKIP LOCKED lets two pollers run at the same time without sending twice.
+CREATE OR REPLACE FUNCTION booking_claim_released(p_limit INT DEFAULT 50)
+RETURNS JSONB
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v JSONB;
+BEGIN
+  WITH due AS (
+    SELECT p.id FROM booking_players p
+    JOIN booking_round_times t ON t.id = p.round_id
+    WHERE p.status = 'booked' AND p.released_notified_at IS NULL AND NOW() > t.checkin_closes_at
+    ORDER BY t.checkin_closes_at
+    LIMIT p_limit
+    FOR UPDATE OF p SKIP LOCKED
+  ), marked AS (
+    UPDATE booking_players p SET released_notified_at = NOW()
+    FROM due WHERE p.id = due.id
+    RETURNING p.full_name, p.email, p.activity_id, p.round_id
+  )
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'full_name', full_name, 'email', email, 'activity_id', activity_id, 'round_id', round_id
+  )), '[]'::jsonb) INTO v FROM marked;
+  RETURN v;
+END;
+$$;
+
+-- Delete every booking and walk-in of one activity (the privacy policy promises
+-- deletion after the event). Staff export to Excel first. Refused until the
+-- activity's last round has ended, so it can't wipe live bookings by mistake.
+CREATE OR REPLACE FUNCTION booking_purge_activity(p_activity_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_players INT;
+  v_walkins INT;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM booking_rounds WHERE activity_id = p_activity_id) THEN
+    RAISE EXCEPTION 'NOT_FOUND';
+  END IF;
+  IF EXISTS (SELECT 1 FROM booking_rounds WHERE activity_id = p_activity_id AND ends_at > NOW()) THEN
+    RAISE EXCEPTION 'TOO_EARLY';
+  END IF;
+
+  DELETE FROM booking_players WHERE activity_id = p_activity_id;
+  GET DIAGNOSTICS v_players = ROW_COUNT;
+  DELETE FROM bookings WHERE activity_id = p_activity_id;
+  DELETE FROM booking_walkins WHERE activity_id = p_activity_id;
+  GET DIAGNOSTICS v_walkins = ROW_COUNT;
+
+  RETURN jsonb_build_object('players', v_players, 'walkins', v_walkins);
+END;
+$$;
+
 -- Only the server (service role) may call these.
 REVOKE EXECUTE ON FUNCTION
   booking_new_code(),
   booking_student_taken(TEXT, TEXT),
+  booking_lock_by_code(TEXT),
+  booking_leader_contact(UUID),
   booking_book_team(UUID, JSONB, TEXT),
   booking_change_round(TEXT, UUID),
   booking_fix_team(UUID),
   booking_cancel_seat(TEXT),
   booking_cancel_team(TEXT),
   booking_remove_member(TEXT, UUID),
-  booking_check_in(UUID, TEXT),
+  booking_check_in(UUID, TEXT, TEXT),
   booking_add_walkin(UUID, TEXT, TEXT, TEXT, TEXT),
-  booking_call_next_walkin(UUID)
+  booking_call_next_walkin(UUID),
+  booking_claim_released(INT),
+  booking_purge_activity(TEXT)
 FROM PUBLIC, anon, authenticated;
 
 -- ============================================
--- 6. MOCK SEED - Escape Room (numbers are placeholders until the brief is final)
+-- 6. SEED - Escape Room
 -- ============================================
+-- 22 Oct 2569 (2026), 1 room, 20 min play + 5 min buffer, 15 players per round
+-- split 4:1 = 12 online + 3 walk-in. Booking opens 18 Oct, closes 20 Oct (may be
+-- extended to 21 Oct: just change booking_closes_at). Staff-break rounds: set
+-- booking_rounds.closed = true once they are decided.
 -- Haunted House: add another row with its own numbers + its rounds, nothing else changes.
--- A round holds as many teams as its seats allow: 12 online seats = e.g. three teams of 4.
 -- Re-running this file applies the numbers below to the existing row.
 
 INSERT INTO booking_activities (
-  id, name, team_min, team_max, online_seats, walkin_seats,
+  id, name, details_md, health_notice, team_min, team_max, online_seats, walkin_seats,
   checkin_opens_before, checkin_duration, booking_opens_at, booking_closes_at
 ) VALUES (
-  'escape_room', 'Escape Room', 1, 4, 12, 3,
+  'escape_room', 'Escape Room',
+  NULL,
+  E'- **ห้องมืด** ภายในห้องมีแสงน้อยมาก โปรดเดินอย่างระมัดระวัง\n- **เสียงดัง** มีเสียงประกอบดังและเสียงที่เกิดขึ้นกะทันหัน\n- **แสงกะพริบ** มีแสงไฟกะพริบ อาจไม่เหมาะกับผู้ที่ไวต่อแสง\n\nไม่แนะนำสำหรับผู้ที่มีโรคหัวใจ โรคลมชัก ผู้ที่ตั้งครรภ์ หรือผู้ที่กลัวที่มืดหรือที่แคบ หากรู้สึกไม่สบายระหว่างเล่น แจ้งทีมงานได้ทันที',
+  1, 4, 12, 3,
   '30 minutes', '15 minutes',
-  '2026-10-12 09:00:00+07', '2026-10-18 23:59:00+07'
+  '2026-10-18 09:00:00+07', '2026-10-20 23:59:00+07'
 ) ON CONFLICT (id) DO UPDATE SET
+  health_notice = EXCLUDED.health_notice,
   team_min = EXCLUDED.team_min,
   team_max = EXCLUDED.team_max,
   online_seats = EXCLUDED.online_seats,
@@ -627,7 +820,16 @@ INSERT INTO booking_activities (
   checkin_duration = EXCLUDED.checkin_duration,
   booking_opens_at = EXCLUDED.booking_opens_at,
   booking_closes_at = EXCLUDED.booking_closes_at;
+-- Room name, story and rules are only filled while empty, so text edited later
+-- isn't overwritten by a re-run.
+UPDATE booking_activities SET
+  room_name = COALESCE(room_name, '[ชื่อห้อง]'),
+  details_md = COALESCE(details_md, E'**ธีม:** [ธีมสั้นๆ]\n\n[เรื่องย่อของห้อง 2–3 ประโยค]'),
+  rules_md = COALESCE(rules_md, E'1. [กฎข้อที่ 1]\n2. [กฎข้อที่ 2]\n3. [กฎข้อที่ 3]\n4. [กฎข้อที่ 4]')
+WHERE id = 'escape_room';
 
+-- Round 1 plays 17:00-17:20, then every 25 minutes; round 10 plays 20:45-21:05.
+-- Check-in for each round opens 30 minutes before it starts (16:30 for round 1).
 INSERT INTO booking_rounds (activity_id, round_no, starts_at, ends_at)
 SELECT
   'escape_room',
