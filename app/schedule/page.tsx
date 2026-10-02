@@ -4,11 +4,40 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
+import Doodle, { type DoodleName } from '@/components/Doodle';
+
+const MOVIE = {
+  title: 'คืนสยองห้องดับจิต',
+  original: 'The Mortuary Assistant',
+  poster: '/movie/the-mortuary-assistant.jpg',
+};
+
+const STAGE: { time: string; title: string; note?: string; movie?: boolean }[] = [
+  { time: '17:33', title: 'Intania Music Club', note: 'วงดนตรี' },
+  { time: '18:00', title: 'BANdSHI', note: 'วงดนตรี' },
+  { time: '18:27', title: 'ตุ้ยนุ้ยโยกเย้ก', note: 'วงดนตรี' },
+  { time: '18:48', title: 'Dance Performance', note: 'จาก 3 ชมรม' },
+  { time: '19:15', title: 'Dance Collab' },
+  { time: '19:30', title: 'ฉายหนังกลางแปลง', note: MOVIE.title, movie: true },
+];
+
+const ACTIVITIES: { name: string; note: string; stamp: string; icon: DoodleName; tilt: string }[] = [
+  { name: 'Escape Room', note: 'รอบละ 20 นาที · 17:00–21:05 น.', stamp: 'จองก่อน', icon: 'skull', tilt: '-rotate-1' },
+  { name: 'บ้านผีสิง', note: 'กล้าก็เข้ามา', stamp: 'หลอน', icon: 'tombstone', tilt: 'rotate-1' },
+  { name: 'หนังกลางแปลง', note: `${MOVIE.title} · 19:30 น.`, stamp: 'ฉายคืนนี้', icon: 'moon', tilt: '-rotate-[0.5deg]' },
+  { name: 'ดนตรีและการแสดง', note: 'ที่เวทีกลาง ตั้งแต่ 17:33 น.', stamp: 'เวที', icon: 'bat', tilt: 'rotate-[0.5deg]' },
+  { name: 'ร้านค้านิสิต', note: 'ของกินของใช้ตลอดงาน', stamp: 'ช้อป', icon: 'potion', tilt: '-rotate-1' },
+];
+
+// Strip of masking tape holding a card to the page
+function Tape({ className = '' }: { className?: string }) {
+  return <span aria-hidden="true" className={`absolute h-5 w-20 bg-halloween-cream/60 ${className}`} />;
+}
 
 export default function SchedulePage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showMovieModal, setShowMovieModal] = useState(false);
+  const [showPoster, setShowPoster] = useState(false);
 
   useEffect(() => {
     const studentId = localStorage.getItem('studentId');
@@ -18,6 +47,13 @@ export default function SchedulePage() {
     }
     setIsLoggedIn(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!showPoster) return;
+    const close = (e: KeyboardEvent) => e.key === 'Escape' && setShowPoster(false);
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [showPoster]);
 
   if (!isLoggedIn) {
     return (
@@ -36,7 +72,7 @@ export default function SchedulePage() {
         {/* Back Button */}
         <button
           onClick={() => router.push('/menu')}
-          className="self-start mb-4 sm:mb-6 flex items-center gap-2 text-halloween-orange hover:text-halloween-red transition-colors"
+          className="self-start mb-4 sm:mb-6 flex items-center gap-2 min-h-11 text-halloween-orange hover:text-halloween-red transition-colors"
         >
           <svg
             className="w-5 h-5 sm:w-6 sm:h-6"
@@ -54,108 +90,119 @@ export default function SchedulePage() {
           <span className="text-sm sm:text-base font-semibold">Back</span>
         </button>
 
-        {/* Centered Content */}
-        <div className="flex-1 flex items-center justify-center py-6">
-          <div className="w-full max-w-5xl space-y-6">
+        <div className="flex-1 flex justify-center pb-8">
+          <div className="w-full max-w-5xl">
             {/* Page Title */}
-            <div className="text-center mb-8">
-              <h2 className="title-font text-3xl sm:text-4xl md:text-5xl font-bold text-halloween-cream mb-6 text-center -rotate-2">
+            <div className="relative text-center mb-8">
+              <Doodle name="bat-small" className="absolute right-[8%] -top-2 w-12 rotate-12" />
+              <h1 className="title-font text-4xl sm:text-5xl text-halloween-orange -rotate-2">
                 Event Schedule
-              </h2>
-              <div className="inline-flex items-center gap-3 text-halloween-cream bg-halloween-charcoal/80 px-6 py-3 rounded-full border-2 border-halloween-orange/50">
-                <svg className="w-6 h-6 text-halloween-orange" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <div>
-                  <p className="font-bold text-lg font-iannnnn-owl">22 ตุลาคม 2569</p>
-                  <p className="text-sm text-halloween-orange font-iannnnn-owl">16:00 - 21:00 น.</p>
-                </div>
-              </div>
+              </h1>
+              <p className="inline-block mt-4 px-4 py-1.5 bg-halloween-cream text-halloween-charcoal font-bold text-base sm:text-lg hand-cut rotate-1">
+                พฤหัสฯ 22 ตุลาคม 2569 · 16:00–21:00 น.
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-5 px-4">
-              {/* Main Stage Schedule - Clean Timeline */}
-              <div className="bg-linear-to-br from-halloween-purple/25 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-purple/40 hand-cut p-5 shadow-xl">
-                <div className="mb-4 pb-3 border-b-2 border-halloween-purple/30">
-                  <h2 className="text-2xl font-black text-halloween-cream tracking-tight">
-                    MAIN STAGE
-                  </h2>
-                  <p className="text-halloween-cream text-xs font-bold mt-1 uppercase tracking-widest">Performance Schedule</p>
+            <div className="grid md:grid-cols-2 gap-8 md:gap-6 items-start">
+              {/* Main stage */}
+              <section className="relative bg-halloween-charcoal/90 border-2 border-halloween-orange hand-cut px-5 pt-7 pb-5 -rotate-[0.5deg] shadow-[0_16px_32px_-12px_rgba(0,0,0,0.6)]">
+                <Tape className="-top-2.5 left-1/2 -translate-x-1/2 rotate-3" />
+                <div className="flex items-end justify-between gap-3 mb-5">
+                  <div>
+                    <h2 className="display-font text-3xl text-halloween-cream leading-none">Main Stage</h2>
+                    <p className="text-halloween-gray text-sm mt-1">เวทีกลาง</p>
+                  </div>
+                  <Doodle name="pumpkin" className="w-12 -rotate-6 shrink-0" />
                 </div>
 
-                <div className="space-y-2.5">
-                  {[
-                    { time: '16:00', event: 'Register and Lost&Found' },
-                    { time: '17:35', event: 'Intania Music Club', type: 'Acoustic' },
-                    { time: '18:10', event: 'BANDSHI', type: 'Acoustic' },
-                    { time: '18:34', event: 'Dance Performance', artist: 'BANDSHI' },
-                    { time: '18:40', event: 'Dance Performance', artist: 'StepOut' },
-                    { time: '18:51', event: 'Collab Dance' },
-                    { time: '19:10', event: 'Movie Starts', title: 'The Conjuring', clickable: true },
-                  ].map((item, index) => (
-                    <div
-                      key={index}
-                      onClick={item.clickable ? () => setShowMovieModal(true) : undefined}
-                      className={`flex items-start gap-3 p-2.5 rounded-lg bg-halloween-dark/40 border-l-3 border-halloween-purple hover:bg-halloween-purple/20 hover:border-halloween-orange transition-all group ${item.clickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-halloween-purple/30' : ''}`}
-                    >
-                      <div className="shrink-0 pt-0.5">
-                        <div className="bg-halloween-orange px-2.5 py-1 rounded-md">
-                          <span className="font-black text-halloween-cream text-xs">{item.time}</span>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-halloween-cream font-bold text-sm group-hover:text-halloween-orange transition-colors">
-                          {item.event}
+                <ol className="relative">
+                  {/* Hand-drawn-ish dashed line down the timeline */}
+                  <span aria-hidden="true" className="absolute left-[calc(4.5rem+0.4375rem-1px)] top-2 bottom-2 border-l-2 border-dashed border-halloween-purple" />
+                  {STAGE.map((item) => (
+                    <li key={item.time} className="relative flex gap-4 py-2.5">
+                      <time className="w-14 shrink-0 text-right display-font text-xl text-halloween-orange leading-tight">
+                        {item.time}
+                      </time>
+                      <span
+                        aria-hidden="true"
+                        className={`relative z-10 mt-1.5 w-3.5 h-3.5 shrink-0 rounded-full border-2 ${
+                          item.movie ? 'bg-halloween-moon border-halloween-moon' : 'bg-halloween-charcoal border-halloween-orange'
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <p className={`font-bold text-base leading-snug ${item.movie ? 'text-halloween-moon' : 'text-halloween-cream'}`}>
+                          {item.title}
                         </p>
-                        {(item.type || item.artist || item.title) && (
-                          <p className="text-halloween-cream/70 text-xs mt-0.5">
-                            {item.type || item.artist || item.title}
-                          </p>
-                        )}
-                        {item.clickable && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <svg className="w-3 h-3 text-halloween-orange animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            <span className="text-halloween-orange text-[10px] font-bold uppercase tracking-wider animate-pulse">Click to reveal movie</span>
-                          </div>
+                        {item.note && <p className="text-halloween-gray text-sm">{item.note}</p>}
+                        {item.movie && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPoster(true)}
+                            className="mt-1.5 min-h-11 inline-flex items-center gap-1.5 text-halloween-orange font-bold text-sm underline decoration-wavy decoration-halloween-orange/60 underline-offset-4 hover:text-halloween-moon"
+                          >
+                            ดูโปสเตอร์หนัง
+                          </button>
                         )}
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ol>
+              </section>
 
-              {/* Activities - Bold Cards */}
-              <div className="bg-linear-to-br from-halloween-orange/20 via-halloween-charcoal/90 to-halloween-dark/95 border border-halloween-orange/40 hand-cut p-5 shadow-xl">
-                <div className="mb-4 pb-3 border-b-2 border-halloween-orange/30">
-                  <h2 className="text-2xl font-black text-halloween-cream tracking-tight text-center font-iannnnn-owl">
-                    กิจกรรมภายในงาน
-                  </h2>
-                  <p className="text-halloween-orange text-xs font-bold mt-1 uppercase tracking-widest text-center">Available All Night</p>
-                </div>
+              <div className="flex flex-col gap-8">
+                {/* Tonight's movie, taped up like a printed poster */}
+                <section className="relative self-center md:self-stretch flex gap-4 items-center bg-halloween-cream text-halloween-charcoal p-3 pr-4 hand-cut rotate-1 shadow-[0_16px_32px_-12px_rgba(0,0,0,0.6)]">
+                  <Tape className="-top-2.5 left-6 -rotate-6 bg-halloween-moon/70" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPoster(true)}
+                    aria-label={`ดูโปสเตอร์ ${MOVIE.title} ขนาดเต็ม`}
+                    className="shrink-0 -rotate-2 hover:rotate-0 transition-transform"
+                  >
+                    <Image
+                      src={MOVIE.poster}
+                      alt=""
+                      width={108}
+                      height={151}
+                      className="w-24 sm:w-28 h-auto border-4 border-white shadow-md"
+                      quality={75}
+                    />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-halloween-orange">หนังกลางแปลง · 19:30 น.</p>
+                    <h2 className="text-2xl font-bold leading-tight mt-0.5">{MOVIE.title}</h2>
+                    <p className="text-sm text-halloween-purple">{MOVIE.original}</p>
+                    <p className="text-sm mt-2">ปูเสื่อหน้าจอรอได้เลย</p>
+                  </div>
+                </section>
 
-                <div className="space-y-2.5">
-                  {[
-                    { name: 'หนังกลางแปลงสุดหลอน', tag: 'MOVIE' },
-                    { name: 'บ้านผีสิง', tag: 'HAUNTED' },
-                    { name: 'โชว์สุดพิเศษ', tag: 'SHOW' },
-                    { name: 'ร้านค้านิสิต', tag: 'VENDOR' },
-                  ].map((activity, index) => (
-                    <div
-                      key={index}
-                      className="relative bg-halloween-dark/60 border-2 border-halloween-orange/30 rounded-lg p-3.5 hover:border-halloween-orange hover:bg-halloween-orange/10 transition-all group overflow-hidden"
-                    >
-                      <div className="absolute top-2 right-2 bg-halloween-orange/20 px-2 py-0.5 rounded-full">
-                        <span className="text-halloween-orange text-[10px] font-black tracking-wider">{activity.tag}</span>
-                      </div>
-                      <p className="text-halloween-cream font-bold text-base pr-16 group-hover:text-halloween-orange transition-colors font-iannnnn-owl">
-                        {activity.name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {/* Activities */}
+                <section className="relative bg-halloween-charcoal/90 border-2 border-halloween-purple hand-cut px-5 pt-6 pb-5 rotate-[0.5deg] shadow-[0_16px_32px_-12px_rgba(0,0,0,0.6)]">
+                  <Doodle name="web" className="absolute -top-4 -right-4 w-16 opacity-80 rotate-6" />
+                  <h2 className="text-2xl font-bold text-halloween-cream">กิจกรรมภายในงาน</h2>
+                  <p className="text-halloween-gray text-sm mb-4">เดินเล่นได้ทั้งคืน</p>
+
+                  <ul className="space-y-3">
+                    {ACTIVITIES.map((a) => (
+                      <li
+                        key={a.name}
+                        className={`flex items-center gap-3 bg-halloween-dark/60 border-2 border-halloween-purple/70 hand-cut p-3 ${a.tilt}`}
+                      >
+                        <span className="w-10 h-10 shrink-0 flex items-center justify-center">
+                          <Doodle name={a.icon} className="max-w-full max-h-full w-auto h-auto" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-halloween-cream leading-snug">{a.name}</p>
+                          <p className="text-sm text-halloween-gray">{a.note}</p>
+                        </div>
+                        {/* Rubber-stamp label */}
+                        <span className="shrink-0 px-2 py-0.5 border-2 border-halloween-orange text-halloween-orange text-xs font-bold -rotate-6 rounded-[6px_10px_5px_9px]">
+                          {a.stamp}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               </div>
             </div>
           </div>
@@ -193,35 +240,36 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Movie Modal */}
-      {showMovieModal && (
+      {/* Full poster */}
+      {showPoster && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-sm"
-          onClick={() => setShowMovieModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={MOVIE.title}
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/85"
+          onClick={() => setShowPoster(false)}
         >
-          <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative -rotate-1" onClick={(e) => e.stopPropagation()}>
+            <Tape className="-top-2.5 left-1/2 -translate-x-1/2 rotate-2 z-10" />
+            <Image
+              src={MOVIE.poster}
+              alt={`โปสเตอร์ ${MOVIE.title} (${MOVIE.original})`}
+              width={1081}
+              height={1513}
+              // As wide as the screen allows while the whole poster still fits in 78vh
+              className="w-[min(86vw,calc(78vh*1081/1513))] h-auto border-8 border-halloween-cream shadow-2xl"
+              quality={80}
+            />
             <button
-              onClick={() => setShowMovieModal(false)}
-              className="absolute -top-8 right-0 sm:-top-10 sm:right-0 text-halloween-cream hover:text-halloween-orange transition-colors z-10"
+              onClick={() => setShowPoster(false)}
+              className="absolute -top-4 -right-4 w-11 h-11 flex items-center justify-center rounded-full bg-halloween-orange text-halloween-dark border-2 border-halloween-cream"
               type="button"
-              aria-label="Close movie modal"
+              aria-label="ปิดโปสเตอร์"
             >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange rounded-lg p-3 sm:p-4 shadow-2xl">
-              <div className="relative w-full" style={{ maxHeight: '75vh' }}>
-                <Image
-                  src="/movie.jpg"
-                  alt="Movie Schedule"
-                  width={800}
-                  height={1200}
-                  className="w-full h-auto max-h-[75vh] object-contain rounded-lg"
-                  quality={75}
-                />
-              </div>
-            </div>
           </div>
         </div>
       )}
