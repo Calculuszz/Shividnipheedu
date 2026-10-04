@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams, redirect } from 'next/navigation';
+import Doodle from '@/components/Doodle';
 import { BookingPage, Button, Card, ErrorNotice, InfoNotice, RoundList } from '@/components/booking';
 import { ALMOST_FULL_THRESHOLD } from '@/components/booking/RoundList';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
@@ -91,7 +92,12 @@ function RoundPageContent() {
   }
 
   return (
-    <BookingPage activity={ACTIVITY} backHref={paths.home} title={title} step={step}>
+    <BookingPage activity={ACTIVITY} backHref={paths.home}>
+      <div className="relative flex flex-col gap-1.5">
+        {step && <span className="text-[15px] font-bold text-halloween-moon">{step}</span>}
+        <h1 className="display-font whitespace-nowrap pr-16 text-[34px] leading-[1.05] text-halloween-orange -rotate-2 origin-left">{title}</h1>
+        <Doodle name="moon" className="absolute -right-1 -top-2 w-11 rotate-[18deg]" />
+      </div>
       {rounds.length > 0 && durationMinutes !== null && (
         <div className="flex flex-col gap-1">
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-halloween-cream">
