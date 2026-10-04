@@ -160,7 +160,7 @@ function RoundPageContent() {
             <ErrorNotice>
               ไม่พบรหัสนิสิตของหัวหน้าทีม กรุณากรอกรหัสนิสิตอีกครั้ง
               <span className="mt-2 block">
-                <Button href={paths.home} variant="secondary">กลับไปกรอกรหัสนิสิต</Button>
+                <Button href={paths.start} variant="secondary">กลับไปกรอกรหัสนิสิต</Button>
               </span>
             </ErrorNotice>
           )}
