@@ -281,7 +281,9 @@ function ActiveBooking({ booking, now }: { booking: MyBooking; now: number }) {
         </div>
         {allLocked && (
           <p className="mt-1 text-sm text-halloween-gray">
-            เช็กอินรอบนี้ปิดแล้ว — จัดการการจองไม่ได้อีก
+            {checkedIn
+              ? 'เช็กอินแล้ว ไปที่หน้าห้องตามเวลารอบได้เลย'
+              : 'เช็กอินรอบนี้ปิดแล้ว — จัดการการจองไม่ได้อีก'}
           </p>
         )}
         {changeLockedOnly && <p className="text-sm text-halloween-gray">ปิดรับจองออนไลน์แล้ว แต่ยังยกเลิกได้ถึงเวลาปิดเช็กอิน</p>}
