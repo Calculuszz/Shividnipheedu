@@ -23,6 +23,9 @@ export interface ActivityInfo {
   health_notice: string | null;
   team_min: number;
   team_max: number;
+  /** Default seats per round: online booking + walk-in (12 + 3 = 15 players / round) */
+  online_seats: number;
+  walkin_seats: number;
   checkin_opens_before_min: number;
   checkin_duration_min: number;
   booking_opens_at: string | null;
