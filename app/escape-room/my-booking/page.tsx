@@ -14,8 +14,65 @@ import { formatTime, formatTimeRange, serverNow } from '@/lib/bookingTime';
 import type { MyBooking, TeamMember } from '@/lib/bookingTypes';
 
 type View = 'find' | 'booking' | 'released' | 'cancelled';
+type PreviewState = 'booked' | 'checked-in' | 'booking-closed' | 'closed' | 'released' | 'cancelled' | 'removed';
 
 const paths = bookingPaths(DEFAULT_ACTIVITY);
+
+function previewBooking(state: PreviewState): MyBooking {
+  const base = Date.now();
+  const minute = 60_000;
+  const isCheckedIn = state === 'checked-in';
+  const isReleased = state === 'released';
+  const isCancelled = state === 'cancelled' || state === 'removed';
+  const checkinClosed = state === 'closed' || isReleased;
+  const bookingClosed = state === 'booking-closed';
+  const meStatus = isCheckedIn ? 'checked_in' : isReleased ? 'released' : state === 'removed' ? 'removed' : state === 'cancelled' ? 'cancelled' : 'booked';
+
+  return {
+    me: {
+      id: 'preview-me',
+      code: 'SVP-7K3QX9',
+      full_name: 'ณัฐวุฒิ ศรีสุข',
+      is_leader: true,
+      status: meStatus,
+      checked_in_at: isCheckedIn ? new Date(base - 5 * minute).toISOString() : null,
+    },
+    activity: {
+      id: DEFAULT_ACTIVITY,
+      name: 'Escape Room',
+      room_name: '[ชื่อห้อง]',
+      booking_closes_at: new Date(base + (bookingClosed ? -60 : 60) * minute).toISOString(),
+    },
+    round: {
+      id: 'preview-round',
+      round_no: 3,
+      starts_at: new Date(base + (checkinClosed ? -20 : 60) * minute).toISOString(),
+      ends_at: new Date(base + (checkinClosed ? 0 : 80) * minute).toISOString(),
+      checkin_opens_at: new Date(base + (checkinClosed ? -50 : 30) * minute).toISOString(),
+      checkin_closes_at: new Date(base + (checkinClosed ? -35 : 45) * minute).toISOString(),
+    },
+    booking: { status: isCancelled ? 'cancelled' : 'active', notes: 'Preview data' },
+    team: [
+      { id: 'preview-me', full_name: 'ณัฐวุฒิ ศรีสุข', is_leader: true, status: meStatus, is_me: true },
+      { id: 'preview-2', full_name: 'พิมพ์ชนก วงศ์ไทย', is_leader: false, status: isCheckedIn ? 'checked_in' : 'booked', is_me: false },
+      { id: 'preview-3', full_name: 'ธนกร แก้วมณี', is_leader: false, status: checkinClosed ? 'checked_in' : 'booked', is_me: false },
+      { id: 'preview-4', full_name: 'ปาริชาต บุญเรือง', is_leader: false, status: isReleased ? 'released' : 'booked', is_me: false },
+    ],
+    can: {
+      change_round: !isCheckedIn && !checkinClosed && !bookingClosed && !isCancelled,
+      cancel_seat: !isCheckedIn && !checkinClosed && !isCancelled,
+      cancel_team: !isCheckedIn && !checkinClosed && !isCancelled,
+      remove_member: !isCheckedIn && !checkinClosed && !isCancelled,
+    },
+  };
+}
+
+function getPreviewState(): PreviewState | null {
+  if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get('preview');
+  const allowed: PreviewState[] = ['booked', 'checked-in', 'booking-closed', 'closed', 'released', 'cancelled', 'removed'];
+  return allowed.includes(value as PreviewState) ? value as PreviewState : null;
+}
 
 function FindBooking({
   code,
@@ -321,6 +378,20 @@ export default function MyBookingPage() {
   useEffect(() => {
     const restoreRememberedBooking = async () => {
       await Promise.resolve();
+      const preview = getPreviewState();
+      if (preview) {
+        const result = previewBooking(preview);
+        setBooking(result);
+        setCode(result.me.code);
+        if (preview === 'released') setView('released');
+        else if (preview === 'cancelled' || preview === 'removed') {
+          setCancelledStatus(preview);
+          setView('cancelled');
+        } else setView('booking');
+        setLoading(false);
+        return;
+      }
+
       const remembered = getRememberedCode(DEFAULT_ACTIVITY);
       if (remembered) {
         setCode(remembered);
