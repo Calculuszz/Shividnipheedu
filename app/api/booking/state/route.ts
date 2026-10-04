@@ -22,6 +22,10 @@ export async function GET(request: Request) {
         health_notice: a.health_notice,
         team_min: a.team_min,
         team_max: a.team_max,
+        // Default seats per round (a round can override them; /api/booking/rounds has the real cap).
+        // Landing shows online + walk-in, e.g. 12 + 3 = 15 players / round.
+        online_seats: a.online_seats,
+        walkin_seats: a.walkin_seats,
         checkin_opens_before_min: intervalMinutes(a.checkin_opens_before),
         checkin_duration_min: intervalMinutes(a.checkin_duration),
         booking_opens_at: a.booking_opens_at,
