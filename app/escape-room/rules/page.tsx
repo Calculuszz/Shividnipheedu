@@ -34,11 +34,14 @@ export default function RulesPage() {
 
         <h2 className="text-xl font-bold text-halloween-orange">การเช็กอิน</h2>
         <ul className="pd-list flex flex-col gap-1.5 pl-5 list-disc marker:text-halloween-orange marker:font-bold text-base leading-relaxed">
+          <li>
+            เช็กอินที่บูธ เปิด {activity.checkin_opens_before_min} นาทีก่อนรอบ และเปิดนาน {activity.checkin_duration_min} นาที
+          </li>
           <li>1 QR เช็กอินได้ 1 คน</li>
           <li>1 คนเล่นได้ 1 รอบ</li>
         </ul>
 
-        <CheckInRuleNotice activity={activity} />
+        <CheckInRuleNotice activity={activity} hideSummaryLine />
 
         {activity.health_notice && (
           <>

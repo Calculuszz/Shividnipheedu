@@ -16,8 +16,11 @@ export function ChulaOnlyNote() {
 
 export function CheckInRuleNotice({
   activity,
+  hideSummaryLine = false,
 }: {
   activity: Pick<ActivityInfo, 'checkin_opens_before_min' | 'checkin_duration_min'>;
+  /** Rules page shows this same sentence in its own "การเช็กอิน" list instead — skip it here to avoid repeating it twice on that page. Landing has no such list, so it keeps showing it (default). */
+  hideSummaryLine?: boolean;
 }) {
   return (
     // No `title` prop: InfoNotice's built-in title is plain bold (correct for
@@ -27,9 +30,11 @@ export function CheckInRuleNotice({
       <span className="display-font text-[22px] leading-tight text-halloween-orange -rotate-2 inline-block origin-left">
         Check-in rule
       </span>
-      <p className="mt-2">
-        เช็กอินที่บูธ เปิด {activity.checkin_opens_before_min} นาทีก่อนรอบ และเปิดนาน {activity.checkin_duration_min} นาที
-      </p>
+      {!hideSummaryLine && (
+        <p className="mt-2">
+          เช็กอินที่บูธ เปิด {activity.checkin_opens_before_min} นาทีก่อนรอบ และเปิดนาน {activity.checkin_duration_min} นาที
+        </p>
+      )}
       <ol className="pd-list flex flex-col gap-1.5 pl-5 list-decimal marker:text-halloween-orange marker:font-bold mt-2">
         <li>ยืนยันสิทธิ์ = เช็กอินที่บูธภายในเวลาเช็กอินของรอบ</li>
         <li>มาไม่ทันถือว่าสละสิทธิ์ ที่นั่งจะถูกปล่อยให้ walk-in</li>
