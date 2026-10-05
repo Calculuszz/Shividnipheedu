@@ -1,5 +1,5 @@
 import { BookingPage, Card } from '@/components/booking';
-import { CONTACT_LINE } from '../_shared';
+import { CONTACT_LINE, MoonCorner } from '../_shared';
 import { bookingPaths } from '@/lib/bookingRules';
 
 const paths = bookingPaths('escape_room');
@@ -7,6 +7,7 @@ const paths = bookingPaths('escape_room');
 export default function PrivacyPage() {
   return (
     <BookingPage backHref={paths.home} showMyBooking={false} title="Privacy policy">
+      <MoonCorner />
       <Card tone="orange" className="flex flex-col gap-3">
         <h2 className="text-xl font-bold text-halloween-orange">ข้อมูลที่เก็บ</h2>
         <ul className="pd-list flex flex-col gap-1.5 pl-5 list-disc marker:text-halloween-orange marker:font-bold text-base leading-relaxed">

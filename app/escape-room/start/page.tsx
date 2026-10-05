@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { BookingPage, Card, Button, ErrorNotice } from '@/components/booking';
 import { TextField } from '@/components/booking';
 import LoadingScreen from '@/components/LoadingScreen';
-import { ChulaOnlyNote } from '../_shared';
+import { ChulaOnlyNote, MoonCorner } from '../_shared';
 import { BookingApiError, checkStudent } from '@/lib/bookingClient';
 import { bookingPaths, isStudentId } from '@/lib/bookingRules';
 
@@ -33,6 +33,7 @@ export default function StartBookingPage() {
   if (studentId === null) {
     return (
       <BookingPage backHref={paths.home} title="Start booking">
+        <MoonCorner />
         <Card tone="orange" className="flex flex-col gap-3.5 items-center text-center">
           <p className="text-base leading-relaxed">ต้องเข้าสู่ระบบด้วยรหัสนิสิตก่อน ถึงจะเริ่มจองได้</p>
           <Button href="/">ไปหน้าเข้าสู่ระบบ</Button>
@@ -55,6 +56,7 @@ export default function StartBookingPage() {
 
   return (
     <BookingPage backHref={paths.home} title="Start booking">
+      <MoonCorner />
       <ChulaOnlyNote />
 
       <Card tone="orange" className="flex flex-col gap-3.5">

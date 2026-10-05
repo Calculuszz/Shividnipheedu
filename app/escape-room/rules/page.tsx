@@ -2,7 +2,7 @@
 
 import { BookingPage, Card, ErrorNotice, Markdown } from '@/components/booking';
 import LoadingScreen from '@/components/LoadingScreen';
-import { CheckInRuleNotice, HealthRows, CONTACT_LINE } from '../_shared';
+import { CheckInRuleNotice, HealthRows, CONTACT_LINE, MoonCorner } from '../_shared';
 import { useBookingState } from '@/hooks/useBooking';
 import { bookingPaths } from '@/lib/bookingRules';
 
@@ -17,6 +17,7 @@ export default function RulesPage() {
   if (state.error || !state.data) {
     return (
       <BookingPage backHref={paths.home} showMyBooking={false}>
+        <MoonCorner />
         <ErrorNotice title="โหลดข้อมูลไม่สำเร็จ">{state.error?.message ?? 'ลองโหลดหน้าใหม่อีกครั้ง'}</ErrorNotice>
       </BookingPage>
     );
@@ -26,6 +27,7 @@ export default function RulesPage() {
 
   return (
     <BookingPage backHref={paths.home} showMyBooking={false} title="Room rules">
+      <MoonCorner />
       <Card tone="orange" className="flex flex-col gap-4">
         <h2 className="text-xl font-bold text-halloween-orange">กฎของห้อง</h2>
         <Markdown text={activity.rules_md} />

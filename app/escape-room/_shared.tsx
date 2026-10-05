@@ -4,6 +4,23 @@ import type { ActivityInfo } from '@/lib/bookingTypes';
 
 export const CONTACT_LINE = 'ติดต่อผู้จัด: [ช่องทางติดต่อ]';
 
+// Floating moon in the top-right corner — repeats identically on Start/Rules/
+// Privacy (same size/position/rotation on all three). Landing (Main.dc.html)
+// does NOT have this: it has its own 5-image Hero cluster instead, so don't
+// add this there too. Position matches the design's pixel values (left: 318px
+// of 390px width → right-8; top: 78px).
+// Not in BookingPage/BookingHeader (shared, not ours to edit) — each page that
+// needs this renders it as the first thing inside <BookingPage>, which already
+// has a `relative` ancestor for it to anchor to.
+export function MoonCorner() {
+  return (
+    <Doodle
+      name="moon"
+      className="absolute right-8 top-[78px] w-10 h-auto pointer-events-none opacity-95 rotate-[10deg] drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]"
+    />
+  );
+}
+
 export function ChulaOnlyNote() {
   return (
     <StickyNote title="Chula students only">
