@@ -2,7 +2,7 @@
 
 import { BookingPage, Card, ErrorNotice, Markdown } from '@/components/booking';
 import LoadingScreen from '@/components/LoadingScreen';
-import { CheckInRuleNotice, HealthCard, CONTACT_LINE } from '../_shared';
+import { CheckInRuleNotice, HealthRows, CONTACT_LINE } from '../_shared';
 import { useBookingState } from '@/hooks/useBooking';
 import { bookingPaths } from '@/lib/bookingRules';
 
@@ -39,9 +39,15 @@ export default function RulesPage() {
         </ul>
 
         <CheckInRuleNotice activity={activity} />
-      </Card>
 
-      <HealthCard activity={activity} />
+        {activity.health_notice && (
+          <>
+            <hr className="my-1 border-0 border-t-2 border-dashed border-halloween-cream/20" />
+            <h2 className="text-xl font-bold text-halloween-orange">คำเตือนด้านสุขภาพ</h2>
+            <HealthRows activity={activity} />
+          </>
+        )}
+      </Card>
 
       <p className="text-center text-[15px] leading-normal text-halloween-gray">{CONTACT_LINE}</p>
     </BookingPage>

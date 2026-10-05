@@ -49,22 +49,17 @@ function parseHealthNotice(text: string) {
   return { items, warning: otherLines.join('\n').trim() };
 }
 
-export function HealthCard({ activity }: { activity: Pick<ActivityInfo, 'health_notice'> }) {
+// Icon rows + warning box only — no heading, no Card. The two pages that show
+// this (landing, rules) wrap it in their own heading style and card layout,
+// because the design doesn't use the same heading or card grouping on both.
+export function HealthRows({ activity }: { activity: Pick<ActivityInfo, 'health_notice'> }) {
   if (!activity.health_notice) return null;
   const { items, warning } = parseHealthNotice(activity.health_notice);
 
-  if (items.length === 0) {
-    return (
-      <Card tone="orange" className="flex flex-col gap-4">
-        <h2 className="display-font text-2xl text-halloween-orange -rotate-2 origin-left">Health &amp; safety</h2>
-        <Markdown text={activity.health_notice} />
-      </Card>
-    );
-  }
+  if (items.length === 0) return <Markdown text={activity.health_notice} />;
 
   return (
-    <Card tone="orange" className="flex flex-col gap-4">
-      <h2 className="display-font text-2xl text-halloween-orange -rotate-2 origin-left">Health &amp; safety</h2>
+    <>
       {items.map(({ title, body }) => (
         <div key={title} className="flex gap-3.5 items-start">
           <span className="flex items-center justify-center w-11 h-11 shrink-0">
@@ -81,6 +76,17 @@ export function HealthCard({ activity }: { activity: Pick<ActivityInfo, 'health_
           <b>{warning}</b>
         </p>
       )}
+    </>
+  );
+}
+
+// Landing's own card: "Health & safety" in the display font, per Main.dc.html.
+export function HealthCard({ activity }: { activity: Pick<ActivityInfo, 'health_notice'> }) {
+  if (!activity.health_notice) return null;
+  return (
+    <Card tone="orange" className="flex flex-col gap-4">
+      <h2 className="display-font text-2xl text-halloween-orange -rotate-2 origin-left">Health &amp; safety</h2>
+      <HealthRows activity={activity} />
     </Card>
   );
 }
