@@ -20,8 +20,16 @@ export function CheckInRuleNotice({
   activity: Pick<ActivityInfo, 'checkin_opens_before_min' | 'checkin_duration_min'>;
 }) {
   return (
-    <InfoNotice title="Check-in rule">
-      เช็กอินที่บูธ เปิด {activity.checkin_opens_before_min} นาทีก่อนรอบ และเปิดนาน {activity.checkin_duration_min} นาที
+    // No `title` prop: InfoNotice's built-in title is plain bold (correct for
+    // e.g. "Online booking closed"), but the design renders "Check-in rule"
+    // in the display font — a style only this box uses, not InfoNotice's default.
+    <InfoNotice>
+      <span className="display-font text-[22px] leading-tight text-halloween-orange -rotate-2 inline-block origin-left">
+        Check-in rule
+      </span>
+      <p className="mt-2">
+        เช็กอินที่บูธ เปิด {activity.checkin_opens_before_min} นาทีก่อนรอบ และเปิดนาน {activity.checkin_duration_min} นาที
+      </p>
       <ol className="pd-list flex flex-col gap-1.5 pl-5 list-decimal marker:text-halloween-orange marker:font-bold mt-2">
         <li>ยืนยันสิทธิ์ = เช็กอินที่บูธภายในเวลาเช็กอินของรอบ</li>
         <li>มาไม่ทันถือว่าสละสิทธิ์ ที่นั่งจะถูกปล่อยให้ walk-in</li>
