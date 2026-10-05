@@ -15,21 +15,31 @@ const paths = bookingPaths(ACTIVITY);
 
 export default function StartBookingPage() {
   const router = useRouter();
-  const [studentId, setStudentId] = useState<string>();
+  // undefined = still checking, null = confirmed not logged in, string = the id
+  const [studentId, setStudentId] = useState<string | null>();
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = localStorage.getItem('studentId');
-    if (!id || !isStudentId(id)) {
-      router.replace('/');
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- must read client-only localStorage after mount (not derivable from props/render); see useEffect above.
-    setStudentId(id);
-  }, [router]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- must read client-only localStorage after mount (not derivable from props/render).
+    setStudentId(id && isStudentId(id) ? id : null);
+  }, []);
 
   if (studentId === undefined) return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." />;
+
+  // No silent redirect: someone landing here without logging in first (e.g. a
+  // direct link) should see why, not bounce to '/' with no explanation.
+  if (studentId === null) {
+    return (
+      <BookingPage backHref={paths.home} title="Start booking">
+        <Card tone="orange" className="flex flex-col gap-3.5 items-center text-center">
+          <p className="text-base leading-relaxed">ต้องเข้าสู่ระบบด้วยรหัสนิสิตก่อน ถึงจะเริ่มจองได้</p>
+          <Button href="/">ไปหน้าเข้าสู่ระบบ</Button>
+        </Card>
+      </BookingPage>
+    );
+  }
 
   async function handleCheck() {
     setError(null);
