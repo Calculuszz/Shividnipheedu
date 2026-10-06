@@ -6,6 +6,7 @@ import {
   BookingQR,
   Button,
   Card,
+  ChangeRoundSheet,
   CheckField,
   ErrorNotice,
   InfoNotice,
@@ -13,6 +14,7 @@ import {
   Markdown,
   PlayerStatusChip,
   RoundStamp,
+  SeatConflict,
   SeatCount,
   Sheet,
   StickyNote,
@@ -26,6 +28,13 @@ import { formatCountdown, formatDateEn, formatDateTh, formatDayTimeTh, formatTim
 import type { PlayerStatus, RoundStatus } from '@/lib/bookingTypes';
 
 const ACTIVITY = 'escape_room';
+
+const demoTeam = [
+  { full_name: 'Player 1', is_leader: true },
+  { full_name: 'Player 2', is_leader: false },
+  { full_name: 'Player 3', is_leader: false },
+  { full_name: 'Player 4', is_leader: false },
+];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -44,6 +53,10 @@ export default function BookingKit() {
   const [sid, setSid] = useState('');
   const [pdpa, setPdpa] = useState(false);
   const [lookup, setLookup] = useState('');
+  const [changeOpen, setChangeOpen] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [demoRound, setDemoRound] = useState<string | null>(null);
+  const [demoKept, setDemoKept] = useState<number[] | null>(null);
 
   const a = state.data?.activity;
 
@@ -205,6 +218,47 @@ export default function BookingKit() {
       >
         <p>ที่นั่งของทุกคนจะถูกยกเลิก กู้คืนไม่ได้ ทุกคนจะได้รับอีเมลแจ้ง</p>
       </Sheet>
+
+      <Section title="ChangeRoundSheet (3c) · SeatConflict (3d)">
+        <Card className="flex flex-col gap-3">
+          <p className="text-[15px]">
+            team of {demoTeam.length} · current round: {rounds.data?.rounds.find((r) => r.id === demoRound)?.round_no ?? '-'}
+            {demoKept && <> · kept indexes: {demoKept.join(', ')}</>}
+          </p>
+          <Button variant="secondary" onClick={() => setChangeOpen(true)}>Open ChangeRoundSheet</Button>
+          <Button variant="secondary" onClick={() => setConflictOpen(true)}>Open SeatConflict (2 seats left)</Button>
+        </Card>
+      </Section>
+
+      {changeOpen && (
+        <ChangeRoundSheet
+          activity={ACTIVITY}
+          teamSize={demoTeam.length}
+          currentRoundId={demoRound}
+          bookingClosesAt={a?.booking_closes_at}
+          onPick={(roundId) => {
+            setDemoRound(roundId);
+            setChangeOpen(false);
+          }}
+          onClose={() => setChangeOpen(false)}
+        />
+      )}
+      {conflictOpen && (
+        <SeatConflict
+          seatsLeft={2}
+          players={demoTeam}
+          round={rounds.data?.rounds.find((r) => r.id === demoRound)}
+          onConfirm={(keep) => {
+            setDemoKept(keep);
+            setConflictOpen(false);
+          }}
+          onPickRound={() => {
+            setConflictOpen(false);
+            setChangeOpen(true);
+          }}
+          onCancel={() => setConflictOpen(false)}
+        />
+      )}
     </BookingPage>
   );
 }
