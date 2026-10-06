@@ -58,6 +58,23 @@ function NotEnoughStamp({ round }: { round: Round }) {
   );
 }
 
+type RowKind = 'pickable' | 'current' | 'not_enough' | 'blocked';
+
+const TONE: Record<RowKind, string> = {
+  pickable: 'border-2 border-halloween-purple bg-halloween-charcoal',
+  current: 'border-2 border-halloween-purple/50 bg-halloween-dark/60 opacity-80',
+  not_enough: DASHED,
+  blocked: DASHED,
+};
+const SELECTED = 'border-2 border-halloween-orange bg-halloween-charcoal shadow-[0_0_0_3px_rgba(234,123,41,0.25)]';
+
+function rowKind(round: Round, teamSize: number, current: boolean): RowKind {
+  if (current) return 'current';
+  const pick = roundPick(round, teamSize);
+  if (pick.selectable) return 'pickable';
+  return pick.reason === 'not_enough' ? 'not_enough' : 'blocked';
+}
+
 function RoundRow({
   round,
   teamSize,
@@ -71,46 +88,45 @@ function RoundRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const pick = roundPick(round, teamSize);
-  const selectable = pick.selectable && !current;
-  const blocked = !pick.selectable && !current;
-  const notEnough = !pick.selectable && pick.reason === 'not_enough';
-  const showSeats = round.round_status === 'available' && round.online_left > 0 && (!notEnough || current);
+  const kind = rowKind(round, teamSize, current);
+  const pickable = kind === 'pickable';
+  const hasSeats = round.round_status === 'available' && round.online_left > 0;
   // available + 0 left = Full
-  const stampStatus = round.round_status === 'available' ? 'full' : round.round_status;
+  const stamp = round.round_status === 'available' ? 'full' : round.round_status;
 
-  const note = current ? (
-    <span className="font-bold text-halloween-orange">Current round</span>
-  ) : notEnough ? (
-    <span className="font-bold text-halloween-error">
-      ที่นั่งไม่พอสำหรับ {teamSize} คน (เหลือ {round.online_left})
-    </span>
-  ) : !pick.selectable && pick.reason === 'closed' && round.closed_reason ? (
-    round.closed_reason
-  ) : null;
+  const note =
+    kind === 'current' ? (
+      <span className="font-bold text-halloween-orange">Current round</span>
+    ) : kind === 'not_enough' ? (
+      <span className="font-bold text-halloween-error">
+        ที่นั่งไม่พอสำหรับ {teamSize} คน (เหลือ {round.online_left})
+      </span>
+    ) : kind === 'blocked' && (round.closed || round.round_status === 'closed') ? (
+      round.closed_reason
+    ) : null;
 
-  const right = showSeats ? (
-    <span className="flex shrink-0 flex-col items-center gap-1">
-      <SeatCount round={round} />
-      <SeatBars round={round} />
-    </span>
-  ) : notEnough ? (
-    <NotEnoughStamp round={round} />
-  ) : (
-    <RoundStamp status={stampStatus} note={stampStatus === 'full' ? `0/${round.online_cap} left` : undefined} />
-  );
+  const right =
+    kind === 'not_enough' ? (
+      <NotEnoughStamp round={round} />
+    ) : hasSeats ? (
+      <span className="flex shrink-0 flex-col items-center gap-1">
+        <SeatCount round={round} />
+        <SeatBars round={round} />
+      </span>
+    ) : (
+      <RoundStamp status={stamp} note={stamp === 'full' ? `0/${round.online_cap} left` : undefined} />
+    );
 
-  const tone = blocked
-    ? DASHED
-    : current
-      ? 'border-2 border-halloween-purple/50 bg-halloween-dark/60 opacity-80'
-      : selected
-        ? 'border-2 border-halloween-orange bg-halloween-charcoal shadow-[0_0_0_3px_rgba(234,123,41,0.25)]'
-        : 'border-2 border-halloween-purple bg-halloween-charcoal';
-
-  const body = (
-    <>
-      {selectable && (
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      disabled={!pickable}
+      onClick={onSelect}
+      className={`flex w-full items-center gap-3 rounded-[12px_8px_14px_6px/8px_14px_6px_12px] p-3.5 text-left transition-colors disabled:cursor-not-allowed ${selected ? SELECTED : TONE[kind]}`}
+    >
+      {pickable && (
         <span
           aria-hidden="true"
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[2.5px] ${selected ? 'border-halloween-orange' : 'border-halloween-gray'}`}
@@ -120,7 +136,7 @@ function RoundRow({
       )}
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className={`text-xl font-bold ${blocked ? 'text-halloween-cream/75' : 'text-halloween-cream'}`}>
+          <span className={`text-xl font-bold ${pickable || kind === 'current' ? 'text-halloween-cream' : 'text-halloween-cream/75'}`}>
             {formatTimeRange(round.starts_at, round.ends_at)}
           </span>
           <span className="rounded-[4px_9px_5px_8px] border-[1.5px] border-halloween-purple px-[7px] text-[13px] font-bold text-halloween-gray">
@@ -130,19 +146,7 @@ function RoundRow({
         {note && <span className="text-sm leading-snug text-halloween-gray">{note}</span>}
       </span>
       {right}
-    </>
-  );
-
-  const className = `flex w-full items-center gap-3 rounded-[12px_8px_14px_6px/8px_14px_6px_12px] p-3.5 text-left ${tone}`;
-
-  return selectable ? (
-    <button type="button" role="radio" aria-checked={selected} onClick={onSelect} className={`${className} cursor-pointer transition-colors`}>
-      {body}
     </button>
-  ) : (
-    <div role="radio" aria-checked={false} aria-disabled="true" className={className}>
-      {body}
-    </div>
   );
 }
 

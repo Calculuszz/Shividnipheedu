@@ -1,65 +1,40 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Doodle from '@/components/Doodle';
 import { BookingPage, BookingQR, Button, Card, LeaderBadge, PlayerStatusChip } from '@/components/booking';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
 import { bookingPaths } from '@/lib/bookingRules';
-import { readLastBooking, rememberCode } from '@/lib/bookingStorage';
+import { parseLastBooking, readLastBookingRaw, rememberCode } from '@/lib/bookingStorage';
 import { formatDateEn, formatDayTimeTh, formatTime, formatTimeRange } from '@/lib/bookingTime';
-import type { BookResult, Round } from '@/lib/bookingTypes';
+import type { BookResult } from '@/lib/bookingTypes';
 
 const ACTIVITY = 'escape_room';
 const paths = bookingPaths(ACTIVITY);
+// Not in the API, same text as the design
+const VENUE = 'อาคารวิศวฯ 100 ปี คณะวิศวฯ';
 
-// Icons from the design
-const ICONS: Record<string, ReactNode> = {
-  Room: (
-    <>
-      <path d="M5.2 20.6V5.6A2.6 2.6 0 0 1 7.8 3h8.4a2.6 2.6 0 0 1 2.6 2.6v15" fill="#bbd03c" />
-      <path d="M3 21h18" stroke="#bbd03c" strokeWidth="2.2" strokeLinecap="round" />
-      <circle cx="15.4" cy="12.6" r="1.4" fill="#1a0229" />
-      <path d="M15.4 13.4v2" stroke="#1a0229" strokeWidth="1.2" strokeLinecap="round" />
-    </>
-  ),
-  Date: (
-    <>
-      <rect x="3" y="5" width="18" height="16" rx="2.6" fill="#bbd03c" />
-      <path d="M3 9.6V7.6A2.6 2.6 0 0 1 5.6 5h12.8A2.6 2.6 0 0 1 21 7.6v2z" fill="#ea7b29" />
-      <path d="M8 3v4M16 3v4" stroke="#bbd03c" strokeWidth="2.4" strokeLinecap="round" />
-    </>
-  ),
-  Round: (
-    <>
-      <path d="M19.2 12.5a7.2 7.2 0 1 1-2.3-5.6" fill="none" stroke="#bbd03c" strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M18.4 3l.5 4.6-4.6.4" fill="none" stroke="#bbd03c" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="12.3" r="2.4" fill="#ea7b29" />
-    </>
-  ),
-  Location: (
-    <>
-      <path d="M12 22.2s-7.2-6.6-7.2-12.2a7.2 7.2 0 0 1 14.4 0c0 5.6-7.2 12.2-7.2 12.2z" fill="#bbd03c" />
-      <circle cx="12" cy="10" r="2.9" fill="#ea7b29" />
-    </>
-  ),
-  Players: (
-    <>
-      <path d="M13.4 20.6v-7.1a4.2 4.2 0 0 1 8.4 0v7.1l-1.4-1.1-1.4 1.1-1.4-1.1-1.4 1.1-1.4-1.1z" fill="#ea7b29" />
-      <path d="M2.4 21.6V13a5 5 0 0 1 10 0v8.6l-1.7-1.3-1.6 1.3-1.7-1.3-1.6 1.3-1.7-1.3z" fill="#bbd03c" />
-      <circle cx="5.9" cy="12.7" r="1.05" fill="#1a0229" />
-      <circle cx="8.9" cy="12.7" r="1.05" fill="#1a0229" />
-    </>
-  ),
-};
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-function Details({ rows }: { rows: [keyof typeof ICONS, string][] }) {
+// Server snapshot undefined = not read yet, avoids a hydration mismatch
+const noSubscription = () => () => {};
+function useLastBooking() {
+  const raw = useSyncExternalStore(noSubscription, readLastBookingRaw, () => undefined);
+  const result = useMemo(() => (raw === undefined ? undefined : parseLastBooking(raw)), [raw]);
+  return result;
+}
+
+type Row = { icon: string; term: string; value: string };
+
+function Details({ rows }: { rows: Row[] }) {
   return (
     <dl className="w-full">
-      {rows.map(([term, value]) => (
+      {rows.map(({ icon, term, value }) => (
         <div key={term} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-dashed border-halloween-cream/30 px-0.5 py-2.5">
           <dt className="flex items-center gap-2.5 whitespace-nowrap text-lg font-bold text-halloween-moon">
-            <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">{ICONS[term]}</svg>
+            <Image src={`/icons/${icon}.svg`} alt="" width={26} height={26} />
             {term}
           </dt>
           <dd className="ml-auto whitespace-nowrap text-right text-lg font-bold text-halloween-cream">{value}</dd>
@@ -69,24 +44,41 @@ function Details({ rows }: { rows: [keyof typeof ICONS, string][] }) {
   );
 }
 
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-3.5 py-3 text-[15px] leading-relaxed">
+      {children}
+    </p>
+  );
+}
+
+function CheckInRules() {
+  return (
+    <div className="flex w-full flex-col gap-2.5 rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-4 py-3.5">
+      <span className="display-font origin-left -rotate-2 text-[22px] leading-tight text-halloween-orange">Check-in rule</span>
+      <ol className="flex list-decimal flex-col gap-1.5 pl-[22px] text-base leading-normal marker:font-bold marker:text-halloween-orange">
+        <li>ยืนยันสิทธิ์ = เช็กอินที่บูธภายในเวลาเช็กอินของรอบ</li>
+        <li>มาไม่ทันถือว่าสละสิทธิ์ ที่นั่งจะถูกปล่อยให้ walk-in</li>
+        <li>ยังมาเล่นแบบ walk-in ได้ถ้ารอบยังมีที่</li>
+      </ol>
+    </div>
+  );
+}
+
 function Confirmed({ result }: { result: BookResult }) {
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
-  const round: Round | undefined = rounds.data?.rounds.find((r) => r.id === result.round_id);
+  const round = rounds.data?.rounds.find((r) => r.id === result.round_id);
   const activity = state.data?.activity;
   const count = result.players.length;
 
-  const rows: [keyof typeof ICONS, string][] = [
-    ['Room', activity?.room_name || activity?.name || 'Escape Room'],
-    ...(round
-      ? ([
-          ['Date', formatDateEn(round.starts_at)],
-          ['Round', `Round ${round.round_no} · ${formatTimeRange(round.starts_at, round.ends_at)}`],
-        ] as [keyof typeof ICONS, string][])
-      : []),
-    ['Location', 'อาคารวิศวฯ 100 ปี คณะวิศวฯ'],
-    ['Players', String(count)],
-  ];
+  const rows: Row[] = [
+    { icon: 'room', term: 'Room', value: activity?.room_name || activity?.name || 'Escape Room' },
+    round && { icon: 'date', term: 'Date', value: formatDateEn(round.starts_at) },
+    round && { icon: 'round', term: 'Round', value: `Round ${round.round_no} · ${formatTimeRange(round.starts_at, round.ends_at)}` },
+    { icon: 'location', term: 'Location', value: VENUE },
+    { icon: 'players', term: 'Players', value: String(count) },
+  ].filter((row): row is Row => Boolean(row));
 
   return (
     <BookingPage activity={ACTIVITY}>
@@ -94,7 +86,7 @@ function Confirmed({ result }: { result: BookResult }) {
         <Doodle name="pumpkin" className="w-[78px] h-auto -rotate-6" />
         <h1 className="display-font text-[40px] leading-[1.05] text-halloween-orange -rotate-2">You&apos;re booked!</h1>
         <span className="rounded-[4px_9px_5px_8px] bg-halloween-purple px-3.5 py-2 text-[15px] font-bold">
-          Sent to {count} {count === 1 ? 'recipient' : 'recipients'}
+          Sent to {plural(count, 'recipient')}
         </span>
         <p className="text-base leading-relaxed">
           {count === 1
@@ -129,22 +121,13 @@ function Confirmed({ result }: { result: BookResult }) {
         ) : (
           <Details rows={rows} />
         )}
-        <div className="flex w-full flex-col gap-2.5 rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-4 py-3.5">
-          <span className="display-font origin-left -rotate-2 text-[22px] leading-tight text-halloween-orange">Check-in rule</span>
-          <ol className="flex list-decimal flex-col gap-1.5 pl-[22px] text-base leading-normal marker:font-bold marker:text-halloween-orange">
-            <li>ยืนยันสิทธิ์ = เช็กอินที่บูธภายในเวลาเช็กอินของรอบ</li>
-            <li>มาไม่ทันถือว่าสละสิทธิ์ ที่นั่งจะถูกปล่อยให้ walk-in</li>
-            <li>ยังมาเล่นแบบ walk-in ได้ถ้ารอบยังมีที่</li>
-          </ol>
-        </div>
+        <CheckInRules />
       </Card>
 
       <Card className="flex flex-col gap-1 p-[18px]">
         <div className="flex items-center gap-2">
           <h2 className="flex-1 text-[19px] font-bold">Team</h2>
-          <span className="text-sm text-halloween-gray">
-            {count} {count === 1 ? 'person' : 'people'}
-          </span>
+          <span className="text-sm text-halloween-gray">{plural(count, 'person', 'people')}</span>
         </div>
         <ul>
           {result.players.map((player, index) => (
@@ -167,13 +150,9 @@ function Confirmed({ result }: { result: BookResult }) {
       <Card className="flex flex-col gap-2.5 p-[18px]">
         <h2 className="text-[19px] font-bold">Changes &amp; cancelling</h2>
         {activity?.booking_closes_at && (
-          <p className="rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-3.5 py-3 text-[15px] leading-relaxed">
-            ย้ายรอบได้ถึงเวลาปิดรับจองล่วงหน้า ({formatDayTimeTh(activity.booking_closes_at)} น.)
-          </p>
+          <Note>ย้ายรอบได้ถึงเวลาปิดรับจองล่วงหน้า ({formatDayTimeTh(activity.booking_closes_at)} น.)</Note>
         )}
-        <p className="rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-3.5 py-3 text-[15px] leading-relaxed">
-          ยกเลิกได้ถึงเวลาปิดเช็กอินของรอบ{round ? ` (${formatTime(round.checkin_closes_at)} น.)` : ''}
-        </p>
+        <Note>ยกเลิกได้ถึงเวลาปิดเช็กอินของรอบ{round ? ` (${formatTime(round.checkin_closes_at)} น.)` : ''}</Note>
       </Card>
 
       <Button href={paths.myBooking}>View my booking</Button>
@@ -185,29 +164,15 @@ function Confirmed({ result }: { result: BookResult }) {
   );
 }
 
-// 4: reads the book result from sessionStorage, none → home
+// 4: shows the book result from sessionStorage, none → home
 export default function ConfirmedPage() {
   const router = useRouter();
-  const [result, setResult] = useState<BookResult | null>(null);
+  const result = useLastBooking();
 
   useEffect(() => {
-    // Browser-only, read after mount
-    let alive = true;
-    void Promise.resolve().then(() => {
-      if (!alive) return;
-      const last = readLastBooking();
-      if (!last?.code || !Array.isArray(last.players)) {
-        router.replace(paths.home);
-        return;
-      }
-      rememberCode(ACTIVITY, last.code);
-      setResult(last);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [router]);
+    if (result === null) router.replace(paths.home);
+    else if (result) rememberCode(ACTIVITY, result.code);
+  }, [result, router]);
 
-  if (!result) return null;
-  return <Confirmed result={result} />;
+  return result ? <Confirmed result={result} /> : null;
 }

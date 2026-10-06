@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Button from '@/components/booking/Button';
 import Sheet from '@/components/booking/Sheet';
 import { LeaderBadge } from '@/components/booking/Status';
@@ -106,11 +107,7 @@ export default function SeatConflict({ seatsLeft, players, onConfirm, onPickRoun
                       aria-hidden="true"
                       className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-halloween-moon ${checked ? 'border-halloween-moon bg-halloween-moon' : 'border-halloween-gray/80 bg-halloween-purple/30'}`}
                     >
-                      {checked && (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-halloween-dark">
-                          <path d="M5 12.5l4.5 4.5L19 7.5" />
-                        </svg>
-                      )}
+                      {checked && <Image src="/icons/check.svg" alt="" width={16} height={16} />}
                     </span>
                     <span className="text-[15px] leading-normal">
                       <b>Remove</b> {player.full_name}

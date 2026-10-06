@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
         source: "/fonts/:path*",
         headers: [{ key: "Cache-Control", value: `public, max-age=${YEAR}, immutable` }],
       },
-      ...["/illustrations/:path*", "/brand/:path*", "/ghosts/:path*", "/questions/:path*", "/sponsors/:path*"].map(
+      ...["/illustrations/:path*", "/icons/:path*", "/brand/:path*", "/ghosts/:path*", "/questions/:path*", "/sponsors/:path*"].map(
         (source) => ({
           source,
           // A week is long enough for repeat visits, short enough that swapped artwork shows up
