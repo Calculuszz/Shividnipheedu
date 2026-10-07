@@ -10,11 +10,10 @@ import { bookingPaths } from '@/lib/bookingRules';
 import { parseLastBooking, readLastBookingRaw, rememberCode } from '@/lib/bookingStorage';
 import { formatDateEn, formatDayTimeTh, formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { BookResult } from '@/lib/bookingTypes';
+import { CheckInRuleNotice, VENUE_BUILDING, VENUE_FACULTY } from '../_shared';
 
 const ACTIVITY = 'escape_room';
 const paths = bookingPaths(ACTIVITY);
-// Not in the API, same text as the design
-const VENUE = 'อาคารวิศวฯ 100 ปี คณะวิศวฯ';
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -52,19 +51,6 @@ function Note({ children }: { children: ReactNode }) {
   );
 }
 
-function CheckInRules() {
-  return (
-    <div className="flex w-full flex-col gap-2.5 rounded-[12px_8px_14px_6px/8px_14px_6px_12px] border-[1.5px] border-halloween-purple bg-halloween-dark px-4 py-3.5">
-      <span className="display-font origin-left -rotate-2 text-[22px] leading-tight text-halloween-orange">Check-in rule</span>
-      <ol className="flex list-decimal flex-col gap-1.5 pl-[22px] text-base leading-normal marker:font-bold marker:text-halloween-orange">
-        <li>ยืนยันสิทธิ์ = เช็กอินที่บูธภายในเวลาเช็กอินของรอบ</li>
-        <li>มาไม่ทันถือว่าสละสิทธิ์ ที่นั่งจะถูกปล่อยให้ walk-in</li>
-        <li>ยังมาเล่นแบบ walk-in ได้ถ้ารอบยังมีที่</li>
-      </ol>
-    </div>
-  );
-}
-
 function Confirmed({ result }: { result: BookResult }) {
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
@@ -76,7 +62,7 @@ function Confirmed({ result }: { result: BookResult }) {
     { icon: 'room', term: 'Room', value: activity?.room_name || activity?.name || 'Escape Room' },
     round && { icon: 'date', term: 'Date', value: formatDateEn(round.starts_at) },
     round && { icon: 'round', term: 'Round', value: `Round ${round.round_no} · ${formatTimeRange(round.starts_at, round.ends_at)}` },
-    { icon: 'location', term: 'Location', value: VENUE },
+    { icon: 'location', term: 'Location', value: `${VENUE_BUILDING} ${VENUE_FACULTY}` },
     { icon: 'players', term: 'Players', value: String(count) },
   ].filter((row): row is Row => Boolean(row));
 
@@ -121,7 +107,11 @@ function Confirmed({ result }: { result: BookResult }) {
         ) : (
           <Details rows={rows} />
         )}
-        <CheckInRules />
+        {activity && (
+          <div className="w-full">
+            <CheckInRuleNotice activity={activity} tone="purple" />
+          </div>
+        )}
       </Card>
 
       <Card className="flex flex-col gap-1 p-[18px]">

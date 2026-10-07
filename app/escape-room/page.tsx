@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip, Markdown } from '@/components/booking';
-import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, CONTACT_LINE } from './_shared';
+import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, CONTACT_LINE, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
 import Doodle from '@/components/Doodle';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useBookingState, useRounds, useMyBooking } from '@/hooks/useBooking';
@@ -14,11 +14,6 @@ import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
 
 const ACTIVITY = 'escape_room';
 const paths = bookingPaths(ACTIVITY);
-
-// No field for the venue in the API — same static text repeats in the design's
-// MainClosed/SelectSlotClosed mockups, so it's not data the DB ever had.
-const VENUE_BUILDING = 'อาคารวิศวฯ 100 ปี';
-const VENUE_FACULTY = 'คณะวิศวกรรมศาสตร์';
 
 // useSyncExternalStore (not useState+useEffect) to read localStorage: the server
 // snapshot is null, so there's no hydration mismatch warning.
