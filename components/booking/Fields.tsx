@@ -1,6 +1,7 @@
 'use client';
 
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import Image from 'next/image';
 import FieldError from '@/components/FieldError';
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
@@ -28,8 +29,8 @@ export function TextField({ id, label, required, hint, error, mono, ...input }: 
         required={required}
         aria-invalid={!!error || undefined}
         aria-describedby={describedBy}
-        className={`w-full min-h-[52px] px-3.5 py-3 rounded-lg border-2 bg-halloween-dark text-halloween-cream text-[17px] outline-none focus:border-halloween-orange ${
-          error ? 'border-halloween-error' : 'border-halloween-purple'
+        className={`w-full min-h-[52px] px-3.5 py-3 rounded-lg border-2 text-halloween-cream text-[17px] outline-none focus:border-halloween-orange ${
+          error ? 'border-halloween-error bg-halloween-error/10' : 'border-halloween-purple bg-halloween-dark'
         } ${mono ? 'tracking-[1px]' : ''}`}
         {...input}
       />
@@ -54,10 +55,12 @@ type CheckFieldProps = {
   onChange: (checked: boolean) => void;
   children: ReactNode;
   error?: string;
+  /** Red box only; caller shows the message with id `${id}-err` */
+  invalid?: boolean;
 };
 
 /** Tick box with a wrapping label (PDPA consent, "I've read the room rules") */
-export function CheckField({ id, checked, onChange, children, error }: CheckFieldProps) {
+export function CheckField({ id, checked, onChange, children, error, invalid = !!error }: CheckFieldProps) {
   return (
     <div className="flex flex-col">
       <label htmlFor={id} className="flex items-start gap-3 min-h-11 py-1 cursor-pointer">
@@ -66,12 +69,25 @@ export function CheckField({ id, checked, onChange, children, error }: CheckFiel
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          aria-invalid={!!error || undefined}
-          className="mt-0.5 w-6 h-6 shrink-0 accent-halloween-orange cursor-pointer"
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? `${id}-err` : undefined}
+          className="peer sr-only"
         />
+        <span
+          aria-hidden="true"
+          className={`mt-px flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-halloween-moon ${
+            checked ? 'border-halloween-moon bg-halloween-moon' : `bg-halloween-purple/30 ${invalid ? 'border-halloween-error' : 'border-halloween-gray/80'}`
+          }`}
+        >
+          {checked && <Image src="/icons/check.svg" alt="" width={16} height={16} />}
+        </span>
         <span className="text-[15px] leading-normal text-halloween-cream">{children}</span>
       </label>
-      {error && <FieldError message={error} />}
+      {error && (
+        <div id={`${id}-err`}>
+          <FieldError message={error} />
+        </div>
+      )}
     </div>
   );
 }

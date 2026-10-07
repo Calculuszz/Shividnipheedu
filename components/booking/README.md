@@ -57,7 +57,7 @@ const { data, error, loading, refresh } = useRounds('escape_room');
 | `Card` (`tone`: orange / purple / danger / cream, `tape`, `tilt`) | กล่องขอบตัดมือทุกกล่อง |
 | `StickyNote` · `InfoNotice` · `ErrorNotice` | โน้ตสีเขียว · กล่องแจ้งข้อมูล · กล่อง error |
 | `Button` (`variant`: primary / secondary / danger / link, `href`, `loading`) | ปุ่มสูง 52px |
-| `TextField` · `CheckField` | ช่องกรอก (มี `hint`, `error`) · ช่องติ๊ก PDPA / กฎ |
+| `TextField` · `CheckField` | ช่องกรอก (มี `hint`, `error`) · ช่องติ๊ก PDPA / กฎ (`invalid` = ขอบแดงอย่างเดียว แสดงข้อความเองใน id `${id}-err`) |
 | `SeatCount` · `RoundStamp` | ด้านขวาของการ์ดรอบ: ตัวเลขที่นั่ง หรือตราประทับ Walk-in / Full / Closed / In progress / Ended |
 | `PlayerStatusChip` · `LeaderBadge` | ป้าย Booked / Checked in / Released … · ป้าย Leader |
 | `BookingQR` | QR ของรหัสการจอง (สตาฟสแกนที่บูธ) |
