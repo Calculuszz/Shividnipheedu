@@ -36,7 +36,7 @@ function Details({ rows }: { rows: Row[] }) {
             <Image src={`/icons/${icon}.svg`} alt="" width={26} height={26} />
             {term}
           </dt>
-          <dd className="ml-auto whitespace-nowrap text-right text-lg font-bold text-halloween-cream">{value}</dd>
+          <dd className="ml-auto text-right text-lg font-bold text-halloween-cream">{value}</dd>
         </div>
       ))}
     </dl>
