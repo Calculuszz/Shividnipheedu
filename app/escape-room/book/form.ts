@@ -13,6 +13,8 @@ const EMPTY = 'ว่าง';
 
 export const FIELDS: Field[] = ['full_name', 'student_id', 'phone', 'email', 'pdpa', 'rules'];
 
+export const isComplete = (issues: Issues) => Object.keys(issues).length === 0;
+
 const SUMMARY_LABEL: Record<Field, string> = {
   full_name: 'ชื่อ',
   student_id: 'รหัสนิสิต',

@@ -11,7 +11,7 @@ import { errorMessage } from '@/lib/bookingText';
 import { formatDateEn, formatTimeRange } from '@/lib/bookingTime';
 import type { ActivityInfo, Round } from '@/lib/bookingTypes';
 import { MoonCorner } from '../_shared';
-import { FIELDS, duplicateOf, emptyPlayer, playerIssues, summarize, toInput, type Field, type Player, type SidStatus } from './form';
+import { FIELDS, duplicateOf, emptyPlayer, isComplete, playerIssues, summarize, toInput, type Field, type Player, type SidStatus } from './form';
 import PlayerCard from './PlayerCard';
 import TeamSize, { type SeatCheck } from './TeamSize';
 
@@ -40,9 +40,10 @@ function RoundCard({ round }: { round: Round }) {
 
 function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: Round; leader: string }) {
   const router = useRouter();
-  const nextKey = useRef(1);
-  const [players, setPlayers] = useState<Player[]>(() => [emptyPlayer(0, leader)]);
-  const [open, setOpen] = useState<Set<number>>(() => new Set([0]));
+  const start = Math.max(1, activity.team_min);
+  const nextKey = useRef(start);
+  const [players, setPlayers] = useState<Player[]>(() => Array.from({ length: start }, (_, i) => emptyPlayer(i, i === 0 ? leader : '')));
+  const [open, setOpen] = useState<Set<number>>(() => new Set(Array.from({ length: start }, (_, i) => i)));
   const [touched, setTouched] = useState<Set<string>>(() => new Set());
   const [sidStatus, setSidStatus] = useState<Record<string, SidStatus>>({});
   const [notes, setNotes] = useState('');
@@ -80,7 +81,8 @@ function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: 
     setOpen(next);
   };
 
-  const reveal = (key: number, field: string) => {
+  const reveal = (key: number, field: Field) => {
+    touch(key, [field]);
     setOpen((prev) => new Set([...prev, key]));
     setFocusTarget({ id: `p${key}-${field}` });
   };
@@ -110,14 +112,15 @@ function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: 
     try {
       const { rounds } = await getRounds(ACTIVITY);
       const latest = rounds.find((r) => r.id === round.id);
-      if (latest && roundPick(latest, need).selectable) {
+      const pick = latest ? roundPick(latest, need) : null;
+      if (pick?.selectable) {
         const key = nextKey.current++;
         // Collapse finished cards so the new one is in view
-        const done = new Set(players.filter((_, i) => Object.keys(issues[i]).length === 0).map((p) => p.key));
+        const done = new Set(players.filter((_, i) => isComplete(issues[i])).map((p) => p.key));
         setOpen((prev) => new Set([...[...prev].filter((k) => !done.has(k)), key]));
         setPlayers((prev) => [...prev, emptyPlayer(key)]);
         setSeatCheck(null);
-      } else if (latest && !latest.closed && (latest.round_status === 'available' || latest.round_status === 'full')) {
+      } else if (latest && (pick?.reason === 'full' || pick?.reason === 'not_enough')) {
         setSeatCheck({ kind: 'blocked', text: `รอบนี้เหลือ ${latest.online_left} ที่นั่ง เพิ่มผู้เล่นคนที่ ${need} ไม่ได้ — เลือกรอบอื่นได้` });
       } else {
         setSeatCheck({ kind: 'blocked', text: errorMessage('ROUND_CLOSED') });
@@ -137,13 +140,9 @@ function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: 
     } catch (e) {
       const err = e instanceof BookingApiError ? e : new BookingApiError(0, 'SERVER_ERROR');
       const at = err.detail ? players.findLastIndex((p) => p.student_id === err.detail) : -1;
-      if (err.code === 'ALREADY_BOOKED' && at >= 0) {
-        setSidStatus((s) => ({ ...s, [err.detail!]: 'taken' }));
-        touch(players[at].key, ['student_id']);
-        reveal(players[at].key, 'sid');
-      } else if (err.code === 'DUPLICATE_IN_TEAM' && at >= 0) {
-        touch(players[at].key, ['student_id']);
-        reveal(players[at].key, 'sid');
+      if ((err.code === 'ALREADY_BOOKED' || err.code === 'DUPLICATE_IN_TEAM') && at >= 0) {
+        if (err.code === 'ALREADY_BOOKED') setSidStatus((s) => ({ ...s, [err.detail!]: 'taken' }));
+        reveal(players[at].key, 'student_id');
       } else if (err.code === 'NOT_ENOUGH_SEATS') {
         alert(err.message);
       } else {
@@ -182,7 +181,7 @@ function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: 
             if (field === 'student_id') checkSid(index);
           }}
           onToggle={() => toggle(player.key)}
-          onRemove={() => removePlayer(player.key)}
+          onRemove={index > 0 && players.length > activity.team_min ? () => removePlayer(player.key) : undefined}
         />
       ))}
       <Card className="flex flex-col gap-1.5 p-[18px]">

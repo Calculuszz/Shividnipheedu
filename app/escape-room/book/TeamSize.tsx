@@ -1,5 +1,4 @@
-import Card from '@/components/booking/Card';
-import Icon from './Icon';
+import { Card, Icon } from '@/components/booking';
 
 export type SeatCheck =
   | { kind: 'checking'; roundTime: string }

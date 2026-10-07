@@ -1,11 +1,8 @@
 import Link from 'next/link';
 import FieldError from '@/components/FieldError';
-import Card from '@/components/booking/Card';
-import { CheckField, TextField } from '@/components/booking/Fields';
-import { LeaderBadge } from '@/components/booking/Status';
+import { Card, CheckField, Icon, LeaderBadge, TextField } from '@/components/booking';
 import { maskStudentId } from '@/lib/bookingRules';
-import type { Field, Issues, Player } from './form';
-import Icon from './Icon';
+import { isComplete, type Field, type Issues, type Player } from './form';
 
 type Props = {
   player: Player;
@@ -20,7 +17,8 @@ type Props = {
   onChange: (patch: Partial<Player>) => void;
   onBlur: (field: Field) => void;
   onToggle: () => void;
-  onRemove: () => void;
+  /** Hidden when not set: leader, or team at team_min */
+  onRemove?: () => void;
 };
 
 function Complete() {
@@ -43,18 +41,16 @@ function PlayerNo({ n, complete }: { n: number; complete: boolean }) {
 
 const LINK = 'font-bold text-halloween-orange underline';
 
-const hasShownError = (issues: Issues, shown: (field: Field) => boolean) => (Object.keys(issues) as Field[]).some(shown);
-
 export default function PlayerCard({ player, index, open, issues, shown, checking, rulesHref, privacyHref, onChange, onBlur, onToggle, onRemove }: Props) {
   const n = index + 1;
   const leader = index === 0;
-  const complete = Object.keys(issues).length === 0 && !checking;
+  const complete = isComplete(issues) && !checking;
   const error = (field: Field) => (shown(field) ? issues[field]?.message : undefined);
   const name = player.full_name.trim() || `Player ${n}`;
-  const id = (field: string) => `p${player.key}-${field}`;
-  const redBorder = hasShownError(issues, shown);
+  const id = (field: Field | 'body') => `p${player.key}-${field}`;
+  const redBorder = (Object.keys(issues) as Field[]).some(shown);
 
-  const remove = !leader && (
+  const remove = onRemove && (
     <button type="button" aria-label={`Remove player ${n}`} onClick={onRemove} className="flex min-h-11 items-center rounded-xl px-2.5 text-[15px] font-bold text-halloween-error">
       Remove
     </button>
@@ -108,7 +104,7 @@ export default function PlayerCard({ player, index, open, issues, shown, checkin
         <div id={id('body')} className="flex flex-col gap-3.5">
           {leader && <span className="text-sm text-halloween-gray">คุณคือผู้จองและหัวหน้าทีม — ลบตัวเองออกจากฟอร์มไม่ได้</span>}
           <TextField
-            id={id('name')}
+            id={id('full_name')}
             label="Full name"
             required
             autoComplete={leader ? 'name' : 'off'}
@@ -118,7 +114,7 @@ export default function PlayerCard({ player, index, open, issues, shown, checkin
             error={error('full_name')}
           />
           <TextField
-            id={id('sid')}
+            id={id('student_id')}
             label="Student ID"
             required
             mono

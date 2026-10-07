@@ -1,8 +1,8 @@
 'use client';
 
 import type { InputHTMLAttributes, ReactNode } from 'react';
-import Image from 'next/image';
 import FieldError from '@/components/FieldError';
+import Icon from './Icon';
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
   id: string;
@@ -79,7 +79,7 @@ export function CheckField({ id, checked, onChange, children, error, invalid = !
             checked ? 'border-halloween-moon bg-halloween-moon' : `bg-halloween-purple/30 ${invalid ? 'border-halloween-error' : 'border-halloween-gray/80'}`
           }`}
         >
-          {checked && <Image src="/icons/check.svg" alt="" width={16} height={16} />}
+          {checked && <Icon name="check" size={16} className="text-halloween-dark" />}
         </span>
         <span className="text-[15px] leading-normal text-halloween-cream">{children}</span>
       </label>
