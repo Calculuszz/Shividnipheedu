@@ -19,7 +19,7 @@ type RoundListProps = {
   mode?: RoundListMode;
 };
 
-function SeatBars({ round }: { round: Round }) {
+export function SeatBars({ round }: { round: Round }) {
   const total = Math.max(0, round.online_cap);
   const remaining = Math.max(0, Math.min(round.online_left, total));
   const almostFull = remaining > 0 && remaining <= ALMOST_FULL_THRESHOLD;

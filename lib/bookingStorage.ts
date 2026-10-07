@@ -35,11 +35,24 @@ export function saveLastBooking(result: BookResult) {
   } catch {}
 }
 
-export function readLastBooking(): BookResult | null {
+/** Raw string, a stable snapshot for useSyncExternalStore. */
+export function readLastBookingRaw(): string | null {
   try {
-    const raw = sessionStorage.getItem(LAST_BOOKING_KEY);
-    return raw ? (JSON.parse(raw) as BookResult) : null;
+    return sessionStorage.getItem(LAST_BOOKING_KEY);
   } catch {
     return null;
   }
+}
+
+export function parseLastBooking(raw: string | null): BookResult | null {
+  try {
+    const data = raw ? (JSON.parse(raw) as BookResult) : null;
+    return data && typeof data.code === 'string' && Array.isArray(data.players) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readLastBooking(): BookResult | null {
+  return parseLastBooking(readLastBookingRaw());
 }

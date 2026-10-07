@@ -4,6 +4,10 @@ import type { ActivityInfo } from '@/lib/bookingTypes';
 
 export const CONTACT_LINE = 'ติดต่อผู้จัด: [ช่องทางติดต่อ]';
 
+// Not in the API yet
+export const VENUE_BUILDING = 'อาคารวิศวฯ 100 ปี';
+export const VENUE_FACULTY = 'คณะวิศวกรรมศาสตร์';
+
 // Floating moon in the top-right corner — repeats identically on Start/Rules/
 // Privacy (same size/position/rotation on all three). Landing (Main.dc.html)
 // does NOT have this: it has its own 5-image Hero cluster instead, so don't
@@ -34,16 +38,19 @@ export function ChulaOnlyNote() {
 export function CheckInRuleNotice({
   activity,
   hideSummaryLine = false,
+  tone = 'orange',
 }: {
   activity: Pick<ActivityInfo, 'checkin_opens_before_min' | 'checkin_duration_min'>;
   /** Rules page shows this same sentence in its own "การเช็กอิน" list instead — skip it here to avoid repeating it twice on that page. Landing has no such list, so it keeps showing it (default). */
   hideSummaryLine?: boolean;
+  /** Border colour; confirmed page uses purple. */
+  tone?: 'orange' | 'purple';
 }) {
   return (
     // No `title` prop: InfoNotice's built-in title is plain bold (correct for
     // e.g. "Online booking closed"), but the design renders "Check-in rule"
     // in the display font — a style only this box uses, not InfoNotice's default.
-    <InfoNotice>
+    <InfoNotice className={tone === 'purple' ? '!border-halloween-purple' : ''}>
       <span className="display-font text-[22px] leading-tight text-halloween-orange -rotate-2 inline-block origin-left">
         Check-in rule
       </span>

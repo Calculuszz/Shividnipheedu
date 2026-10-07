@@ -9,3 +9,5 @@ export { default as Markdown } from './Markdown';
 export { TextField, CheckField } from './Fields';
 export { default as Sheet } from './Sheet';
 export { default as RoundList } from './RoundList';
+export { default as ChangeRoundSheet } from './ChangeRoundSheet';
+export { default as SeatConflict } from './SeatConflict';
