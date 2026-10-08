@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import EventName from '@/components/EventName';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
-import Image from 'next/image';
+import Sponsors from '@/components/Sponsors';
 
 type FormData = {
   studentId: string;
@@ -698,38 +698,8 @@ export default function RegistrationPage() {
           </div>
         )}
 
-        {/* Sponsors Section - Only on Step 1 (Scrollable) */}
-        {step === 1 && (
-          <div className="mt-8">
-            <p className="text-center text-halloween-orange font-bold text-xs mb-3">Our Sponsors</p>
-            <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-2">
-              {[
-                { src: '/sponsors/cqk-hotpot-logo-2-copy.png', alt: 'CQK Hotpot' },
-                { src: '/sponsors/escaperoomlogo.png', alt: 'Escape Room' },
-                { src: '/sponsors/tri-petch-isuzu-sales-.png', alt: 'Tri Petch Isuzu Sales' },
-                { src: '/sponsors/img_0628.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7475.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7476.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7484.jpg', alt: 'Sponsor' },
-              ].map((sponsor, index) => (
-                <div
-                  key={index}
-                  className="w-[50px] h-[50px] sm:w-[55px] sm:h-[55px] md:w-[60px] md:h-[60px] lg:w-[65px] lg:h-[65px] hover:scale-110 transition-transform flex items-center justify-center"
-                >
-                  <Image
-                    src={sponsor.src}
-                    alt={sponsor.alt}
-                    width={65}
-                    height={65}
-                    className="w-full h-full object-contain"
-                    quality={75}
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Sponsors - only on step 1 */}
+        {step === 1 && <Sponsors className="mt-8" />}
       </div>
     </div>
   );

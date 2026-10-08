@@ -1012,7 +1012,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
 
   // DESKTOP/TABLET LAYOUT
   return (
-    <div className="w-full pb-24">
+    <div className="w-full pb-36">
       <div className="flex gap-4 h-[calc(100vh-280px)] w-full">
       {/* Camera Section - 2/3 width */}
       <div className="w-2/3">
@@ -1141,7 +1141,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
       </div>
 
       {/* Fixed Sponsors centered at bottom */}
-      <Sponsors />
+      <Sponsors placement="fixed" />
     </div>
   );
 }

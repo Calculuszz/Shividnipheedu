@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Sponsors from '@/components/Sponsors';
 import LoadingScreen from '@/components/LoadingScreen';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 
@@ -209,35 +210,8 @@ export default function SchedulePage() {
         </div>
         </div>
 
-        {/* Sponsors Section - Same as menu page */}
-        <div className="shrink-0 w-full">
-          <div className="bg-halloween-charcoal/70 border-t-2 border-halloween-orange py-2 px-0">
-            <p className="text-center text-halloween-orange font-bold text-xs mb-1.5">Our Sponsors</p>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-              {[
-                { src: '/sponsors/cqk-hotpot-logo-2-copy.png', alt: 'CQK Hotpot' },
-                { src: '/sponsors/escaperoomlogo.png', alt: 'Escape Room' },
-                { src: '/sponsors/tri-petch-isuzu-sales-.png', alt: 'Tri Petch Isuzu Sales' },
-                { src: '/sponsors/img_0628.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7475.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7476.jpg', alt: 'Sponsor' },
-                { src: '/sponsors/img_7484.jpg', alt: 'Sponsor' },
-              ].map((sponsor, index) => (
-                <div key={index} className="w-[35px] h-[35px] sm:w-[40px] sm:h-[40px] md:w-[45px] md:h-[45px] flex items-center justify-center">
-                  <Image
-                    src={sponsor.src}
-                    alt={sponsor.alt}
-                    width={45}
-                    height={45}
-                    className="w-full h-full object-contain"
-                    quality={75}
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Sponsors */}
+        <Sponsors className="shrink-0 px-4 pb-5 pt-3" />
       </div>
 
       {/* Full poster */}

@@ -1,48 +1,41 @@
-'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import Image from 'next/image';
+// This year's sponsors, shown on every page that thanks them. Change the list here only.
+// w × h is the display size: each logo gets the same area (wide ones shorter, tall ones
+// taller) so none of them shouts louder than the rest. Files are 3× that for sharp screens.
+const SPONSORS = [
+  { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 50, h: 15 },
+  { id: 'major', name: 'Major Cineplex', w: 19, h: 30 },
+  { id: 'cunex', name: 'CUNEX', w: 58, h: 11 },
+  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 53, h: 14 },
+  { id: 'nk-boardgame', name: 'NK Board Game', w: 34, h: 22 },
+  { id: 'codec', name: 'Codec Creation', w: 28, h: 27 },
+  { id: 'merge-clinic', name: 'Merge Clinic', w: 21, h: 30 },
+  { id: 'hand-wrap', name: 'Hand Wrap', w: 35, h: 22 },
+  { id: 'lesgo', name: 'LesGO Clothing', w: 58, h: 10 },
+  // Supplied white-only; recoloured to the site's plum so it shows on the cream ribbon
+  { id: 'jejuvita', name: 'Jejuvita', w: 56, h: 14 },
+] as const;
 
-const sponsors = [
-  { src: '/sponsors/cqk-hotpot-logo-2-copy.png', alt: 'CQK Hotpot' },
-  { src: '/sponsors/escaperoomlogo.png', alt: 'Escape Room' },
-  { src: '/sponsors/tri-petch-isuzu-sales-.png', alt: 'Tri Petch Isuzu Sales' },
-  { src: '/sponsors/img_0628.jpg', alt: 'Sponsor' },
-  { src: '/sponsors/img_7475.jpg', alt: 'Sponsor' },
-  { src: '/sponsors/img_7476.jpg', alt: 'Sponsor' },
-  { src: '/sponsors/img_7484.jpg', alt: 'Sponsor' },
-];
-
-interface SponsorsProps {
-  title?: string;
+type SponsorsProps = {
+  /** "fixed" pins it to the bottom of the screen (admin QR scanner) */
+  placement?: 'inline' | 'fixed';
   className?: string;
-}
+};
 
-export default function Sponsors({ title = 'Our Sponsors', className = '' }: SponsorsProps) {
+/** "ขอบคุณผู้สนับสนุน" + one cream ribbon of logos, 5 × 2 with thin dividers */
+export default function Sponsors({ placement = 'inline', className = '' }: SponsorsProps) {
+  const position = placement === 'fixed' ? 'fixed bottom-3 left-1/2 z-40 -translate-x-1/2 lg:bottom-5' : '';
   return (
-    <div className={`fixed bottom-3 left-1/2 -translate-x-1/2 lg:bottom-5 z-40 max-w-[95vw] ${className}`}>
-      {title && (
-        <p className="text-halloween-orange font-bold text-xs mb-2 text-center">
-          {title}
-        </p>
-      )}
-      <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4">
-        {sponsors.map((sponsor, index) => (
-          <div
-            key={index}
-            className="w-[50px] h-[50px] sm:w-[55px] sm:h-[55px] md:w-[60px] md:h-[60px] lg:w-[65px] lg:h-[65px] hover:scale-110 transition-transform flex items-center justify-center"
-          >
-            <Image
-              src={sponsor.src}
-              alt={sponsor.alt}
-              width={65}
-              height={65}
-              className="w-full h-full object-contain"
-              quality={75}
-              loading="lazy"
-            />
-          </div>
+    <section aria-label="ผู้สนับสนุน" className={`mx-auto w-full max-w-[420px] ${position} ${className}`}>
+      <p className="mb-2.5 text-center text-xs font-bold tracking-[0.08em] text-halloween-orange">ขอบคุณผู้สนับสนุน</p>
+      <ul className="grid grid-cols-5 gap-y-2 rounded-[18px] bg-halloween-cream px-2 py-2.5 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)]">
+        {SPONSORS.map(({ id, name, w, h }) => (
+          <li key={id} className="flex h-[34px] items-center justify-center [&:not(:nth-child(5n))]:border-r [&:not(:nth-child(5n))]:border-halloween-purple/20">
+            <img src={`/sponsors/${id}.webp`} alt={name} width={w} height={h} loading="lazy" />
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
