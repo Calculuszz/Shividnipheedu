@@ -51,3 +51,5 @@ export function maskStudentId(id: string) {
 
 export const isStudentId = (v: string) => /^[0-9]{10}$/.test(v);
 export const isEmail = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim());
+export const normalizePhone = (v: string) => v.replace(/[\s-]/g, '');
+export const isPhone = (v: string) => /^(\+66|0)\d{8,9}$/.test(normalizePhone(v));
