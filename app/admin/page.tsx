@@ -400,7 +400,6 @@ function AttendanceTable() {
   }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
-  const checkInPercentage = totalCount > 0 ? Math.round((checkedInCount / totalCount) * 100) : 0;
 
   return (
     <div>
@@ -433,24 +432,6 @@ function AttendanceTable() {
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
               </svg>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="bg-halloween-charcoal border-2 border-halloween-purple rounded-lg p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-halloween-cream font-bold font-iannnnn-owl">ความคืบหน้าการเช็คอิน</p>
-          <p className="text-halloween-orange text-2xl font-black">{checkInPercentage}%</p>
-        </div>
-        <div className="w-full bg-halloween-dark rounded-full h-6 overflow-hidden border-2 border-halloween-purple">
-          <div
-            className="bg-linear-to-r from-halloween-orange to-halloween-red h-full transition-all duration-500 ease-out flex items-center justify-end px-2"
-            style={{ width: `${checkInPercentage}%` }}
-          >
-            {checkInPercentage > 10 && (
-              <span className="text-white text-xs font-bold">{checkedInCount}/{totalCount}</span>
-            )}
           </div>
         </div>
       </div>
