@@ -610,6 +610,10 @@ function scanFeedback(audio: AudioContext | null, ok: boolean) {
   }
 }
 
+function isBackCamera(stream: MediaStream) {
+  return stream.getVideoTracks()[0]?.getSettings().facingMode === 'environment';
+}
+
 function QRScanner({ onExit }: { onExit: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -626,6 +630,10 @@ function QRScanner({ onExit }: { onExit: () => void }) {
   const audioRef = useRef<AudioContext | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  // Preview is mirrored only for a front/laptop camera, like a selfie. The back camera
+  // must not be: mirrored, the picture moves the wrong way when the phone moves.
+  // (Display only; jsQR reads the unmirrored frame either way.)
+  const [mirrored, setMirrored] = useState(false);
   const [recentAttendees, setRecentAttendees] = useState<Registration[]>([]);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -715,7 +723,9 @@ function QRScanner({ onExit }: { onExit: () => void }) {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log("Successfully got stream with primary constraints.");
       streamRef.current = stream;
-          setMediaStream(stream);
+      // Asked for the back camera and got it (some Android browsers leave facingMode unset)
+      setMirrored(!(constraints === mobileConstraints || isBackCamera(stream)));
+      setMediaStream(stream);
       setScanning(true);
 
     } catch (err: any) {
@@ -728,6 +738,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
           const stream = await navigator.mediaDevices.getUserMedia(desktopConstraints);
           console.log("Successfully got stream with fallback constraints.");
           streamRef.current = stream;
+          setMirrored(!isBackCamera(stream));
           setMediaStream(stream);
           setScanning(true);
         } catch (fallbackErr: any) {
@@ -947,7 +958,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
               playsInline
               muted
               autoPlay
-              style={{ transform: 'scaleX(-1)' }}
+              style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
             />
             <canvas ref={canvasRef} className="hidden" />
 
@@ -1033,7 +1044,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
                 playsInline
                 muted
                 autoPlay
-                style={{ transform: 'scaleX(-1)' }}
+                style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
               />
               <canvas ref={canvasRef} className="hidden" />
 
