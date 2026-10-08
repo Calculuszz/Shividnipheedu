@@ -208,7 +208,7 @@ function BookForm({ activity, round, leader }: { activity: ActivityInfo; round: 
           </ErrorNotice>
         )}
         {submitError && <ErrorNotice>{submitError}</ErrorNotice>}
-        <Button onClick={confirm} disabled={summary.count > 0 || checking} loading={submitting} loadingText="กำลังจอง…">
+        <Button onClick={confirm} disabled={summary.count > 0 || checking || seatCheck?.kind === 'checking'} loading={submitting} loadingText="กำลังจอง…">
           Confirm booking
         </Button>
         <span className="text-center text-sm text-halloween-gray">
