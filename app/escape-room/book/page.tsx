@@ -1,4 +1,4 @@
-import BookingForm from '@/components/booking/BookingForm';
+import BookingForm from './BookingForm';
 
 export default async function BookPage({ searchParams }: {
   searchParams: Promise<{ round?: string | string[]; leader?: string | string[] }>;

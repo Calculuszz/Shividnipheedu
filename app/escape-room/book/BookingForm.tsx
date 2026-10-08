@@ -12,7 +12,7 @@ import { formatDateEn, formatTimeRange } from '@/lib/bookingTime';
 import type { PlayerInput } from '@/lib/bookingTypes';
 import Doodle from '@/components/Doodle';
 import PlayerFields from './PlayerFields';
-import { newPlayer, playerErrors, studentChecked, toPlayerInput, type PlayerDraft } from './bookingFormModel';
+import { newPlayer, playerComplete, playerErrors, studentCanSubmit, toPlayerInput, type PlayerDraft } from './bookingFormModel';
 
 const ACTIVITY = 'escape_room';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,6 +34,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   const [addError, setAddError] = useState('');
   const [seatsBlocked, setSeatsBlocked] = useState(false);
   const [seatLimit, setSeatLimit] = useState<number | null>(null);
+  const [addedPlayerKey, setAddedPlayerKey] = useState<string | null>(null);
   const sequence = useRef(0);
   const actionLock = useRef(false);
   const requests = useRef(new Map<string, number>());
@@ -45,7 +46,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   const busy = adding || submitting || submitted;
   const errors = players.map(p => playerErrors(p, players));
   const checking = players.some(p => p.check.status === 'checking');
-  const pending = players.some(p => !studentChecked(p));
+  const pending = players.some(p => !studentCanSubmit(p));
   const teamValid = !!activity && players.length >= activity.team_min && players.length <= activity.team_max;
   const roundValid = !!round && roundPick(round, players.length).selectable && (seatLimit === null || players.length <= seatLimit);
   const ready = validUrl && teamValid && roundValid && state.data?.state === 'open' && !state.loading && !rounds.loading &&
@@ -60,17 +61,19 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     const token = (requests.current.get(key) ?? 0) + 1;
     requests.current.set(key, token);
     setPlayers(current => current.map(p => p.key === key && p.student_id === sid
-      ? { ...p, check: { sid, status: 'checking' }, touched: { ...p.touched, student_id: true } } : p));
+      ? { ...p, check: { sid, status: 'checking', error: p.check.sid === sid ? p.check.error : undefined }, touched: { ...p.touched, student_id: true } } : p));
     try {
       const taken = await checkStudent(ACTIVITY, sid);
       if (requests.current.get(key) !== token) return;
       setPlayers(current => current.map(p => p.key === key && p.student_id === sid
-        ? { ...p, check: taken ? { sid, status: 'error', error: errorMessage('ALREADY_BOOKED') } : { sid, status: 'available' } } : p));
+        ? { ...p, check: taken ? { sid, status: 'blocked', error: errorMessage('ALREADY_BOOKED') } : { sid, status: 'available' } } : p));
     } catch (e) {
       if (requests.current.get(key) !== token) return;
       const message = e instanceof BookingApiError ? e.message : errorMessage('SERVER_ERROR');
       setPlayers(current => current.map(p => p.key === key && p.student_id === sid
-        ? { ...p, check: { sid, status: 'error', error: message } } : p));
+        ? { ...p, check: e instanceof BookingApiError && e.code === 'ALREADY_BOOKED'
+          ? { sid, status: 'blocked', error: message }
+          : { sid, status: 'warning', error: p.check.error, warning: message } } : p));
     }
   }, []);
 
@@ -79,6 +82,13 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     const currentRequests = requests.current;
     return () => { currentRequests.clear(); };
   }, [leaderId, validUrl, verifyStudent]);
+
+  useEffect(() => {
+    if (!addedPlayerKey) return;
+    document.getElementById(`player-${addedPlayerKey}`)?.scrollIntoView({
+      block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+  }, [addedPlayerKey]);
 
   function changeField<K extends keyof PlayerInput>(key: string, field: K, value: PlayerInput[K]) {
     if (actionLock.current || submitted) return;
@@ -94,8 +104,9 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
 
   function blurField(player: PlayerDraft, field: keyof PlayerInput) {
     updatePlayer(player.key, p => ({ ...p, touched: { ...p.touched, [field]: true } }));
+    const playerIndex = players.findIndex(p => p.key === player.key);
     if (field === 'student_id' && isStudentId(player.student_id) &&
-      !players.some(p => p.key !== player.key && p.student_id === player.student_id)) {
+      !players.some((p, index) => index < playerIndex && p.student_id === player.student_id)) {
       void verifyStudent(player.key, player.student_id);
     }
   }
@@ -128,7 +139,8 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
         return;
       }
       const added = newPlayer(`member-${++sequence.current}`);
-      setPlayers(current => [...current, added]);
+      setPlayers(current => [...current.map(p => ({ ...p, expanded: !playerComplete(p, current) })), added]);
+      setAddedPlayerKey(added.key);
     } finally {
       actionLock.current = false;
       setAdding(false);
@@ -173,7 +185,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
         if (error.code === 'ALREADY_BOOKED' || error.code === 'DUPLICATE_IN_TEAM') {
           setPlayers(current => current.map(p => p.student_id === error.detail
             ? { ...p, expanded: true, touched: { ...p.touched, student_id: true },
-              check: { sid: p.student_id, status: 'error', error: error.message } } : p));
+              check: { sid: p.student_id, status: 'blocked', error: error.message } } : p));
         }
       }
     } finally {
@@ -184,7 +196,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
 
   const issues = errors.flatMap((fields, index) => Object.entries(fields).map(([field, message]) => ({
     key: `${players[index].key}-${field}`, playerKey: players[index].key, field,
-    text: `${FIELD_LABELS[field as keyof PlayerInput]}ของผู้เล่นคนที่ ${index + 1}: ${message}`,
+    text: `${FIELD_LABELS[field as keyof PlayerInput]} ของผู้เล่นคนที่ ${index + 1}: ${message}`,
   })));
 
   return (

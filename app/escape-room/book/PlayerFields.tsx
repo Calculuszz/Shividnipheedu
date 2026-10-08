@@ -22,7 +22,7 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
   const paths = bookingPaths();
 
   return (
-    <section aria-label={`Player ${number}`} className={`hand-cut border-2 bg-halloween-charcoal p-4 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.45)] ${hasError ? 'border-halloween-error' : 'border-halloween-orange'}`}>
+    <section id={prefix} aria-label={`Player ${number}`} className={`scroll-mt-4 hand-cut border-2 bg-halloween-charcoal p-4 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.45)] ${hasError ? 'border-halloween-error' : 'border-halloween-orange'}`}>
       <div className="flex items-center gap-2">
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold ${complete ? 'bg-halloween-moon text-halloween-dark' : 'bg-halloween-purple text-halloween-cream'}`}>{number}</span>
         <button type="button" onClick={onToggle} aria-expanded={player.expanded} aria-controls={`${prefix}-fields`}
@@ -31,7 +31,7 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
             Player {number} {leader && <LeaderBadge />}
             {complete && <span className="rounded-[4px_9px_5px_8px] bg-halloween-moon px-2 py-0.5 text-[12px] text-halloween-dark">Complete</span>}
           </span>
-          {!player.expanded && <span className="max-w-full break-words text-sm text-halloween-gray">{player.full_name || 'ยังไม่ได้กรอกชื่อ'} · {maskStudentId(player.student_id)}</span>}
+          {!player.expanded && <span className="max-w-full break-words text-sm text-halloween-gray">{player.full_name || 'ยังไม่ได้กรอกชื่อ'}{player.student_id && ` · ${maskStudentId(player.student_id)}`}</span>}
         </button>
         {!leader && <button type="button" disabled={!canRemove || disabled} onClick={onRemove} aria-label={`Remove player ${number}`}
           className="min-h-11 px-1 text-sm font-bold text-halloween-error disabled:opacity-40">Remove</button>}
@@ -50,7 +50,11 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
             error={shown('student_id')} hint={leader ? 'รหัสนิสิตหัวหน้าทีมจากขั้นตอนก่อนหน้า' : 'รหัสนิสิต 10 หลัก'} />
           <div aria-live="polite" className="text-sm text-halloween-gray">
             {player.check.status === 'checking' && 'กำลังตรวจสอบรหัสนิสิต…'}
-            {player.check.status === 'error' && <button type="button" disabled={disabled} onClick={onRetry} className="min-h-11 text-halloween-orange underline">ตรวจสอบรหัสนิสิตอีกครั้ง</button>}
+            {player.check.warning && <p className="rounded-lg border border-halloween-orange bg-halloween-orange/10 p-3 text-halloween-cream">
+              ตรวจสอบรหัสนิสิตไม่สำเร็จ: {player.check.warning}{' '}
+              {player.check.error ? 'ยังต้องแก้ไขรหัสนิสิตที่มีปัญหาก่อนยืนยัน' : 'สามารถกดยืนยันได้ ระบบจะตรวจรหัสซ้ำอีกครั้งตอนจอง'}
+            </p>}
+            {(player.check.status === 'warning' || player.check.status === 'blocked') && <button type="button" disabled={disabled} onClick={onRetry} className="min-h-11 text-halloween-orange underline">ตรวจสอบรหัสนิสิตอีกครั้ง</button>}
           </div>
           <TextField id={`${prefix}-phone`} label="Phone" required type="tel" maxLength={30} autoComplete="tel" value={player.phone}
             onChange={e => onChange('phone', e.target.value)} onBlur={() => onBlur('phone')} error={shown('phone')} />
