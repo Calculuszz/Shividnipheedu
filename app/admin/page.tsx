@@ -8,6 +8,7 @@ import FieldError from '@/components/FieldError';
 import FloatingGhost from '@/components/FloatingGhost';
 import Doodle from '@/components/Doodle';
 import Sponsors from '@/components/Sponsors';
+import { formatTime } from '@/lib/bookingTime';
 
 // Force dynamic rendering (don't prerender at build time)
 export const dynamic = 'force-dynamic';
@@ -385,7 +386,6 @@ function AttendanceTable() {
     { id: 'attended', label: 'เข้าร่วม' },
     { id: 'student_id', label: 'รหัสนิสิต' },
     { id: 'full_name', label: 'ชื่อ-นามสกุล' },
-    { id: 'email', label: 'อีเมล' },
     { id: 'department', label: 'คณะ' },
     { id: 'attended_at', label: 'เวลาเช็คอิน' },
   ];
@@ -521,7 +521,11 @@ function AttendanceTable() {
                       <input
                         type="checkbox"
                         checked={reg.attended}
-                        onChange={() => toggleAttendance(reg.id, reg.attended)}
+                        onChange={() => {
+                          // Ticking in is instant; taking a check-in away needs a second look
+                          if (reg.attended && !window.confirm(`ยกเลิกการเช็คอินของ ${reg.full_name} ใช่ไหม?`)) return;
+                          toggleAttendance(reg.id, reg.attended);
+                        }}
                         className="w-5 h-5 cursor-pointer"
                         aria-label={`Mark ${reg.full_name} as attended`}
                       />
@@ -533,16 +537,13 @@ function AttendanceTable() {
                   {!hiddenColumns.has('full_name') && (
                     <td className="px-4 py-3 text-halloween-cream">{reg.full_name}</td>
                   )}
-                  {!hiddenColumns.has('email') && (
-                    <td className="px-4 py-3 text-halloween-cream">{reg.email}</td>
-                  )}
                   {!hiddenColumns.has('department') && (
                     <td className="px-4 py-3 text-halloween-cream">{reg.department}</td>
                   )}
                   {!hiddenColumns.has('attended_at') && (
                     <td className="px-4 py-3 text-halloween-cream">
                       {reg.attended_at
-                        ? new Date(reg.attended_at).toLocaleString('th-TH')
+                        ? `${formatTime(reg.attended_at)} น.`
                         : '-'}
                     </td>
                   )}
@@ -582,14 +583,47 @@ function AttendanceTable() {
 }
 
 // QR Scanner Component
+type ScanResult = { success: boolean; message: string; name?: string; detail?: string };
+
+// Escape Room booking codes look like SVP-7K3QX9; entry tickets are SHIVIDNIPHEEDU-<id>-<time>
+const BOOKING_QR = /^SVP-[A-Z0-9]{6}$/i;
+// The same QR held in front of the camera is ignored for this long after its result
+const SAME_QR_COOLDOWN_MS = 5000;
+
+/** Beep + vibrate so staff don't have to look at the screen for every scan */
+function scanFeedback(audio: AudioContext | null, ok: boolean) {
+  navigator.vibrate?.(ok ? 80 : [120, 80, 120]);
+  if (!audio) return;
+  const tones = ok ? [{ hz: 1046, at: 0, len: 0.12 }] : [{ hz: 330, at: 0, len: 0.14 }, { hz: 330, at: 0.2, len: 0.14 }];
+  for (const { hz, at, len } of tones) {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.frequency.value = hz;
+    osc.type = ok ? 'sine' : 'square';
+    const start = audio.currentTime + at;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.25, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + len);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(start);
+    osc.stop(start + len + 0.02);
+  }
+}
+
 function QRScanner({ onExit }: { onExit: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Mirrors mediaStream so cleanup on unmount can stop the camera (state would be stale there)
   const streamRef = useRef<MediaStream | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string; name?: string } | null>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
   const [processing, setProcessing] = useState(false);
+  // The scan loop runs in a setInterval, which only ever sees the first render's
+  // state, so "busy" and "last code" live in refs.
+  const busyRef = useRef(false);
+  const lastCodeRef = useRef<{ code: string; at: number } | null>(null);
+  // Browsers only allow sound after a tap, so this is created on "เปิดกล้อง"
+  const audioRef = useRef<AudioContext | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recentAttendees, setRecentAttendees] = useState<Registration[]>([]);
@@ -623,6 +657,12 @@ function QRScanner({ onExit }: { onExit: () => void }) {
   // Request camera permission and start scanning
   const startCamera = async () => {
     setCameraError(null);
+    try {
+      audioRef.current ??= new AudioContext();
+      void audioRef.current.resume();
+    } catch {
+      // No Web Audio: vibration only
+    }
 
     // Stop any existing stream
     if (streamRef.current) {
@@ -751,7 +791,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
     }
 
     scanIntervalRef.current = setInterval(() => {
-      if (videoRef.current && canvasRef.current && !processing) {
+      if (videoRef.current && canvasRef.current && !busyRef.current) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
@@ -765,6 +805,9 @@ function QRScanner({ onExit }: { onExit: () => void }) {
           const code = jsQR(imageData.data, imageData.width, imageData.height);
 
           if (code) {
+            const last = lastCodeRef.current;
+            // Still the same QR in front of the camera: don't report it again
+            if (last && last.code === code.data && Date.now() - last.at < SAME_QR_COOLDOWN_MS) return;
             processQRCode(code.data);
           }
         }
@@ -772,11 +815,36 @@ function QRScanner({ onExit }: { onExit: () => void }) {
     }, 500); // Scan every 500ms
   };
 
-  const processQRCode = async (decodedText: string) => {
-    // Prevent processing multiple scans at once
-    if (processing) return;
+  // Hide the result and scan again. The cooldown for this QR starts now.
+  const finishScan = () => {
+    setResult(null);
+    setProcessing(false);
+    busyRef.current = false;
+    if (lastCodeRef.current) lastCodeRef.current.at = Date.now();
+  };
 
+  const showScanResult = (next: ScanResult) => {
+    setResult(next);
+    scanFeedback(audioRef.current, next.success);
+    // Desktop clears itself; mobile shows a popup the staff taps (warnings also clear themselves)
+    if (!isMobileDevice || !next.success) setTimeout(finishScan, 3000);
+  };
+
+  const processQRCode = async (decodedText: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setProcessing(true);
+    lastCodeRef.current = { code: decodedText, at: Date.now() };
+
+    // An Escape Room booking QR is not an entry ticket; no need to ask the server
+    if (BOOKING_QR.test(decodedText.trim())) {
+      showScanResult({
+        success: false,
+        message: 'นี่คือ QR การจอง Escape Room',
+        detail: 'ไม่ใช่บัตรเข้างาน ให้เปิด QR จากอีเมลลงทะเบียน',
+      });
+      return;
+    }
 
     try {
       const scan = await adminFetch('/api/admin/scan', {
@@ -787,18 +855,16 @@ function QRScanner({ onExit }: { onExit: () => void }) {
       const data = scan.row as Registration | undefined;
 
       if (scan.status === 'not_found' || !data) {
-        // QR not found - silently ignore and continue scanning
-        setProcessing(false);
+        showScanResult({ success: false, message: 'QR นี้ไม่ใช่บัตรเข้างาน', detail: 'ไม่พบในรายชื่อผู้ลงทะเบียน' });
         return;
       }
 
       if (scan.status === 'already') {
-        setResult({
+        showScanResult({
           success: false,
           message: `${data.full_name} เช็คอินแล้ว`,
+          detail: data.attended_at ? `เมื่อ ${formatTime(data.attended_at)} น.` : undefined,
         });
-        setProcessing(false);
-        setTimeout(() => setResult(null), 3000);
         return;
       }
 
@@ -810,27 +876,12 @@ function QRScanner({ onExit }: { onExit: () => void }) {
         return [updatedAttendee, ...prev.filter(a => a.id !== updatedAttendee.id)].slice(0, 20);
       });
 
-      setResult({
-        success: true,
-        message: `เช็คอินสำเร็จ!`,
-        name: data.full_name
-      });
-
-      // Clear result and allow next scan after 3 seconds (mobile gets confirm button)
-      if (!isMobileDevice) {
-        setTimeout(() => {
-          setResult(null);
-          setProcessing(false);
-        }, 3000);
-      } else {
-        // Mobile waits for user action
-        setProcessing(false);
-      }
+      showScanResult({ success: true, message: 'เช็คอินสำเร็จ!', name: data.full_name });
     } catch (error) {
       console.error('Error processing QR code:', error);
-      setResult({ success: false, message: 'เกิดข้อผิดพลาด' });
-      setProcessing(false);
-      setTimeout(() => setResult(null), 3000);
+      // Let the same QR be tried again straight away
+      lastCodeRef.current = null;
+      showScanResult({ success: false, message: 'เกิดข้อผิดพลาด', detail: 'ลองสแกนใหม่อีกครั้ง' });
     }
   };
 
@@ -930,15 +981,13 @@ function QRScanner({ onExit }: { onExit: () => void }) {
             >
               <div className="text-3xl font-bold mb-2 font-iannnnn-owl">{result.message}</div>
               {result.name && (
-                <div className="text-xl mb-6 font-iannnnn-owl">{result.name}</div>
+                <div className="text-xl mb-2 font-iannnnn-owl">{result.name}</div>
               )}
+              {result.detail && <div className="text-lg font-iannnnn-owl">{result.detail}</div>}
               <button
                 type="button"
-                onClick={() => {
-                  setResult(null);
-                  setProcessing(false);
-                }}
-                className="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 rounded-lg transition-colors font-iannnnn-owl"
+                onClick={finishScan}
+                className="mt-6 w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 rounded-lg transition-colors font-iannnnn-owl"
               >
                 ตกลง
               </button>
@@ -1049,7 +1098,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
                     </div>
                     <div className="text-halloween-gray text-xs mt-1">
                       {attendee.attended_at
-                        ? new Date(attendee.attended_at).toLocaleTimeString('th-TH')
+                        ? `${formatTime(attendee.attended_at)} น.`
                         : '-'}
                     </div>
                   </div>
@@ -1074,6 +1123,7 @@ function QRScanner({ onExit }: { onExit: () => void }) {
             {result.name && (
               <div className="text-2xl mt-2 font-iannnnn-owl">{result.name}</div>
             )}
+            {result.detail && <div className="text-xl mt-2 font-iannnnn-owl">{result.detail}</div>}
           </div>
         </div>
       )}
