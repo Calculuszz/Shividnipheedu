@@ -196,11 +196,15 @@ function AttendanceTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [checkedInCount, setCheckedInCount] = useState(0);
-  const [playedGameCount, setPlayedGameCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const itemsPerPage = 50;
+  // Manual ticks still being saved, and when the last one finished. A poll that
+  // started before a tick was saved still carries the old value, so it must not
+  // overwrite the tick (that made the box flip back until the next poll).
+  const savingTicks = useRef(0);
+  const lastTickSavedAt = useRef(0);
 
   useEffect(() => {
     fetchRegistrations();
@@ -211,6 +215,7 @@ function AttendanceTable() {
   }, [currentPage, searchQuery]);
 
   const fetchRegistrations = async () => {
+    const startedAt = Date.now();
     try {
       const params = new URLSearchParams({
         mode: 'page',
@@ -219,9 +224,10 @@ function AttendanceTable() {
         search: searchQuery.trim(),
       });
       const data = await adminFetch(`/api/admin/registrations?${params}`);
+      // Stale: a tick was saved (or is saving) after this request left. The next poll is fresh.
+      if (savingTicks.current > 0 || startedAt <= lastTickSavedAt.current) return;
       setTotalCount(data.total);
       setCheckedInCount(data.checkedIn);
-      setPlayedGameCount(data.played);
 
       // Reset to page 1 if search changes and current page is out of bounds
       const maxPage = Math.ceil(data.total / itemsPerPage);
@@ -255,12 +261,15 @@ function AttendanceTable() {
     // Update checked-in count optimistically
     setCheckedInCount((prev) => (!currentStatus ? prev + 1 : prev - 1));
 
+    savingTicks.current += 1;
     try {
       const error = await adminFetch('/api/admin/registrations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, attended: !currentStatus }),
       }).then(() => null, (e) => e);
+      savingTicks.current -= 1;
+      lastTickSavedAt.current = Date.now();
 
       if (error) {
         // Revert optimistic updates on error
@@ -396,7 +405,7 @@ function AttendanceTable() {
   return (
     <div>
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Total People */}
         <div className="bg-halloween-charcoal border-2 border-halloween-purple rounded-lg p-6">
           <div className="flex items-center justify-between">
@@ -422,21 +431,6 @@ function AttendanceTable() {
             <div className="bg-halloween-orange/20 p-4 rounded-lg">
               <svg className="w-8 h-8 text-halloween-orange" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* Played Game */}
-        <div className="bg-halloween-charcoal border-2 border-halloween-blue rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-halloween-gray text-sm font-bold mb-1 font-iannnnn-owl">จำนวนผู้เล่นเกม</p>
-              <p className="text-halloween-blue text-4xl font-black">{playedGameCount}</p>
-            </div>
-            <div className="bg-halloween-blue/20 p-4 rounded-lg">
-              <svg className="w-8 h-8 text-halloween-blue" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21,6H3A1,1,0,0,0,2,7V17a1,1,0,0,0,1,1H21a1,1,0,0,0,1-1V7A1,1,0,0,0,21,6ZM11,15H9V13H7V11H9V9h2v2h2v2H11ZM16.5,13A1.5,1.5,0,1,1,18,11.5,1.5,1.5,0,0,1,16.5,13Zm2-3A1.5,1.5,0,1,1,20,8.5,1.5,1.5,0,0,1,18.5,10Z"/>
               </svg>
             </div>
           </div>

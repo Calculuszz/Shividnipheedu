@@ -47,10 +47,9 @@ export async function GET(request: Request) {
     const page = Math.max(Number(url.searchParams.get('page')) || 1, 1);
     const filtered = (q: any) => (search ? q.ilike('student_id', `%${search}%`) : q);
 
-    const [total, checkedIn, played] = await Promise.all([
+    const [total, checkedIn] = await Promise.all([
       filtered(supabaseAdmin.from('registrations').select('*', { count: 'exact', head: true })),
       filtered(supabaseAdmin.from('registrations').select('*', { count: 'exact', head: true }).eq('attended', true)),
-      filtered(supabaseAdmin.from('registrations').select('*', { count: 'exact', head: true }).not('ghost_result', 'is', null)),
     ]);
     if (total.error) throw total.error;
 
@@ -64,7 +63,6 @@ export async function GET(request: Request) {
       rows: data || [],
       total: total.count || 0,
       checkedIn: checkedIn.count || 0,
-      played: played.count || 0,
     });
   } catch (error) {
     console.error('Admin registrations error:', error);
