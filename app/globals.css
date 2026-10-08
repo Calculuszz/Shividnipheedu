@@ -208,6 +208,36 @@ body > * {
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
 }
 
+/* ===== Pick a boo quiz (Figma: Main) ===== */
+
+/* The quiz screens' own night: deep plum fading to maroon at the edges */
+.pick-a-boo-bg {
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, #2e0446 36%, #320641 53%, #380a39 72%, #42102c 100%);
+  background-attachment: fixed;
+}
+
+/* Sticker lettering: white text with a thick outline (orange for titles, plum on the orange button) */
+.boo-stroke,
+.boo-stroke-dark {
+  --stroke: 0.09em;
+  text-shadow:
+    var(--stroke) 0 0 var(--stroke-color), calc(var(--stroke) * -1) 0 0 var(--stroke-color),
+    0 var(--stroke) 0 var(--stroke-color), 0 calc(var(--stroke) * -1) 0 var(--stroke-color),
+    calc(var(--stroke) * 0.7) calc(var(--stroke) * 0.7) 0 var(--stroke-color),
+    calc(var(--stroke) * -0.7) calc(var(--stroke) * 0.7) 0 var(--stroke-color),
+    calc(var(--stroke) * 0.7) calc(var(--stroke) * -0.7) 0 var(--stroke-color),
+    calc(var(--stroke) * -0.7) calc(var(--stroke) * -0.7) 0 var(--stroke-color);
+}
+
+.boo-stroke {
+  --stroke-color: #fe7700;
+}
+
+.boo-stroke-dark {
+  --stroke: 0.06em;
+  --stroke-color: #1a0229;
+}
+
 /* The ghost from the logo, drifting around */
 @keyframes ghost-drift {
   0%, 100% { transform: translate(0, 0) rotate(-5deg); }

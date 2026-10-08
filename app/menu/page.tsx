@@ -6,19 +6,8 @@ import EventName from '@/components/EventName';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
 import Doodle, { type DoodleName } from '@/components/Doodle';
-
-// Ghost image mapping - All 7 ghosts
-const ghostImages: Record<string, string> = {
-  'ผีนางรำ': '/ghosts/ผีนางรำ.webp',
-  'ผีแม่นาค': '/ghosts/ผีแม่นาค.webp',
-  'แวมไพร์': '/ghosts/แวมไพร์.webp',
-  'ซอมบี้': '/ghosts/ซอมบี้.webp',
-  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.webp',
-  'ผีปอบ': '/ghosts/ผีปอบ.webp',
-  'Zatan': '/ghosts/zatan.webp',
-};
-
-const defaultGhostImage = '/ghosts/default.webp';
+import { booByName } from '@/app/what-ghost/quiz';
+import PickABooCard from './PickABooCard';
 
 export default function MenuPage() {
   const router = useRouter();
@@ -59,8 +48,11 @@ export default function MenuPage() {
     return <LoadingScreen />;
   }
 
-  const menuItems: { title: string; path: string; icon: DoodleName; tilt: string }[] = [
+  // path null = booking page not built yet: shown, but not clickable
+  const menuItems: { title: string; path: string | null; icon: DoodleName; tilt: string }[] = [
     { title: 'My Ticket', path: '/my-ticket', icon: 'pumpkin', tilt: '-rotate-1' },
+    { title: 'Book Escape Room', path: '/escape-room', icon: 'skull', tilt: 'rotate-[0.5deg]' },
+    { title: 'Book Haunted House', path: null, icon: 'tombstone', tilt: '-rotate-[0.5deg]' },
     { title: 'Event Map', path: '/event-map', icon: 'broom', tilt: 'rotate-1' },
     { title: 'Schedule', path: '/schedule', icon: 'moon', tilt: '-rotate-[0.5deg]' },
   ];
@@ -102,66 +94,39 @@ export default function MenuPage() {
           </h1>
         </div>
 
-        {/* Ghost Display Section */}
+        {/* Pick a boo quiz: start art, or the boo from last time */}
         <div className="shrink-0 flex justify-center w-full">
-          <div className="w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[340px] relative bg-halloween-charcoal/90 border-2 border-halloween-orange hand-cut flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 lg:p-5">
-            <Doodle name="web" className="absolute -top-3 -right-3 w-16 opacity-80 rotate-6" />
-            {/* Ghost Image */}
-            <div className="w-full flex items-center justify-center mb-2 sm:mb-3 pt-2 sm:pt-3">
-              <Image
-                src={userData.ghost_result ? ghostImages[userData.ghost_result] : defaultGhostImage}
-                alt={userData.ghost_result || 'Mystery Ghost'}
-                width={200}
-                height={200}
-                className="rounded-lg w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 object-contain"
-                priority
-                quality={75}
-              />
-            </div>
-
-            {/* Ghost Name or Question */}
-            {userData.ghost_result ? (
-              <>
-                <p className="text-base sm:text-lg md:text-2xl lg:text-xl font-bold text-halloween-orange mb-2 sm:mb-3 md:mb-3 font-iannnnn-owl">
-                  {userData.ghost_result}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('/what-ghost')}
-                  className="bg-halloween-purple hover:bg-halloween-orange border-2 border-halloween-orange text-halloween-cream hover:text-halloween-dark font-bold text-xs sm:text-sm md:text-base px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full transition-all active:scale-95 shadow-lg flex items-center gap-1.5 sm:gap-2"
-                >
-                  <Doodle name="ghost" className="w-5 sm:w-6 -rotate-6" />
-                  <span className="font-iannnnn-owl">เล่นอีกครั้ง</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm sm:text-base md:text-lg text-halloween-cream font-medium mb-2 sm:mb-2.5">
-                  What Ghost Am I?
-                </p>
-                {/* Button - Different style when not played yet */}
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('/what-ghost')}
-                  className="bg-halloween-purple hover:bg-halloween-orange border-2 border-halloween-orange text-halloween-cream hover:text-halloween-dark font-bold text-xs sm:text-sm md:text-base px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full transition-all active:scale-95 shadow-lg flex items-center gap-1.5 sm:gap-2 relative"
-                >
-                  {/* Notification Dot */}
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-halloween-moon rounded-full animate-pulse"></span>
-                  <Doodle name="ghost" className="w-5 sm:w-6 -rotate-6" />
-                  <span>Let's Find Out!</span>
-                </button>
-              </>
-            )}
-          </div>
+          <PickABooCard result={booByName(userData.ghost_result)} onStart={() => handleNavigate('/what-ghost')} />
         </div>
 
         {/* Menu - Single Column Vertical */}
         <div className="shrink-0 flex justify-center w-full">
           <div className="w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] lg:max-w-[340px] space-y-2 sm:space-y-2.5">
-            {menuItems.map((item) => (
+            {menuItems.map((item) => {
+              const path = item.path;
+              if (!path) {
+                return (
+                  <div
+                    key={item.title}
+                    aria-disabled="true"
+                    className={`w-full bg-halloween-charcoal/70 border-2 border-dashed border-halloween-orange/60 hand-cut ${item.tilt} p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 opacity-80`}
+                  >
+                    <span className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shrink-0 grayscale-[40%]">
+                      <Doodle name={item.icon} className="max-w-full max-h-full w-auto h-auto" />
+                    </span>
+                    <span className="text-sm sm:text-base md:text-lg lg:text-lg font-bold text-halloween-cream/80 text-left flex-1">
+                      {item.title}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-halloween-orange/60 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-halloween-orange">
+                      เร็ว ๆ นี้
+                    </span>
+                  </div>
+                );
+              }
+              return (
               <button
-                key={item.path}
-                onClick={() => handleNavigate(item.path)}
+                key={item.title}
+                onClick={() => handleNavigate(path)}
                 className={`w-full bg-halloween-charcoal/90 hover:bg-halloween-orange/90 border-2 border-halloween-orange hand-cut ${item.tilt} hover:rotate-0 p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 transition-all active:scale-98 group`}
               >
                 <span className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-6 transition-transform shrink-0">
@@ -182,7 +147,8 @@ export default function MenuPage() {
                   <path d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
         </div>
