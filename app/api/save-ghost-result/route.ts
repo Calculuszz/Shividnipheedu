@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { booByName } from '@/app/what-ghost/quiz';
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +12,11 @@ export async function POST(request: Request) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // Only the four Pick a boo results can be saved
+    if (!booByName(ghostResult)) {
+      return NextResponse.json({ error: 'Unknown result' }, { status: 400 });
     }
 
     // Update the user's ghost result

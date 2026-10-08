@@ -1,546 +1,234 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+/* eslint-disable @next/next/no-img-element */
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
-import FloatingGhost from '@/components/FloatingGhost';
+import { QUESTIONS, pickBoo, type Boo, type BooId } from './quiz';
 
-// Ghost image mapping - All 7 ghosts
-const ghostImages: Record<string, string> = {
-  'ผีนางรำ': '/ghosts/ผีนางรำ.webp',
-  'ผีแม่นาค': '/ghosts/ผีแม่นาค.webp',
-  'แวมไพร์': '/ghosts/แวมไพร์.webp',
-  'ซอมบี้': '/ghosts/ซอมบี้.webp',
-  'ผีสาวญี่ปุ่นคอยาว': '/ghosts/ผีญี่ปุ่นคอยาว.webp',
-  'ผีปอบ': '/ghosts/ผีปอบ.webp',
-  'Zatan': '/ghosts/zatan.webp',
-};
+// Pick a boo (Figma: Main › iPhone 16 - 2 … 12). The page is laid out on the
+// design's 393px phone width. FC Iconic is loaded with size-adjust 118%, so the
+// design's 20px Thai text is 17px here.
 
-export default function WhatGhostPage() {
-  const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [showResult, setShowResult] = useState(false);
-  const [navigating, setNavigating] = useState(false);
-  const [loadingQuestion, setLoadingQuestion] = useState(false);
-  const [loadingResult, setLoadingResult] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+const ORANGE = '#fe7700';
 
-  const questions: Array<{
-    q: string;
-    image?: string;
-    options: Array<{ text: string; value: string }>;
-  }> = [
-    {
-      q: 'คืนฮาโลวีน คุณเลือกแต่งตัวเป็นอะไร?',
-      image: '/questions/q1.webp',
-      options: [
-        { text: 'ผีขี้เล่นถือหัวฟักทอง', value: 'A' },
-        { text: 'ผีเจ้าสาวแสนเศร้าเพราะผัวทิ้ง', value: 'B' },
-        { text: 'แวมไพร์ old money', value: 'C' },
-        { text: 'ปีศาจเขาแดงแรงฤทธิ์', value: 'D' },
-      ],
-    },
-    {
-      q: 'เมื่อขบวน Trick or Treat เริ่มขึ้น! คุณจะ...',
-      image: '/questions/q2.webp',
-      options: [
-        { text: 'แกล้ง Gen alpha ให้ตกใจเบา ๆ ก่อนให้ขนม', value: 'A' },
-        { text: 'ฉีกยิ้มอันอ่อนโยนและยื่นลูกอมให้', value: 'B' },
-        { text: 'ยื่นลูกอมอย่างมีสไตล์ พร้อมสายตาเยือกเย็น', value: 'C' },
-        { text: 'แจกขนมเฉพาะคนที่เติมไฟจนไฟสีม่วง', value: 'D' },
-      ],
-    },
-    {
-      q: 'เสียงประตูบ้านผีสิงดังเอี๊ยด... คุณจะทำยังไง?',
-      image: '/questions/q3.webp',
-      options: [
-        { text: 'ผลักประตูเข้าหาผีในบ้านเลย', value: 'A' },
-        { text: 'ยืนดูสถานการณ์ก่อน แล้วค่อย ๆ เดินตามแสงเทียน', value: 'B' },
-        { text: 'ก้าวช้า ๆ ด้วยท่าทางสงบ แต่สายตาจ้องลึก', value: 'C' },
-        { text: 'ยิ้มมุมปาก แล้วเดินนำทุกคนเข้าไปพร้อมท่า zigma', value: 'D' },
-      ],
-    },
-    {
-      q: 'ในงานฮาโลวีนมีประกวดชุดผี คุณมั่นใจว่าคุณจะ',
-      image: '/questions/q4.webp',
-      options: [
-        { text: 'ชุดของฉันต้องตลก ตลก หัวเราะน้ำตาเล็ดทั้งงาน', value: 'A' },
-        { text: 'ชุดของฉันต้องมีเรื่องราวเศร้า ๆ ที่จะต้องเป็นตำนาน', value: 'B' },
-        { text: 'ชุดของฉันต้องเท่ ลึกลับ ดูดี สะกดทุกสายตาในงาน', value: 'C' },
-        { text: 'ชุดของฉันต้องมีออร่า +999', value: 'D' },
-      ],
-    },
-    {
-      q: 'หากมีเพื่อนโดน "ผีในบ้านสิง" เล่นงาน คุณจะ...',
-      image: '/questions/q5.webp',
-      options: [
-        { text: 'หัวเราะก่อน แล้วค่อยช่วยเพื่อนที่โดนหลอก', value: 'A' },
-        { text: 'วิ่งไปปลอบผีด้วยความเป็นห่วง', value: 'B' },
-        { text: 'เฝ้าดูด้วยความสงบ แล้วค่อยช่วยอย่างมีจังหวะ', value: 'C' },
-        { text: 'เข้าจัดการผีตนนั้นด้วยความมั่นใจ ไม่กลัว', value: 'D' },
-      ],
-    },
-    {
-      q: 'ของตกแต่งฮาโลวีนที่คุณชอบที่สุดคือ...',
-      image: '/questions/q6.webp',
-      options: [
-        { text: 'ฟักทองหัวเราะถือ tung tung tung sahur', value: 'A' },
-        { text: 'เทียนและกลีบดอกไม้', value: 'B' },
-        { text: 'โลงศพจำลอง / โคมไฟสีเลือด', value: 'C' },
-        { text: 'รูปดาวห้าแฉกกับควันสีดำ', value: 'D' },
-      ],
-    },
-    {
-      q: 'คืนนี้มีหนังผีฉายกลางแปลง คุณจะเลือกดูเรื่องไหน?',
-      image: '/questions/q7.webp',
-      options: [
-        { text: 'Friday 13', value: 'A' },
-        { text: 'พี่มาก พระโขนง', value: 'B' },
-        { text: 'The nun', value: 'C' },
-        { text: 'The Conjuring', value: 'D' },
-      ],
-    },
-    {
-      q: 'ถ้าคุณได้ขับรถผ่านสุสานตอนเที่ยงคืน...',
-      image: '/questions/q8.webp',
-      options: [
-        { text: 'เปิดเพลงหลอนแล้วถ่ายคลิปลงสตอรี่ เช็คอิน', value: 'A' },
-        { text: 'เปิดเพลงเบา ๆ แล้วภาวนาให้ถึงบ้านโดยไม่มีอะไรตามมา', value: 'B' },
-        { text: 'มองกระจกหลังอย่างจงใจ พร้อมพูดว่ากลับบ้านกันมั้ย', value: 'C' },
-        { text: 'แวะจอดดูหน่อย เผื่อมี "น่าอะไรสนุก"', value: 'D' },
-      ],
-    },
-    {
-      q: 'กลิ่นไหนที่คุณรู้สึกว่า "ฮาโลวีนมาก"',
-      image: '/questions/q9.webp',
-      options: [
-        { text: 'กลิ่นขนมอบใหม่ ๆ', value: 'A' },
-        { text: 'กลิ่นเทียนไขผสมกลีบดอกไม้', value: 'B' },
-        { text: 'กลิ่นฝนกับผ้ากำมะหยี่', value: 'C' },
-        { text: 'กลิ่นควันและกำยาน', value: 'D' },
-      ],
-    },
-    {
-      q: 'ถ้าได้เป็น "ผีในตำนานจุฬา" สักคืน คุณอยากเป็นแบบไหน?',
-      image: '/questions/q10.webp',
-      options: [
-        { text: 'ผีแสบ ๆ หลอกแล้วหัวเราะด้วยความสะใจ', value: 'A' },
-        { text: 'ผีสุดเศร้ารอใครสักคนที่จริงใจ', value: 'B' },
-        { text: 'ผีเท่และสงบแต่ทำให้คนขนลุก', value: 'C' },
-        { text: 'ผีผู้ควบคุมพลังในเงามืด พร้อมให้พรนิสิต', value: 'D' },
-      ],
-    },
-  ];
+// localStorage only exists in the browser: the server snapshot is "unknown"
+const noSubscription = () => () => {};
+function useStudentId() {
+  return useSyncExternalStore(noSubscription, () => localStorage.getItem('studentId'), () => undefined);
+}
 
-  const progressWidthClasses = [
-    'w-[10%]',
-    'w-[20%]',
-    'w-[30%]',
-    'w-[40%]',
-    'w-[50%]',
-    'w-[60%]',
-    'w-[70%]',
-    'w-[80%]',
-    'w-[90%]',
-    'w-full',
-  ] as const;
-
-  const progressClass = progressWidthClasses[
-    Math.min(currentQuestion, progressWidthClasses.length - 1)
-  ];
-
-  // 7 Ghost Types with personality scoring
-  const ghostTypes = {
-    'ผีนางรำ': {
-      name: 'ผีนางรำ',
-      description: 'สนุก ขี้เล่น - ผีไทยสายปั่นคนอื่น',
-      theme: 'คุณเป็นคนสนุกสนาน ชอบหัวเราะ และทำให้คนรอบข้างมีความสุข!',
-    },
-    'ผีแม่นาค': {
-      name: 'ผีแม่นาค',
-      description: 'ละเมียด ละไม มีความรัก - ผีไทยสายดราม่าอบอุ่น',
-      theme: 'คุณเป็นคนอ่อนโยน รักลึก และพร้อมเสียสละเพื่อคนที่รัก',
-    },
-    'แวมไพร์': {
-      name: 'แวมไพร์',
-      description: 'เท่ หรู ลึกลับ - ผีต่างชาติสายมีสไตล์',
-      theme: 'คุณมีเสน่ห์ลึกลับ มีรสนิยม และดึงดูดสายตาคนทุกคน',
-    },
-    'ซอมบี้': {
-      name: 'ซอมบี้',
-      description: 'ตลก ขี้เกียจ แต่จริงใจ - ผีขี้เล่นสายชิล',
-      theme: 'คุณเป็นคนสบาย ๆ ไม่ซีเรียส และมีความเป็นตัวของตัวเองสูง!',
-    },
-    'ผีสาวญี่ปุ่นคอยาว': {
-      name: 'ผีสาวญี่ปุ่นคอยาว',
-      description: 'เศร้า เยือกเย็น มีศิลป์ - ผีญี่ปุ่นสายสงบแต่หลอน',
-      theme: 'คุณเป็นคนสงบ ลึกซึ้ง มีความรู้สึกที่ละเอียดอ่อน',
-    },
-    'ผีปอบ': {
-      name: 'ผีปอบ',
-      description: 'ดาร์ก ขรึม เงียบแต่แรง - ผีไทยสายมืดแต่เท่',
-      theme: 'คุณเป็นคนลึกลับ มีพลัง และไม่ชอบความวุ่นวาย',
-    },
-    'Zatan': {
-      name: 'Zatan',
-      description: 'มีอำนาจ นำทีม - ผีหัวหน้าสุดขลังแห่งฮาโลวีน',
-      theme: 'คุณเป็นผู้นำโดยกำเนิด มีความมั่นใจและควบคุมสถานการณ์ได้อย่างเยี่ยม!',
-    },
-  };
-
-  useEffect(() => {
-    const studentId = localStorage.getItem('studentId');
-    if (!studentId) {
-      router.push('/');
-      return;
-    }
-    setIsLoggedIn(true);
-  }, [router]);
-
-  // Wait for current question image to load before showing content
-  useEffect(() => {
-    setImageLoaded(false);
-
-    const currentImageSrc = questions[currentQuestion].image;
-    if (currentImageSrc) {
-      const img = new window.Image();
-      img.onload = () => {
-        setImageLoaded(true);
-      };
-      img.onerror = () => {
-        setImageLoaded(true); // Show content even if image fails to load
-      };
-      img.src = currentImageSrc;
-    } else {
-      setImageLoaded(true); // No image, show content immediately
-    }
-  }, [currentQuestion]);
-
-  // Preload next question image
-  useEffect(() => {
-    if (currentQuestion < questions.length - 1) {
-      const nextImageSrc = questions[currentQuestion + 1].image;
-      if (nextImageSrc) {
-        const nextImage = new window.Image();
-        nextImage.src = nextImageSrc;
-      }
-    }
-  }, [currentQuestion]);
-
-  const handleAnswer = async (value: string) => {
-    const newAnswers = [...answers];
-    newAnswers[currentQuestion] = value;
-    setAnswers(newAnswers);
-
-    if (currentQuestion < questions.length - 1) {
-      // Show loading animation for next question
-      setLoadingQuestion(true);
-
-      // Wait for 500ms before showing next question
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setCurrentQuestion(currentQuestion + 1);
-      setLoadingQuestion(false);
-    } else {
-      // Show full-page loading for result
-      setLoadingResult(true);
-
-      // Quiz complete - calculate and save result
-      const ghostResult = calculateGhostResult(newAnswers);
-
-      // Save to database
-      const studentId = localStorage.getItem('studentId');
-      if (studentId) {
-        try {
-          await fetch('/api/save-ghost-result', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentId, ghostResult }),
-          });
-
-          // Update localStorage userData
-          const userDataStr = localStorage.getItem('userData');
-          if (userDataStr) {
-            const userData = JSON.parse(userDataStr);
-            userData.ghost_result = ghostResult;
-            localStorage.setItem('userData', JSON.stringify(userData));
-          }
-        } catch (error) {
-          console.error('Error saving ghost result:', error);
-        }
-      }
-
-      // Wait a bit before showing result
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      setLoadingResult(false);
-      setShowResult(true);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
-  };
-
-  const calculateGhostResult = (answersList: string[]): string => {
-    // Count A, B, C, D answers
-    const counts = { A: 0, B: 0, C: 0, D: 0 };
-    answersList.forEach((ans) => {
-      counts[ans as keyof typeof counts]++;
-    });
-
-    // Find dominant answer type
-    const maxCount = Math.max(...Object.values(counts));
-    const dominantTypes = Object.keys(counts).filter(
-      (key) => counts[key as keyof typeof counts] === maxCount
-    );
-
-    // If there's a tie, use first answer as tiebreaker
-    const primaryType = dominantTypes.includes(answersList[0])
-      ? answersList[0]
-      : dominantTypes[0];
-
-    // Map to specific ghost based on primary type + secondary patterns
-    if (primaryType === 'A') {
-      // A = Fun/Playful → ผีนางรำ (Thai playful) vs ซอมบี้ (lazy chill)
-      // Check questions 1,3,4 for style preference
-      const styleAnswers = [answersList[0], answersList[2], answersList[3]];
-      const hasTraditionalThai = styleAnswers.filter(a => a === 'A' || a === 'B').length >= 2;
-      return hasTraditionalThai ? 'ผีนางรำ' : 'ซอมบี้';
-    }
-    else if (primaryType === 'B') {
-      // B = Sad/Romantic → ผีแม่นาค (Thai romantic) vs ผีสาวญี่ปุ่นคอยาว (Japanese cold/artistic)
-      // Check questions 5,8 for warmth vs coldness
-      const warmthAnswers = [answersList[4], answersList[7]];
-      const isWarm = warmthAnswers.filter(a => a === 'B' || a === 'A').length >= 1;
-      return isWarm ? 'ผีแม่นาค' : 'ผีสาวญี่ปุ่นคอยาว';
-    }
-    else if (primaryType === 'C') {
-      // C = Cool/Mysterious → แวมไพร์ (elegant stylish) vs ผีปอบ (dark strong)
-      // Check questions 0,3 for elegance vs darkness
-      const eleganceAnswers = [answersList[0], answersList[3]];
-      const isElegant = eleganceAnswers.filter(a => a === 'C').length >= 1;
-      return isElegant ? 'แวมไพร์' : 'ผีปอบ';
-    }
-    else {
-      // D = Powerful leader → Zatan
-      return 'Zatan';
-    }
-  };
-
-  const calculateResult = () => {
-    const ghostName = calculateGhostResult(answers);
-    return ghostTypes[ghostName as keyof typeof ghostTypes];
-  };
-
-  const resetQuiz = () => {
-    setCurrentQuestion(0);
-    setAnswers([]);
-    setShowResult(false);
-  };
-
-  const handleNavigate = (path: string) => {
-    setNavigating(true);
-    router.push(path);
-  };
-
-  if (!isLoggedIn) {
-    return <LoadingScreen message="กำลังเรียกวิญญาณมาตั้งคำถาม..." />;
-  }
-
-  if (navigating) {
-    return <LoadingScreen />;
-  }
-
-  if (loadingResult) {
-    return <LoadingScreen message="กำลังส่องดูว่าคุณเป็นผีตนไหน..." />;
-  }
-
+/** A rotated sticker inside its Figma bounding box */
+function Sticker({ src, className, box, inner, transform }: { src: string; className: string; box: [number, number]; inner: [number, number]; transform: string }) {
   return (
-    <div className="image-background min-h-screen relative overflow-hidden">
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/20 pointer-events-none" aria-hidden="true"></div>
+    <div aria-hidden="true" className={`pointer-events-none absolute ${className}`} style={{ width: box[0], height: box[1] }}>
+      <img
+        src={src}
+        alt=""
+        className="absolute left-1/2 top-1/2 max-w-none object-cover"
+        style={{ width: inner[0], height: inner[1], transform: `translate(-50%, -50%) ${transform}` }}
+      />
+    </div>
+  );
+}
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col px-3 py-3 sm:px-6 sm:py-6">
-        {/* Back Button */}
-        <button
-          type="button"
-          onClick={() => handleNavigate('/menu')}
-          className="self-start mb-2 sm:mb-4 flex items-center gap-1.5 sm:gap-2 text-halloween-orange hover:text-halloween-red transition-colors shrink-0"
-        >
-          <svg
-            className="w-4 h-4 sm:w-6 sm:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span className="text-sm sm:text-base font-semibold">Back</span>
-        </button>
-
-        {/* Quiz Content */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-2xl">
-            {showResult ? (
-              // Result View
-              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange hand-cut p-4 sm:p-8 text-center">
-                <h2 className="text-xl sm:text-4xl font-bold text-halloween-orange mb-3 sm:mb-6 font-iannnnn-owl">
-                  คุณคือ... {calculateResult().name}!
-                </h2>
-
-                {/* Ghost Image */}
-                {ghostImages[calculateResult().name] && (
-                  <div className="mb-4 sm:mb-6 flex justify-center">
-                    <Image
-                      src={ghostImages[calculateResult().name]}
-                      alt={calculateResult().name}
-                      width={200}
-                      height={200}
-                      className="rounded-lg w-32 h-32 sm:w-[200px] sm:h-[200px]"
-                      priority
-                      quality={75}
-                    />
-                  </div>
-                )}
-
-                <div className="bg-halloween-dark p-3 sm:p-5 rounded-lg border border-halloween-purple mb-4 sm:mb-6">
-                  <p className="text-halloween-bone text-sm sm:text-xl mb-2 sm:mb-4 font-iannnnn-owl">
-                    {calculateResult().description}
-                  </p>
-                  <p className="text-halloween-cream text-xs sm:text-base font-iannnnn-owl">
-                    {calculateResult().theme}
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center">
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('/menu')}
-                    className="bg-halloween-purple hover:bg-halloween-orange border-2 border-halloween-orange text-halloween-cream hover:text-halloween-dark font-bold px-4 py-2 sm:px-8 sm:py-3 text-sm sm:text-base rounded-lg transition-colors active:scale-95 font-iannnnn-owl"
-                  >
-                    กลับหน้าหลัก
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetQuiz}
-                    className="bg-halloween-orange hover:bg-halloween-red text-halloween-dark font-bold px-4 py-2 sm:px-8 sm:py-3 text-sm sm:text-base rounded-lg transition-colors active:scale-95 font-iannnnn-owl"
-                  >
-                    เล่นอีกครั้ง
-                  </button>
-                </div>
-              </div>
-            ) : (
-              // Question View
-              <div className="bg-halloween-charcoal/95 border-2 border-halloween-orange hand-cut p-3 sm:p-5">
-                {loadingQuestion || !imageLoaded ? (
-                  // Loading animation within quiz card
-                  <div className="flex flex-col items-center justify-center py-12 sm:py-20">
-                    <FloatingGhost className="w-14 sm:w-20" />
-                    <p className="mt-4 text-halloween-cream text-sm sm:text-lg font-iannnnn-owl">
-                      {loadingQuestion ? 'ผีกำลังคิดคำถามข้อต่อไป...' : 'กำลังเสกรูปขึ้นมา...'}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-2 sm:mb-4">
-                      <div className="flex justify-between items-center text-halloween-gray text-[10px] sm:text-sm mb-1.5 sm:mb-2">
-                        <div className="flex items-center gap-2">
-                          {currentQuestion > 0 && (
-                            <button
-                              type="button"
-                              onClick={handleBack}
-                              className="text-halloween-orange hover:text-halloween-red transition-colors"
-                              aria-label="Previous question"
-                            >
-                              <svg
-                                className="w-4 h-4 sm:w-5 sm:h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 19l-7-7 7-7"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                          <span className="font-iannnnn-owl">คำถามที่ {currentQuestion + 1}</span>
-                        </div>
-                        <span>
-                          {currentQuestion + 1} / {questions.length}
-                        </span>
-                      </div>
-                      <div className="bg-halloween-dark h-1.5 sm:h-2 rounded-full">
-                        <div className={`bg-halloween-orange h-1.5 sm:h-2 rounded-full transition-all ${progressClass}`}></div>
-                      </div>
-                    </div>
-
-                    {/* Question Image */}
-                    {questions[currentQuestion].image && (
-                      <div className="mb-2 sm:mb-4 flex justify-center">
-                        <Image
-                          src={questions[currentQuestion].image}
-                          alt={questions[currentQuestion].q}
-                          width={700}
-                          height={700}
-                          sizes="(max-width: 640px) 100vw, 700px"
-                          className="rounded-lg w-full max-h-40 sm:max-h-64 object-contain"
-                          priority={currentQuestion === 0}
-                          quality={75}
-                        />
-                      </div>
-                    )}
-
-                    <h3 className="text-base sm:text-xl font-bold text-halloween-cream mb-2 sm:mb-4 font-iannnnn-owl">
-                      {questions[currentQuestion].q}
-                    </h3>
-
-                    <div className="space-y-1.5 sm:space-y-2">
-                      {questions[currentQuestion].options.map((option, index) => {
-                        const isSelected = answers[currentQuestion] === option.value;
-                        return (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => handleAnswer(option.value)}
-                            className={`w-full text-left border-2 rounded-lg px-2.5 py-2 sm:px-4 sm:py-3 text-xs sm:text-base transition-all active:scale-98 font-iannnnn-owl ${
-                              isSelected
-                                ? 'bg-halloween-orange/90 border-halloween-orange text-halloween-dark font-semibold'
-                                : 'bg-halloween-dark/90 hover:bg-halloween-purple border-halloween-purple hover:border-halloween-orange text-halloween-cream'
-                            }`}
-                          >
-                            <span className={`font-bold mr-1.5 sm:mr-3 ${isSelected ? 'text-halloween-dark' : 'text-halloween-orange'}`}>
-                              {option.value}.
-                            </span>
-                            {isSelected && (
-                              <span className="mr-1.5 sm:mr-2">✓</span>
-                            )}
-                            {option.text}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+function Screen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+  return (
+    <div className="pick-a-boo-bg min-h-screen overflow-hidden">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[393px] flex-col items-center">
+        {children}
+        {footer}
       </div>
     </div>
   );
+}
+
+function Progress({ current }: { current: number }) {
+  return (
+    <ol className="mt-6 flex gap-[26px]" aria-label={`คำถามที่ ${current + 1} จาก ${QUESTIONS.length}`}>
+      {QUESTIONS.map((_, i) => (
+        <li key={i} aria-hidden="true" className="size-[13px] rounded-full border" style={{ borderColor: ORANGE, background: i <= current ? ORANGE : 'transparent' }} />
+      ))}
+    </ol>
+  );
+}
+
+function Graveyard({ onBack, backLabel }: { onBack: () => void; backLabel: string }) {
+  return (
+    <div className="relative mt-auto h-[191px] w-full shrink-0">
+      <img src="/pick-a-boo/graveyard.webp" alt="" aria-hidden="true" className="absolute left-1/2 top-0 h-[233px] w-[393px] max-w-none -translate-x-1/2 object-cover" />
+      <img src="/pick-a-boo/logo.webp" alt="SHIVIDNI PHEEDU" className="absolute left-1/2 top-[34px] size-[134px] -translate-x-1/2" />
+      <button type="button" onClick={onBack} className="absolute left-[35px] top-[116px] min-h-11 px-0 text-[17px] font-bold text-white/65 hover:text-white">
+        &lt; {backLabel}
+      </button>
+    </div>
+  );
+}
+
+function QuestionView({ index, picked, onPick, onBack }: { index: number; picked: BooId | null; onPick: (boo: BooId) => void; onBack: () => void }) {
+  const question = QUESTIONS[index];
+  const number = String(index + 1).padStart(2, '0');
+  const total = String(QUESTIONS.length).padStart(2, '0');
+
+  return (
+    <Screen footer={<Graveyard onBack={onBack} backLabel={index === 0 ? 'กลับเมนู' : 'ย้อนกลับ'} />}>
+      <Sticker src="/pick-a-boo/bats.webp" className="right-[15px] top-[18px]" box={[128, 85]} inner={[128, 85]} transform="scaleX(-1)" />
+
+      <p className="display-font mt-[116px] text-[20px] tracking-[1.6px]" style={{ color: ORANGE }}>
+        QUESTION {number} / {total}
+      </p>
+
+      <div className="relative mt-[21px] w-[323px] max-w-[calc(100%-32px)]">
+        <Sticker src="/pick-a-boo/skull.webp" className="-left-[18px] -top-[25px] z-10" box={[49.4, 45.3]} inner={[43.66, 38.69]} transform="rotate(-9.42deg) scaleX(-1)" />
+        <h1
+          className="flex min-h-[77px] items-center justify-center rounded-[14px] border-[5px] bg-[#2a0041] px-3 py-2 text-center text-[17px] font-bold leading-snug text-white"
+          style={{ borderColor: ORANGE }}
+        >
+          {question.text}
+        </h1>
+      </div>
+
+      <div className="relative mt-6 w-[323px] max-w-[calc(100%-32px)] rounded-[14px] border-2 bg-[#2a0041] px-3 pb-8 pt-[31px]" style={{ borderColor: ORANGE }}>
+        <div className="flex flex-col gap-[13px]">
+          {question.options.map((option) => {
+            const selected = picked === option.boo;
+            return (
+              <button
+                key={option.text}
+                type="button"
+                disabled={picked !== null}
+                onClick={() => onPick(option.boo)}
+                className={`flex min-h-[54px] items-center justify-center rounded-[14px] border-2 px-4 py-1.5 text-center text-[17px] font-bold leading-snug text-white transition-colors ${
+                  selected ? 'bg-[#fe7700]/30' : 'border-white/33 bg-[#33094b] enabled:hover:border-white/70'
+                }`}
+                style={selected ? { borderColor: ORANGE } : undefined}
+              >
+                {option.text}
+              </button>
+            );
+          })}
+        </div>
+        <Sticker src="/pick-a-boo/pumpkin.webp" className="-bottom-6 -right-[25px]" box={[51.27, 53.02]} inner={[46, 48]} transform="rotate(6.67deg)" />
+      </div>
+
+      <Progress current={index} />
+    </Screen>
+  );
+}
+
+/** The boo's message as a note on cream "magic paper", signed by the boo */
+function Letter({ boo }: { boo: Boo }) {
+  return (
+    <article className="relative mt-10 w-[345px] max-w-[calc(100%-40px)] -rotate-[0.6deg] rounded-[6px_14px_8px_16px] bg-halloween-cream px-5 pb-4 pt-7 text-[16px] leading-[1.75] text-halloween-blue shadow-[0_14px_30px_rgba(0,0,0,0.45)]">
+      <span aria-hidden="true" className="display-font absolute -top-6 left-3 text-[72px] leading-none" style={{ color: ORANGE }}>
+        “
+      </span>
+      <p>
+        <b style={{ color: boo.ink }}>แฮ่ !</b> {boo.letter.paragraphs[0]}
+      </p>
+      {boo.letter.paragraphs.slice(1).map((paragraph) => (
+        <p key={paragraph} className="mt-2.5">
+          {paragraph}
+        </p>
+      ))}
+      <p className="mt-2.5 font-bold" style={{ color: boo.ink }}>
+        {boo.letter.closing}
+      </p>
+      <p className="display-font mt-3 text-right text-[22px] leading-none" style={{ color: ORANGE }}>
+        — {boo.name}
+      </p>
+    </article>
+  );
+}
+
+function ResultView({ boo, onAgain, onMenu }: { boo: Boo; onAgain: () => void; onMenu: () => void }) {
+  return (
+    <Screen>
+      <p className="display-font mt-[83px] text-[32px] leading-none" style={{ color: ORANGE }}>
+        ✦ YOUR boo ✦
+      </p>
+
+      <img src={boo.card} alt={boo.name} width={170} height={255} className="mt-4 h-[255px] w-[170px] rounded-[13px] object-cover shadow-[0_12px_30px_rgba(0,0,0,0.45)]" />
+
+      <h1 className="display-font boo-stroke mt-4 text-[32px] leading-[43px] text-white">{boo.name}</h1>
+      <hr className="mt-[27px] h-0.5 w-[258px] border-0" style={{ background: ORANGE }} />
+
+      <Letter boo={boo} />
+
+      <div className="mb-8 mt-6 flex items-center gap-6 text-[15px] font-bold text-white/65">
+        <button type="button" onClick={onMenu} className="min-h-11 hover:text-white">
+          &lt; กลับเมนู
+        </button>
+        <button type="button" onClick={onAgain} className="min-h-11 underline underline-offset-4 hover:text-white">
+          ทำอีกครั้ง
+        </button>
+      </div>
+    </Screen>
+  );
+}
+
+async function saveResult(studentId: string, boo: Boo) {
+  try {
+    const res = await fetch('/api/save-ghost-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, ghostResult: boo.name }),
+    });
+    if (!res.ok) return;
+    const userData = JSON.parse(localStorage.getItem('userData') ?? 'null');
+    if (userData) localStorage.setItem('userData', JSON.stringify({ ...userData, ghost_result: boo.name }));
+  } catch (error) {
+    // The result still shows; the menu just won't remember it
+    console.error('Error saving ghost result:', error);
+  }
+}
+
+export default function PickABooPage() {
+  const router = useRouter();
+  const studentId = useStudentId();
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState<BooId[]>([]);
+  const [picked, setPicked] = useState<BooId | null>(null);
+  const [result, setResult] = useState<Boo | null>(null);
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    if (studentId === null) router.replace('/');
+  }, [studentId, router]);
+
+  if (!studentId || leaving) return <LoadingScreen message="กำลังเรียกวิญญาณมาตั้งคำถาม..." />;
+
+  const toMenu = () => {
+    setLeaving(true);
+    router.push('/menu');
+  };
+
+  const pick = (boo: BooId) => {
+    setPicked(boo);
+    // A short beat so the tap shows before the next question
+    setTimeout(() => {
+      const next = [...answers.slice(0, index), boo];
+      setAnswers(next);
+      setPicked(null);
+      if (index < QUESTIONS.length - 1) {
+        setIndex(index + 1);
+      } else {
+        const boo = pickBoo(next);
+        setResult(boo);
+        void saveResult(studentId, boo);
+      }
+      window.scrollTo(0, 0);
+    }, 250);
+  };
+
+  const back = () => (index === 0 ? toMenu() : setIndex(index - 1));
+
+  const again = () => {
+    setAnswers([]);
+    setIndex(0);
+    setResult(null);
+  };
+
+  if (result) return <ResultView boo={result} onAgain={again} onMenu={toMenu} />;
+  return <QuestionView index={index} picked={picked} onPick={pick} onBack={back} />;
 }
