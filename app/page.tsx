@@ -6,6 +6,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import FieldError from '@/components/FieldError';
 import Doodle from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
+import Sponsors from '@/components/Sponsors';
 
 function LoginForm() {
   const router = useRouter();
@@ -218,6 +219,8 @@ export default function Home() {
         }>
           <LoginForm />
         </Suspense>
+
+        <Sponsors className="mt-8" />
 
         <p className="mt-6 text-center text-xs text-halloween-gray/70">
           ภาพประกอบโดย{' '}
