@@ -1,5 +1,5 @@
-import StaffPlaceholder from '@/components/StaffPlaceholder';
+import EscapeRoomStaff from '@/components/staff/EscapeRoomStaff';
 
 export default function EscapeRoomAdminPage() {
-  return <StaffPlaceholder role="escape_room" title="Escape Room" />;
+  return <EscapeRoomStaff />;
 }
