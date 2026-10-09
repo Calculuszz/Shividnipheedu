@@ -1,7 +1,8 @@
 import { NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { badRequest, isUuid, readJson, ruleError, serverError, str } from '@/lib/booking';
-import { bookingConfirmed, roundInfo, sendAll } from '@/lib/bookingEmail';
+import { bookingConfirmed, hauntedConfirmed, roundInfo, sendAll } from '@/lib/bookingEmail';
+import { FACULTIES, YEARS } from '@/lib/registrationOptions';
 import { clientIp, hit, underLimit } from '@/lib/rateLimit';
 
 // Generous: a whole faculty may book from the same campus IP when booking opens.
@@ -32,10 +33,35 @@ export async function POST(request: Request) {
       email: str(x.email, 200),
       pdpa: x.pdpa === true,
       rules: x.rules === true,
+      nickname: str(x.nickname, 60),
+      faculty: str(x.faculty, 120),
+      year: str(x.year, 60),
     };
   });
 
   try {
+    // The Haunted House also needs nickname, faculty, year and a 10-digit phone.
+    // The database checks what both activities share; these are checked here.
+    const { data: roundRow, error: roundError } = await supabaseAdmin
+      .from('booking_rounds')
+      .select('activity_id')
+      .eq('id', body.round_id as string)
+      .maybeSingle();
+    if (roundError) throw roundError;
+    const haunted = roundRow?.activity_id === 'haunted_house';
+    if (
+      haunted &&
+      players.some(
+        (p) =>
+          !p.nickname ||
+          !FACULTIES.includes(p.faculty) ||
+          !YEARS.includes(p.year) ||
+          !/^0[0-9]{9}$/.test(p.phone.replace(/[\s-]/g, ''))
+      )
+    ) {
+      return badRequest('INVALID_PLAYER');
+    }
+
     const { data, error } = await supabaseAdmin.rpc('booking_book_team', {
       p_round_id: body.round_id,
       p_players: players,
@@ -48,7 +74,8 @@ export async function POST(request: Request) {
 
     after(async () => {
       const r = await roundInfo(result.round_id);
-      if (r) await sendAll(result.players.map((p) => bookingConfirmed(p, r, p.is_leader)));
+      if (!r) return;
+      await sendAll(result.players.map((p) => (haunted ? hauntedConfirmed(p, r) : bookingConfirmed(p, r, p.is_leader))));
     });
 
     // Only the leader's own code comes back; members get theirs by email only.

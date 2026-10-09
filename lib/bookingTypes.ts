@@ -65,6 +65,10 @@ export interface PlayerInput {
   email: string;
   pdpa: boolean;
   rules: boolean;
+  /** Haunted House asks for these too */
+  nickname?: string;
+  faculty?: string;
+  year?: string;
 }
 
 export interface BookRequest {

@@ -78,7 +78,7 @@ export default function BookingScanner({
       busy.current = true;
       last.current = { code: text, at: Date.now() };
       if (ENTRY_TICKET.test(text)) {
-        show({ ok: false, title: 'นี่คือ QR บัตรเข้างาน', action: 'ไม่ใช่ QR Escape Room ให้เปิด QR การจองจากอีเมล Escape Room' });
+        show({ ok: false, title: 'นี่คือ QR บัตรเข้างาน', action: 'ไม่ใช่ QR การจอง ให้เปิด QR จากอีเมลยืนยันการจอง' });
         return;
       }
       try {

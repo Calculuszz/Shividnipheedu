@@ -1,5 +1,5 @@
-import EscapeRoomStaff from '@/components/staff/EscapeRoomStaff';
+import StaffApp from '@/components/staff/StaffApp';
 
 export default function EscapeRoomAdminPage() {
-  return <EscapeRoomStaff />;
+  return <StaffApp activity="escape_room" />;
 }

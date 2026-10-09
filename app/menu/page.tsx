@@ -9,6 +9,25 @@ import Doodle, { type DoodleName } from '@/components/Doodle';
 import { booByName } from '@/app/what-ghost/quiz';
 import PickABooCard from './PickABooCard';
 
+// Plain items are orange; the booking items take their activity's theme colours
+const THEMES = {
+  plain: {
+    box: 'bg-halloween-charcoal/90 hover:bg-halloween-orange/90 border-halloween-orange',
+    text: 'group-hover:text-halloween-dark',
+    arrow: 'text-halloween-orange group-hover:text-halloween-dark',
+  },
+  escape: {
+    box: 'border-halloween-moon bg-[radial-gradient(ellipse_at_15%_0%,rgba(187,208,60,0.28),transparent_70%),linear-gradient(180deg,#3a1556,#24033a)] shadow-[0_0_18px_rgba(187,208,60,0.3)] hover:brightness-110',
+    text: '',
+    arrow: 'text-halloween-moon',
+  },
+  haunted: {
+    box: 'border-[#e5383b] bg-[radial-gradient(ellipse_at_15%_0%,rgba(229,56,59,0.35),transparent_70%),linear-gradient(180deg,#2b0509,#160204)] shadow-[0_0_18px_rgba(229,56,59,0.35)] hover:brightness-110',
+    text: '',
+    arrow: 'text-[#ff6a5c]',
+  },
+} as const;
+
 export default function MenuPage() {
   const router = useRouter();
   const [userData, setUserData] = useState<any>(null);
@@ -48,11 +67,12 @@ export default function MenuPage() {
     return <LoadingScreen />;
   }
 
-  // path null = booking page not built yet: shown, but not clickable
-  const menuItems: { title: string; path: string | null; icon: DoodleName; tilt: string }[] = [
+  // path null = page not built yet: shown, but not clickable.
+  // The two booking buttons wear their activity's colours so they're easy to tell apart.
+  const menuItems: { title: string; path: string | null; icon: DoodleName; tilt: string; theme?: 'escape' | 'haunted' }[] = [
     { title: 'My Ticket', path: '/my-ticket', icon: 'pumpkin', tilt: '-rotate-1' },
-    { title: 'Book Escape Room', path: '/escape-room', icon: 'skull', tilt: 'rotate-[0.5deg]' },
-    { title: 'Book Haunted House', path: null, icon: 'tombstone', tilt: '-rotate-[0.5deg]' },
+    { title: 'Book Escape Room', path: '/escape-room', icon: 'skull', tilt: 'rotate-[0.5deg]', theme: 'escape' },
+    { title: 'Book Haunted House', path: '/haunted-house', icon: 'tombstone', tilt: '-rotate-[0.5deg]', theme: 'haunted' },
     { title: 'Event Map', path: '/event-map', icon: 'broom', tilt: 'rotate-1' },
     { title: 'Schedule', path: '/schedule', icon: 'moon', tilt: '-rotate-[0.5deg]' },
   ];
@@ -123,20 +143,21 @@ export default function MenuPage() {
                   </div>
                 );
               }
+              const theme = item.theme ? THEMES[item.theme] : THEMES.plain;
               return (
               <button
                 key={item.title}
                 onClick={() => handleNavigate(path)}
-                className={`w-full bg-halloween-charcoal/90 hover:bg-halloween-orange/90 border-2 border-halloween-orange hand-cut ${item.tilt} hover:rotate-0 p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 transition-all active:scale-98 group`}
+                className={`relative w-full border-2 hand-cut ${theme.box} ${item.tilt} hover:rotate-0 p-3 sm:p-4 md:p-5 lg:p-4 flex items-center gap-3 sm:gap-4 md:gap-5 transition-all active:scale-98 group`}
               >
                 <span className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-6 transition-transform shrink-0">
                   <Doodle name={item.icon} className="max-w-full max-h-full w-auto h-auto" />
                 </span>
-                <span className="text-sm sm:text-base md:text-lg lg:text-lg font-bold text-halloween-cream group-hover:text-halloween-dark text-left flex-1">
+                <span className={`text-sm sm:text-base md:text-lg lg:text-lg font-bold text-halloween-cream text-left flex-1 ${theme.text}`}>
                   {item.title}
                 </span>
                 <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-halloween-orange group-hover:text-halloween-dark transition-colors shrink-0"
+                  className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 transition-colors shrink-0 ${theme.arrow}`}
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -146,6 +167,13 @@ export default function MenuPage() {
                 >
                   <path d="M9 5l7 7-7 7" />
                 </svg>
+                {item.theme === 'escape' && (
+                  <Doodle name="bat" className="absolute -top-3 right-8 w-8 h-auto -rotate-[10deg] pointer-events-none" />
+                )}
+                {item.theme === 'haunted' && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src="/pick-a-boo/spider.webp" alt="" aria-hidden="true" className="absolute -top-4 right-12 w-5 h-auto pointer-events-none" />
+                )}
               </button>
               );
             })}

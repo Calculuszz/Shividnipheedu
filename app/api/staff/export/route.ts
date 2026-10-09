@@ -30,19 +30,28 @@ export async function GET(request: Request) {
   if (!staff) return forbidden();
 
   try {
-    const [players, walkins, bookings] = await Promise.all([
+    const [players, walkins, bookings, extras] = await Promise.all([
       all(
         'booking_players_live',
-        'round_no, starts_at, booking_id, position, is_leader, student_id, full_name, phone, email, live_status, checked_in_at, checked_in_by, cancelled_at, created_at',
+        'id, round_no, starts_at, booking_id, position, is_leader, student_id, full_name, phone, email, live_status, checked_in_at, checked_in_by, cancelled_at, created_at',
         staff.activity,
         'round_no'
       ),
       all('booking_walkins', 'round_id, queue_no, student_id, full_name, phone, status, created_at, checked_in_at', staff.activity, 'queue_no'),
       all('bookings', 'id, status, notes', staff.activity, 'created_at'),
+      // Haunted House answers (not in booking_players_live, which predates them)
+      all('booking_players', 'id, nickname, faculty, year', staff.activity, 'created_at'),
     ]);
+    const extra = new Map(extras.map((e) => [e.id, e]));
     const notes = new Map(bookings.map((b) => [b.id, b.notes]));
     return NextResponse.json({
-      players: players.map((p) => ({ ...p, notes: notes.get(p.booking_id) ?? null })),
+      players: players.map(({ id, ...p }) => ({
+        ...p,
+        nickname: extra.get(id)?.nickname ?? null,
+        faculty: extra.get(id)?.faculty ?? null,
+        year: extra.get(id)?.year ?? null,
+        notes: notes.get(p.booking_id) ?? null,
+      })),
       walkins,
     });
   } catch (error) {

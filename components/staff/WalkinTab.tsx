@@ -6,7 +6,7 @@ import { isPhone, isStudentId, normalizePhone } from '@/lib/bookingRules';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { Walkin } from '@/lib/bookingTypes';
 import { focusRound, maskId, roundName, roundPhase } from '@/lib/staffRounds';
-import type { StaffCtx } from './EscapeRoomStaff';
+import type { StaffCtx } from './StaffApp';
 import { Notice, PhoneLink, RoundPicker, btn, card } from './ui';
 import { staffFail } from './useStaffRounds';
 

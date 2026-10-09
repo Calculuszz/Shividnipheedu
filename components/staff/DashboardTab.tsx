@@ -5,7 +5,7 @@ import { staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
 import { notArrived, phaseChip, phaseLabel, roundName, roundPhase } from '@/lib/staffRounds';
-import type { StaffCtx } from './EscapeRoomStaff';
+import type { StaffCtx } from './StaffApp';
 import { Chip, Icon, Notice, Svg, card } from './ui';
 import { staffFail } from './useStaffRounds';
 
@@ -55,6 +55,13 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
         { header: 'หัวหน้าทีม', key: 'is_leader', width: 10 },
         { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
         { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
+        ...(ctx.activity === 'haunted_house'
+          ? [
+              { header: 'ชื่อเล่น', key: 'nickname', width: 12 },
+              { header: 'คณะ', key: 'faculty', width: 26 },
+              { header: 'ชั้นปี', key: 'year', width: 12 },
+            ]
+          : []),
         { header: 'เบอร์โทร', key: 'phone', width: 14 },
         { header: 'อีเมล', key: 'email', width: 30 },
         { header: 'สถานะ', key: 'live_status', width: 22 },
@@ -107,7 +114,7 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `SHIVIDNI-PHEEDU-escape-room-${stamp}.xlsx`;
+      link.download = `SHIVIDNI-PHEEDU-${ctx.activity.replace('_', '-')}-${stamp}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (e) {

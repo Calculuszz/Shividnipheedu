@@ -20,6 +20,7 @@ export type RoundInfo = {
 };
 
 const LOCATION = 'อาคารวิศวฯ 100 ปี คณะวิศวกรรมศาสตร์';
+const HAUNTED_POINT = 'ใต้อาคารวิศวฯ 100 ปี ฝั่งลิฟต์ปกติ';
 const TZ = 'Asia/Bangkok';
 
 function siteUrl() {
@@ -144,6 +145,33 @@ export function bookingConfirmed(p: Person & { code: string }, r: RoundInfo, isL
     `<p style="font-size:16px">${isLeader ? 'การจองของทีมคุณเสร็จเรียบร้อย' : 'หัวหน้าทีมจองรอบนี้ให้คุณแล้ว'} เพื่อนในทีมแต่ละคนได้รับอีเมลพร้อมรหัสและ QR ของตัวเอง</p>
 ${roundBlock(r)}${codeBlock(p.code)}${checkinRule}
 <p style="font-size:14px;color:#666666">ยกเลิกที่นั่งของตัวเองได้ถึงเวลาปิดเช็กอินของรอบ (${time(r.checkin_closes_at)} น.) ที่หน้า My booking ด้วยรหัสนี้</p>`,
+    r,
+    p.code
+  );
+}
+
+// Haunted House: one person per booking, no changes or cancelling, register at the point
+export function hauntedConfirmed(p: Person & { code: string }, r: RoundInfo) {
+  const rows: [string, string][] = [
+    ['กิจกรรม', 'บ้านผีสิง (Haunted House)'],
+    ['วันที่', date(r.starts_at)],
+    ['รอบ', `รอบที่ ${r.round_no} เล่น ${time(r.starts_at)}–${time(r.ends_at)} น.`],
+    ['ลงทะเบียน', `${time(r.checkin_opens_at)}–${time(r.checkin_closes_at)} น.`],
+    ['จุดลงทะเบียน', HAUNTED_POINT],
+  ];
+  const table = `<table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:15px">${rows
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 0;color:#7a0a19;font-weight:bold;width:120px;vertical-align:top">${k}</td><td style="padding:8px 0;color:#2d2d2d">${esc(v)}</td></tr>`
+    )
+    .join('')}</table>`;
+  return send(
+    p,
+    'ยืนยันการจองบ้านผีสิง',
+    'จองบ้านผีสิงสำเร็จแล้ว',
+    `<p style="font-size:16px">การจองลงทะเบียนเข้าร่วมกิจกรรมบ้านผีสิงของท่านได้เสร็จสมบูรณ์แล้ว กรุณามาลงทะเบียนตามเวลาที่กำหนด และโปรดมาก่อนเวลาเล่นกิจกรรมขั้นต่ำ 10 นาที ไม่เช่นนั้นจะถือว่าสละสิทธิ์</p>
+${table}${codeBlock(p.code)}
+<p style="font-size:14px;color:#666666">การจองนี้แก้ไขข้อมูล เปลี่ยนรอบ หรือยกเลิกไม่ได้</p>`,
     r,
     p.code
   );
