@@ -9,6 +9,7 @@ import FloatingGhost from '@/components/FloatingGhost';
 import Doodle from '@/components/Doodle';
 import Sponsors from '@/components/Sponsors';
 import { formatTime } from '@/lib/bookingTime';
+import { isBackCamera, scanFeedback } from '@/lib/scanner';
 
 // Force dynamic rendering (don't prerender at build time)
 export const dynamic = 'force-dynamic';
@@ -589,30 +590,6 @@ type ScanResult = { success: boolean; message: string; name?: string; detail?: s
 const BOOKING_QR = /^SVP-[A-Z0-9]{6}$/i;
 // The same QR held in front of the camera is ignored for this long after its result
 const SAME_QR_COOLDOWN_MS = 5000;
-
-/** Beep + vibrate so staff don't have to look at the screen for every scan */
-function scanFeedback(audio: AudioContext | null, ok: boolean) {
-  navigator.vibrate?.(ok ? 80 : [120, 80, 120]);
-  if (!audio) return;
-  const tones = ok ? [{ hz: 1046, at: 0, len: 0.12 }] : [{ hz: 330, at: 0, len: 0.14 }, { hz: 330, at: 0.2, len: 0.14 }];
-  for (const { hz, at, len } of tones) {
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.frequency.value = hz;
-    osc.type = ok ? 'sine' : 'square';
-    const start = audio.currentTime + at;
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.25, start + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + len);
-    osc.connect(gain).connect(audio.destination);
-    osc.start(start);
-    osc.stop(start + len + 0.02);
-  }
-}
-
-function isBackCamera(stream: MediaStream) {
-  return stream.getVideoTracks()[0]?.getSettings().facingMode === 'environment';
-}
 
 function QRScanner({ onExit }: { onExit: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
