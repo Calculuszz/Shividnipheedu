@@ -1,4 +1,4 @@
-# SHIVIDNI PHEEDU
+# SHIVIDNIPHEEDU
 
 Official website for **SHIVIDNI PHEEDU**, a Halloween event co-hosted by the Faculty of Commerce and Accountancy, the Faculty of Engineering, and the Faculty of Communication Arts, Chulalongkorn University.
 
