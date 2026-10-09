@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   referral_source TEXT,
   interested_activities TEXT,
   transportation TEXT,
+  origin_province TEXT,   -- จังหวัดต้นทาง (travel report, see travel-report.sql)
+  origin_district TEXT,   -- เขตต้นทาง, Bangkok only
 
   -- QR and attendance tracking
   qr_code TEXT NOT NULL UNIQUE,
