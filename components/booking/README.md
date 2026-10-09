@@ -65,6 +65,7 @@ const { data, error, loading, refresh } = useRounds('escape_room');
 | `Sheet` | dialog ที่เลื่อนขึ้นจากด้านล่าง (3c, 3d, 5c, 5e, 5f) |
 | `ChangeRoundSheet` | 3c เปลี่ยนรอบ: ดึงรอบเองตอนเปิด เลือกได้เฉพาะรอบที่ที่นั่งพอสำหรับ `teamSize` → `onPick(roundId)` (5b ใช้ซ้ำได้) |
 | `SeatConflict` | 3d ที่นั่งหมดตอนยืนยัน: ให้ติ๊กคนออกจนเหลือ `seatsLeft` (หัวหน้าอยู่ต่อเสมอ) → `onConfirm(keepIndexes)` หรือ `onPickRound` |
+| `CancelSeatDialog` · `CancelTeamDialog` · `RemoveMemberDialog` | 5e ยกเลิกที่นั่งของฉัน · 5c ยกเลิกทั้งทีม · 5f นำสมาชิกออก เรียก API เองและแสดง error ไทยให้ → `onDone()` เมื่อสำเร็จ (หน้าเรียก `findBooking` ใหม่เอง) · `onClose()` เมื่อกดปิด · `onStale?.()` เมื่อได้ TOO_LATE / NOT_CANCELLABLE / NOT_LEADER (หน้าควรโหลดข้อมูลใหม่) |
 
 ## กติกาที่ต้องจำ
 
