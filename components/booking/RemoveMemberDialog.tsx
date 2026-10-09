@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { BookingApiError, removeMember } from '@/lib/bookingClient';
-import { DialogButton, DialogError, DialogSheet, closesNote, type DialogRound } from './DialogParts';
+import { DialogButton, DialogError, DialogSheet, closesNote, isStaleError, type DialogRound } from './DialogParts';
 
 type Props = {
   /** รหัสของหัวหน้าที่เปิดหน้าอยู่ */
@@ -15,10 +15,12 @@ type Props = {
   onDone: () => void;
   /** กดปิด / Keep in team */
   onClose: () => void;
+  /** ได้ TOO_LATE / NOT_CANCELLABLE / NOT_LEADER: ข้อมูลหน้าเก่าแล้ว หน้าควรเรียก find ใหม่ (dialog ยังโชว์ข้อความ error) */
+  onStale?: () => void;
 };
 
 // 5f: นำสมาชิกออกจากทีม (หัวหน้าเท่านั้น) POST /api/booking/remove-member { code, player_id }
-export default function RemoveMemberDialog({ code, member, round, onDone, onClose }: Props) {
+export default function RemoveMemberDialog({ code, member, round, onDone, onClose, onStale }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -31,6 +33,7 @@ export default function RemoveMemberDialog({ code, member, round, onDone, onClos
     } catch (e) {
       // e.message เป็นข้อความไทยพร้อมแสดง (NOT_LEADER, CANNOT_REMOVE_LEADER, NOT_CANCELLABLE, NOT_FOUND, TOO_LATE ฯลฯ)
       setErr(e instanceof BookingApiError ? e.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง');
+      if (isStaleError(e)) onStale?.();
     } finally {
       setBusy(false);
     }
@@ -39,6 +42,7 @@ export default function RemoveMemberDialog({ code, member, round, onDone, onClos
   return (
     <DialogSheet
       title={`Remove ${member.full_name}?`}
+      busy={busy}
       onClose={onClose}
       footer={
         <>

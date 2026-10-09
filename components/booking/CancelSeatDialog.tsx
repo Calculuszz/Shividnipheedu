@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { BookingApiError, cancelSeat } from '@/lib/bookingClient';
 import { formatTimeRange } from '@/lib/bookingTime';
-import { DialogButton, DialogError, DialogSheet, closesNote, type DialogRound } from './DialogParts';
+import { DialogButton, DialogError, DialogSheet, closesNote, isStaleError, type DialogRound } from './DialogParts';
 
 type Props = {
   code: string;
@@ -12,7 +12,7 @@ type Props = {
   nextLeaderName?: string | null;
   /** data.round ของ find: ใช้แสดงเวลารอบและเวลาปิดเช็กอิน */
   round?: DialogRound;
-  /** จำนวนคนในทีมตอนนี้ (รวมตัวเอง) ใช้แสดง "เพื่อนอีก N คน" / "ทั้ง N คน" */
+  /** จำนวนคนในทีมตอนนี้ (รวมตัวเอง) ใช้แสดง "เพื่อนอีก N คน" ถ้าเป็น 1 = จองคนเดียว การยกเลิกที่นั่งคือยกเลิกทั้งการจอง */
   teamSize?: number;
   /** หัวหน้าเลือก "Cancel whole team" แล้วกดยืนยัน → หน้าปิด dialog นี้แล้วเปิด CancelTeamDialog (5c) */
   onChooseTeam?: () => void;
@@ -20,6 +20,8 @@ type Props = {
   onDone: () => void;
   /** กดปิด / Keep my booking */
   onClose: () => void;
+  /** ได้ TOO_LATE / NOT_CANCELLABLE / NOT_LEADER: ข้อมูลหน้าเก่าแล้ว หน้าควรเรียก find ใหม่ (dialog ยังโชว์ข้อความ error) */
+  onStale?: () => void;
 };
 
 type Choice = 'seat' | 'team';
@@ -67,7 +69,7 @@ function ChoiceCard({
 }
 
 // 5e: ยกเลิกเฉพาะที่นั่งของตัวเอง POST /api/booking/cancel-seat { code }
-// หัวหน้า (ส่ง onChooseTeam มา) จะเห็นตัวเลือก "Cancel my seat / Cancel whole team" ตามดีไซน์
+// หัวหน้า (ส่ง onChooseTeam มา และมีเพื่อนในทีม) จะเห็นตัวเลือก "Cancel my seat / Cancel whole team" ตามดีไซน์
 export default function CancelSeatDialog({
   code,
   isLeader,
@@ -77,16 +79,22 @@ export default function CancelSeatDialog({
   onChooseTeam,
   onDone,
   onClose,
+  onStale,
 }: Props) {
   const [choice, setChoice] = useState<Choice>('seat');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const showChooser = isLeader && !!onChooseTeam;
+  const alone = teamSize === 1;
+  const showChooser = isLeader && !!onChooseTeam && !alone;
   const others = teamSize && teamSize > 1 ? `เพื่อนอีก ${teamSize - 1} คน` : 'เพื่อนที่เหลือในทีม';
   const roundText = round ? `รอบ ${formatTimeRange(round.starts_at, round.ends_at)}` : 'รอบเดิม';
-  const seatDesc = `ออกจากทีม ที่นั่งของคุณถูกปล่อยทันที ${others}ยังเล่น ${roundText} ตามเดิม`;
-  const teamDesc = `ยกเลิกที่นั่งของ${teamSize ? `ทั้ง ${teamSize} คน` : 'ทั้งทีม'} ทุกคนได้รับอีเมลแจ้ง (ดูรายชื่อในขั้นถัดไป)`;
+  // จองคนเดียว: ยกเลิกที่นั่ง = ยกเลิกการจองทั้งหมด ไม่มีเพื่อนเล่นต่อ
+  const seatDesc = alone
+    ? 'ที่นั่งของคุณถูกปล่อยทันที และการจองนี้จะถูกยกเลิก จองรอบอื่นใหม่ได้ถ้ายังเปิดรับจอง'
+    : `ออกจากทีม ที่นั่งของคุณถูกปล่อยทันที ${others}ยังเล่น ${roundText} ตามเดิม`;
+  // ไม่ระบุจำนวนคน: teamSize รวมคนที่เช็กอินแล้ว ซึ่ง 5c ไม่ยกเลิก ตัวเลขจะไม่ตรงกับปุ่มของ 5c
+  const teamDesc = 'ยกเลิกที่นั่งของทั้งทีม ทุกคนได้รับอีเมลแจ้ง (ดูรายชื่อในขั้นถัดไป)';
   const leaderNote = isLeader && nextLeaderName ? `ทีมจะไม่ถูกยกเลิก — ${nextLeaderName} จะเป็นหัวหน้าทีมแทน` : '';
 
   async function onConfirm() {
@@ -102,6 +110,7 @@ export default function CancelSeatDialog({
     } catch (e) {
       // e.message เป็นข้อความไทยพร้อมแสดง (TOO_LATE, NOT_CANCELLABLE, TRY_AGAIN ฯลฯ)
       setErr(e instanceof BookingApiError ? e.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง');
+      if (isStaleError(e)) onStale?.();
     } finally {
       setBusy(false);
     }
@@ -115,15 +124,11 @@ export default function CancelSeatDialog({
     <DialogSheet
       title={showChooser ? 'Cancel what?' : 'Cancel my seat?'}
       compactTitle
+      busy={busy}
       onClose={onClose}
       footer={
         <>
-          <DialogButton
-            variant="coral"
-            loading={busy}
-            loadingText="กำลังยกเลิก…"
-            onClick={onConfirm}
-          >
+          <DialogButton variant="coral" loading={busy} loadingText="กำลังยกเลิก…" onClick={onConfirm}>
             {showChooser && choice === 'team' ? 'Cancel whole team' : 'Cancel my seat'}
           </DialogButton>
           <DialogButton variant="muted" disabled={busy} onClick={onClose}>

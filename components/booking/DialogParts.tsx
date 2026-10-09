@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
+import { BookingApiError } from '@/lib/bookingClient';
 import { formatTime } from '@/lib/bookingTime';
 
 // ชิ้นส่วนของ dialog 5e / 5c / 5f ที่ต้องตรงดีไซน์ (แถบลาก, ไม่มีปุ่ม X, ปุ่มตัวหนังสือ 15px)
@@ -18,25 +19,38 @@ export function closesNote(round?: DialogRound) {
   return ` · ยกเลิกได้ถึงเวลาปิดเช็กอินของรอบ (${formatTime(round.checkin_closes_at)} น.)`;
 }
 
+// ข้อมูลของหน้าเก่าแล้ว (เลยเวลา / สถานะเปลี่ยนไปแล้ว / ไม่ใช่หัวหน้า) → หน้าควรเรียก find ใหม่
+const STALE_CODES = new Set(['TOO_LATE', 'NOT_CANCELLABLE', 'NOT_LEADER']);
+
+export function isStaleError(e: unknown) {
+  return e instanceof BookingApiError && STALE_CODES.has(e.code);
+}
+
 type SheetProps = {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer: ReactNode;
+  /** กำลังเรียก API: ไม่ปิดด้วย Esc / แตะพื้นหลัง กันกดปิดแล้วรายการสำเร็จทีหลัง */
+  busy?: boolean;
   /** 5e ใช้หัวข้อเล็กกว่า 5c/5f เล็กน้อยตามดีไซน์ */
   compactTitle?: boolean;
 };
 
-export function DialogSheet({ title, onClose, children, footer, compactTitle }: SheetProps) {
+export function DialogSheet({ title, onClose, children, footer, busy, compactTitle }: SheetProps) {
   const panel = useRef<HTMLDivElement>(null);
-  // เก็บ onClose ล่าสุดไว้ใน ref เพื่อให้หน้าที่ส่ง arrow function ใหม่ทุก render ไม่ทำให้โฟกัสรีเซ็ต
+  // เก็บ onClose / busy ล่าสุดไว้ใน ref เพื่อให้หน้าที่ส่ง arrow function ใหม่ทุก render ไม่ทำให้โฟกัสรีเซ็ต
   const closeRef = useRef(onClose);
+  const busyRef = useRef(!!busy);
   useEffect(() => {
     closeRef.current = onClose;
+    busyRef.current = !!busy;
   });
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busyRef.current) closeRef.current();
+    };
     document.addEventListener('keydown', onKey);
     const previous = document.activeElement as HTMLElement | null;
     panel.current?.focus();
@@ -50,12 +64,18 @@ export function DialogSheet({ title, onClose, children, footer, compactTitle }: 
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70"
+      onClick={() => {
+        if (!busy) onClose();
+      }}
+    >
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        aria-busy={busy || undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md max-h-[92vh] overflow-y-auto bg-halloween-charcoal text-halloween-cream rounded-t-[26px] border-t-2 border-halloween-orange shadow-[0_-10px_30px_rgba(0,0,0,0.35)] outline-none px-4 pt-[18px] pb-[max(24px,env(safe-area-inset-bottom))]"
