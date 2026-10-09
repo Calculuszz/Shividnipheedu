@@ -6,6 +6,7 @@ import EventName from '@/components/EventName';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
 import Sponsors from '@/components/Sponsors';
+import { BANGKOK, BANGKOK_DISTRICTS, PROVINCES, TRAVEL_MODES } from '@/lib/travel';
 
 type FormData = {
   studentId: string;
@@ -16,6 +17,8 @@ type FormData = {
   referralSource: string;
   interestedActivities: string[];
   transportation: string;
+  originProvince: string;
+  originDistrict: string;
   email: string;
 };
 
@@ -67,17 +70,6 @@ const EVENT_HIGHLIGHTS: { label: string; icon: DoodleName; tilt: string }[] = [
 // Form checkboxes use the same activities as the intro list, so the two never drift apart
 const ACTIVITIES = EVENT_HIGHLIGHTS.map((item) => item.label);
 
-const TRANSPORTATION = [
-  'BTS / MRT',
-  'CU POP BUS',
-  'รถยนต์ส่วนตัว',
-  'รถตู้',
-  'รถโดยสารประจำทาง (รถเมย์)',
-  'รถจักรยานยนต์',
-  'เดินเท้า',
-  'อื่นๆ'
-];
-
 export default function RegistrationPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -90,6 +82,8 @@ export default function RegistrationPage() {
     referralSource: '',
     interestedActivities: [],
     transportation: '',
+    originProvince: '',
+    originDistrict: '',
     email: '',
   });
   const [pdpaConsent, setPdpaConsent] = useState(false);
@@ -146,6 +140,12 @@ export default function RegistrationPage() {
     }
     if (!formData.transportation) {
       newErrors.transportation = 'เดินทางมายังไง บอกหน่อยนะ';
+    }
+    if (!formData.originProvince) {
+      newErrors.originProvince = 'เลือกจังหวัดที่ออกเดินทางด้วยนะ';
+    }
+    if (formData.originProvince === BANGKOK && !formData.originDistrict) {
+      newErrors.originDistrict = 'เลือกเขตที่ออกเดินทางด้วยนะ';
     }
 
     setErrors(newErrors);
@@ -553,10 +553,10 @@ export default function RegistrationPage() {
                 )}
               </div>
 
-              {/* Transportation */}
+              {/* Travel: values must match lib/travel.ts exactly (sustainability office report) */}
               <div>
                 <label htmlFor="transportation" className="block text-sm sm:text-base text-halloween-cream font-semibold mb-2 font-iannnnn-owl">
-                  วิธีการเดินทาง *
+                  วิธีการเดินทางมางาน *
                 </label>
                 <select
                   id="transportation"
@@ -568,7 +568,7 @@ export default function RegistrationPage() {
                   required
                 >
                   <option value="">เลือกวิธีการเดินทาง</option>
-                  {TRANSPORTATION.map((method) => (
+                  {TRAVEL_MODES.map((method) => (
                     <option key={method} value={method}>
                       {method}
                     </option>
@@ -578,6 +578,62 @@ export default function RegistrationPage() {
                   <p className="mt-1 text-sm text-halloween-error">{errors.transportation}</p>
                 )}
               </div>
+
+              <div>
+                <label htmlFor="originProvince" className="block text-sm sm:text-base text-halloween-cream font-semibold mb-2 font-iannnnn-owl">
+                  เดินทางมาจากจังหวัดไหน *
+                </label>
+                <select
+                  id="originProvince"
+                  value={formData.originProvince}
+                  onChange={(e) => {
+                    updateField('originProvince', e.target.value);
+                    // District is asked for Bangkok only
+                    if (e.target.value !== BANGKOK) updateField('originDistrict', '');
+                  }}
+                  className={`w-full bg-halloween-dark border-2 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-halloween-cream text-base font-iannnnn-owl focus:border-halloween-orange focus:outline-none focus:ring-2 focus:ring-halloween-orange/20 transition-all duration-200 ${
+                    errors.originProvince ? 'border-halloween-error' : 'border-halloween-purple'
+                  }`}
+                  required
+                >
+                  <option value="">เลือกจังหวัดที่ออกเดินทาง</option>
+                  {PROVINCES.map((province) => (
+                    <option key={province} value={province}>
+                      {province === BANGKOK ? 'กรุงเทพมหานคร' : province}
+                    </option>
+                  ))}
+                </select>
+                {errors.originProvince && (
+                  <p className="mt-1 text-sm text-halloween-error">{errors.originProvince}</p>
+                )}
+              </div>
+
+              {formData.originProvince === BANGKOK && (
+                <div>
+                  <label htmlFor="originDistrict" className="block text-sm sm:text-base text-halloween-cream font-semibold mb-2 font-iannnnn-owl">
+                    มาจากเขตไหนในกรุงเทพฯ *
+                  </label>
+                  <select
+                    id="originDistrict"
+                    value={formData.originDistrict}
+                    onChange={(e) => updateField('originDistrict', e.target.value)}
+                    className={`w-full bg-halloween-dark border-2 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-halloween-cream text-base font-iannnnn-owl focus:border-halloween-orange focus:outline-none focus:ring-2 focus:ring-halloween-orange/20 transition-all duration-200 ${
+                    errors.originDistrict ? 'border-halloween-error' : 'border-halloween-purple'
+                  }`}
+                    required
+                  >
+                    <option value="">เลือกเขต</option>
+                    {BANGKOK_DISTRICTS.map((district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.originDistrict && (
+                    <p className="mt-1 text-sm text-halloween-error">{errors.originDistrict}</p>
+                  )}
+                </div>
+              )}
             </form>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6 sm:mt-8">

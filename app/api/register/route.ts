@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import QRCode from 'qrcode';
+import { cleanTravel } from '@/lib/travel';
 import { sendEmail } from '@/lib/email';
 
 // Simple in-memory rate limiter
@@ -41,7 +42,6 @@ export async function POST(request: Request) {
       year,
       referralSource,
       interestedActivities,
-      transportation,
       email,
     } = body;
 
@@ -49,6 +49,15 @@ export async function POST(request: Request) {
     if (!studentId || !email || !fullName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Travel answers go into a report read by exact text, so only values from lib/travel.ts are kept
+    const travel = cleanTravel(body);
+    if ('error' in travel) {
+      return NextResponse.json(
+        { error: 'ข้อมูลการเดินทางไม่ถูกต้อง ลองเลือกใหม่อีกครั้งนะ', field: travel.error },
         { status: 400 }
       );
     }
@@ -95,7 +104,9 @@ export async function POST(request: Request) {
             year: year,
             referral_source: referralSource,
             interested_activities: Array.isArray(interestedActivities) ? interestedActivities.join(', ') : '',
-            transportation: transportation,
+            transportation: travel.transportation,
+            origin_province: travel.origin_province,
+            origin_district: travel.origin_district,
             qr_code: qrData,
             attended: false,
           },

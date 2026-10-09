@@ -10,6 +10,7 @@ import Doodle from '@/components/Doodle';
 import Sponsors from '@/components/Sponsors';
 import { formatTime } from '@/lib/bookingTime';
 import { isBackCamera, scanFeedback } from '@/lib/scanner';
+import { TRAVEL_COLUMNS, TRAVEL_CSV_NAME, travelCsv } from '@/lib/travel';
 
 // Force dynamic rendering (don't prerender at build time)
 export const dynamic = 'force-dynamic';
@@ -328,7 +329,10 @@ function AttendanceTable() {
         { header: 'ชั้นปี', key: 'year', width: 10 },
         { header: 'ช่องทางรับรู้งาน', key: 'referral_source', width: 22 },
         { header: 'กิจกรรมที่สนใจ', key: 'interested_activities', width: 36 },
-        { header: 'การเดินทาง', key: 'transportation', width: 20 },
+        // Same headers as the sustainability office's travel sheet (lib/travel.ts)
+        { header: TRAVEL_COLUMNS[0], key: 'transportation', width: 22 },
+        { header: TRAVEL_COLUMNS[1], key: 'origin_province', width: 18 },
+        { header: TRAVEL_COLUMNS[2], key: 'origin_district', width: 20 },
         { header: 'ผลเกมผี', key: 'ghost_result', width: 18 },
         { header: 'เช็คอินแล้ว', key: 'attended', width: 12 },
         { header: 'เวลาเช็คอิน', key: 'attended_at', width: 22 },
@@ -350,7 +354,7 @@ function AttendanceTable() {
       header.font = { bold: true, color: { argb: 'FFF5EEE6' } };
       header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3167' } };
       header.alignment = { vertical: 'middle' };
-      sheet.autoFilter = { from: 'A1', to: 'N1' };
+      sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } };
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
@@ -365,6 +369,29 @@ function AttendanceTable() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting registrations:', error);
+      setExportError('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // The travel report for the sustainability office: 3 columns, text exactly as their sheet
+  const exportTravelCsv = async () => {
+    setExporting(true);
+    setExportError('');
+    try {
+      const { rows } = (await adminFetch('/api/admin/registrations?mode=all')) as { rows: Record<string, unknown>[] };
+      const { csv, skipped } = travelCsv(rows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = TRAVEL_CSV_NAME;
+      link.click();
+      URL.revokeObjectURL(url);
+      if (skipped) setExportError(`ข้าม ${skipped} คนที่ลงทะเบียนก่อนมีช่องจังหวัด/เขต (ข้อมูลการเดินทางไม่ครบ)`);
+    } catch (error) {
+      console.error('Error exporting travel report:', error);
       setExportError('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setExporting(false);
@@ -439,7 +466,7 @@ function AttendanceTable() {
 
       <div className="mb-6">
         {/* Search Input */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 max-w-md">
             <input
               key="search-student-id"
@@ -476,6 +503,14 @@ function AttendanceTable() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
             </svg>
             {exporting ? 'กำลังเตรียมไฟล์...' : 'ดาวน์โหลด Excel'}
+          </button>
+          <button
+            type="button"
+            onClick={exportTravelCsv}
+            disabled={exporting || totalCount === 0}
+            className="flex items-center gap-2 border-2 border-halloween-moon text-halloween-moon hover:bg-halloween-moon/10 px-4 py-2 rounded font-bold font-iannnnn-owl transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            รายงานการเดินทาง (.csv)
           </button>
         </div>
         {exportError && <FieldError message={exportError} />}
