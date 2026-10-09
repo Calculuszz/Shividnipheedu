@@ -23,6 +23,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 /** What every tab gets: the polled rounds, a clock that ticks, and a way to refetch now. */
 export type StaffCtx = {
+  activity: StaffActivity;
   rounds: StaffRound[];
   now: number;
   updatedAt: string | null;
@@ -38,9 +39,13 @@ const tabFromHash = (): Tab => {
   return TABS.some((t) => t.id === h) ? (h as Tab) : 'checkin';
 };
 
-// Escape Room staff back office (issue #8). Phone first: bottom tab bar on a phone,
-// tabs in the header on a tablet / laptop.
-export default function EscapeRoomStaff() {
+export type StaffActivity = 'escape_room' | 'haunted_house';
+
+const STAFF_TITLE: Record<StaffActivity, string> = { escape_room: 'Escape Room', haunted_house: 'Haunted House' };
+
+// Staff back office for one bookable activity (issue #8; the Haunted House reuses it in
+// its own colours). Phone first: bottom tab bar on a phone, tabs in the header on a tablet / laptop.
+export default function StaffApp({ activity }: { activity: StaffActivity }) {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<Tab>('checkin');
   const [roundHint, setRoundHint] = useState<string | null>(null);
@@ -51,12 +56,12 @@ export default function EscapeRoomStaff() {
     fetch('/api/admin/login', { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((data) => {
-        if (data.role !== 'escape_room') return toLogin();
+        if (data.role !== activity) return toLogin();
         setTab(tabFromHash());
         setReady(true);
       })
       .catch(toLogin);
-  }, []);
+  }, [activity]);
 
   const go = (next: Tab, roundId?: string) => {
     setTab(next);
@@ -72,14 +77,14 @@ export default function EscapeRoomStaff() {
 
   if (!ready) return <div className="min-h-screen bg-halloween-dark" />;
 
-  const ctx: StaffCtx | null = rounds ? { rounds, now, updatedAt, refresh, go, roundHint } : null;
+  const ctx: StaffCtx | null = rounds ? { activity, rounds, now, updatedAt, refresh, go, roundHint } : null;
 
   return (
-    <div className="min-h-screen bg-halloween-dark text-halloween-cream">
+    <div className={`min-h-screen bg-halloween-dark text-halloween-cream ${activity === 'haunted_house' ? 'theme-haunted' : ''}`}>
       <header className="sticky top-0 z-30 border-b-2 border-halloween-purple bg-halloween-charcoal">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <div className="flex flex-1 flex-col gap-0.5 md:flex-none">
-            <span className="display-font text-[22px] leading-none tracking-wide text-halloween-orange">Escape Room</span>
+            <span className="display-font text-[22px] leading-none tracking-wide text-halloween-orange">{STAFF_TITLE[activity]}</span>
             <span className="text-[13px] text-halloween-gray">Staff / หลังบ้าน</span>
           </div>
           <nav aria-label="เมนูหลังบ้าน" className="hidden flex-1 justify-center gap-1 md:flex">

@@ -7,6 +7,7 @@ import Doodle, { type DoodleName } from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
 import Sponsors from '@/components/Sponsors';
 import { BANGKOK, BANGKOK_DISTRICTS, PROVINCES, TRAVEL_MODES } from '@/lib/travel';
+import { FACULTIES, YEARS } from '@/lib/registrationOptions';
 
 type FormData = {
   studentId: string;
@@ -22,34 +23,7 @@ type FormData = {
   email: string;
 };
 
-const FACULTIES = [
-  'คณะวิศวกรรมศาสตร์',
-  'คณะพาณิชยศาสตร์และบัญชี',
-  'คณะครุศาสตร์',
-  'คณะนิติศาสตร์',
-  'คณะนิเทศศาสตร์',
-  'คณะจิตวิทยา',
-  'คณะทันตแพทย์ศาสตร์',
-  'คณะพยาบาลศาสตร์',
-  'คณะแพทย์ศาสตร์',
-  'คณะเภสัชศาสตร์',
-  'คณะรัฐศาสตร์',
-  'คณะวิทยาศาสตร์',
-  'คณะวิทยาศาสตร์การกีฬา',
-  'คณะศิลปกรรมศาสตร์',
-  'คณะเศรษฐศาสตร์',
-  'คณะสถาปัตยกรรมศาสตร์',
-  'คณะสหเวชศาสตร์',
-  'คณะสัตวแพทยศาสตร์',
-  'คณะอักษรศาสตร์',
-  'School of Integrated Innovation (SCII)',
-  'School of Agriculture Resources (SAR)',
-  'อื่นๆ'
-];
-
 const GENDERS = ['ชาย', 'หญิง', 'ไม่ต้องการระบุ'];
-
-const YEARS = ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'มหาบัณฑิต (ป.โท)', 'ดุษฎีบัณฑิต (ป.เอก)', 'อื่นๆ'];
 
 const REFERRAL_SOURCES = [
   'รุ่นพี่ / รุ่นน้อง',

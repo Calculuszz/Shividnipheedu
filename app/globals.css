@@ -282,3 +282,25 @@ body > * {
   border-radius: 0 0 28px 28px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
+
+/* ===== Haunted House theme =====
+   The same booking kit, recoloured for /haunted-house: orange → blood red,
+   lime → old paper, plum → maroon. Utilities read these variables, so every
+   component inside .theme-haunted picks the new colours up by itself. */
+.theme-haunted {
+  --halloween-dark: #160204;
+  --halloween-charcoal: #260509;
+  --halloween-dusty-orange: #e5383b;
+  --halloween-faded-purple: #5a1a20;
+  --halloween-slate-blue: #3a0a10;
+  --halloween-ash-gray: #c4aaa5;
+  --halloween-moon: #ecd9bd;
+}
+
+.theme-haunted .image-background {
+  background:
+    radial-gradient(ellipse at 50% 22%, rgba(122, 16, 26, 0.9), transparent 62%),
+    radial-gradient(circle at 10% 90%, rgba(234, 123, 41, 0.1), transparent 45%),
+    linear-gradient(180deg, #2b0509 0%, #1e0307 55%, #0f0103 100%);
+  background-attachment: fixed;
+}

@@ -16,7 +16,7 @@ import { newPlayer, playerComplete, playerErrors, studentCanSubmit, toPlayerInpu
 
 const ACTIVITY = 'escape_room';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const FIELD_LABELS: Record<keyof PlayerInput, string> = {
+const FIELD_LABELS: Partial<Record<keyof PlayerInput, string>> = {
   full_name: 'ชื่อ', student_id: 'รหัสนิสิต', phone: 'เบอร์โทร', email: 'อีเมล', pdpa: 'PDPA', rules: 'การรับทราบกฎ',
 };
 

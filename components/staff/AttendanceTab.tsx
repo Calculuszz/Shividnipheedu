@@ -5,7 +5,7 @@ import { BookingApiError, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { AttendanceResponse, StaffPlayer } from '@/lib/bookingTypes';
 import { focusRound, minutesText, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
-import type { StaffCtx } from './EscapeRoomStaff';
+import type { StaffCtx } from './StaffApp';
 import { LeaderChip, Notice, PhoneLink, RoundPicker, btn, card, meta } from './ui';
 import { staffFail } from './useStaffRounds';
 

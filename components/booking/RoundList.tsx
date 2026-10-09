@@ -17,6 +17,18 @@ type RoundListProps = {
   onSelect: (round: Round) => void;
   readOnly?: boolean;
   mode?: RoundListMode;
+  /** Wording per activity (Escape Room: "Round 3" / "Check-in … at the booth") */
+  labels?: RoundLabels;
+};
+
+export type RoundLabels = {
+  round: (roundNo: number) => string;
+  checkin: (timeRange: string) => string;
+};
+
+const DEFAULT_LABELS: RoundLabels = {
+  round: (n) => `Round ${n}`,
+  checkin: (range) => `Check-in ${range} at the booth`,
 };
 
 export function SeatBars({ round }: { round: Round }) {
@@ -41,7 +53,7 @@ export function SeatBars({ round }: { round: Round }) {
   );
 }
 
-function RoundDetails({ round, mode }: { round: Round; mode: RoundListMode }) {
+function RoundDetails({ round, mode, labels }: { round: Round; mode: RoundListMode; labels: RoundLabels }) {
   const isWalkin = mode === 'walkin';
   const showWalkinInfo = round.round_status === 'walkin_available';
   const hideCheckin = isWalkin && ['ended', 'in_progress', 'closed'].includes(round.round_status);
@@ -53,7 +65,7 @@ function RoundDetails({ round, mode }: { round: Round; mode: RoundListMode }) {
           {formatTimeRange(round.starts_at, round.ends_at)}
         </span>
         <span className="rounded-md border border-halloween-purple px-1.5 py-0.5 text-[11px] font-bold leading-none text-halloween-gray">
-          Round {round.round_no}
+          {labels.round(round.round_no)}
         </span>
       </span>
 
@@ -64,7 +76,7 @@ function RoundDetails({ round, mode }: { round: Round; mode: RoundListMode }) {
           {showWalkinInfo && <span className="mt-1.5 text-xs leading-snug text-halloween-gray">Walk-in seats at the booth</span>}
           {!hideCheckin && (
             <span className={`${showWalkinInfo ? 'mt-0.5' : 'mt-1.5'} text-xs leading-snug text-halloween-gray`}>
-              Check-in {formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)} at the booth
+              {labels.checkin(formatTimeRange(round.checkin_opens_at, round.checkin_closes_at))}
             </span>
           )}
         </>
@@ -88,6 +100,7 @@ export default function RoundList({
   onSelect,
   readOnly = false,
   mode = 'online',
+  labels = DEFAULT_LABELS,
 }: RoundListProps) {
   return (
     <div
@@ -162,7 +175,7 @@ export default function RoundList({
                 {isSelected && <span className="h-3.5 w-3.5 rounded-full bg-halloween-orange" />}
               </span>
             )}
-            <RoundDetails round={round} mode={mode} />
+            <RoundDetails round={round} mode={mode} labels={labels} />
             {rightSide}
           </>
         );

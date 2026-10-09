@@ -6,7 +6,7 @@ import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffPlayer, StaffRound } from '@/lib/bookingTypes';
 import { maskId, minutesText, notArrived, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
 import BookingScanner from './BookingScanner';
-import type { StaffCtx } from './EscapeRoomStaff';
+import type { StaffCtx } from './StaffApp';
 import { Chip, Icon, LeaderChip, Notice, Svg, btn, card, meta } from './ui';
 import { staffFail } from './useStaffRounds';
 

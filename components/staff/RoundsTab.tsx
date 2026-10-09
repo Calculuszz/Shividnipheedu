@@ -5,7 +5,7 @@ import { getBookingState, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
 import { phaseChip, phaseLabel, roundName, roundPhase } from '@/lib/staffRounds';
-import type { StaffCtx } from './EscapeRoomStaff';
+import type { StaffCtx } from './StaffApp';
 import { Chip, Notice, btn, card } from './ui';
 import { staffFail } from './useStaffRounds';
 
@@ -20,10 +20,10 @@ export default function RoundsTab({ ctx }: { ctx: StaffCtx }) {
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
-    getBookingState('escape_room')
+    getBookingState(ctx.activity)
       .then((s) => setDefaults({ online: s.activity.online_seats, walkin: s.activity.walkin_seats }))
       .catch(() => setDefaults(null));
-  }, []);
+  }, [ctx.activity]);
 
   // Rounds whose check-in has opened are left alone: people are already on their way
   const editable = (r: StaffRound) => now < Date.parse(r.checkin_opens_at);

@@ -116,6 +116,10 @@ CREATE TABLE IF NOT EXISTS booking_walkins (
 
 -- Upgrades for databases created from an earlier version of this file.
 ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS room_name TEXT;
+-- Haunted House asks for these too (NULL for Escape Room players); see haunted-house.sql
+ALTER TABLE booking_players ADD COLUMN IF NOT EXISTS nickname TEXT;
+ALTER TABLE booking_players ADD COLUMN IF NOT EXISTS faculty TEXT;
+ALTER TABLE booking_players ADD COLUMN IF NOT EXISTS year TEXT;
 ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS details_md TEXT;
 ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS rules_md TEXT;
 ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS health_notice TEXT;
@@ -411,12 +415,14 @@ BEGIN
 
   INSERT INTO booking_players (
     booking_id, activity_id, round_id, position, is_leader,
-    student_id, full_name, phone, email, code, pdpa_accepted_at, rules_accepted_at
+    student_id, full_name, phone, email, code, pdpa_accepted_at, rules_accepted_at,
+    nickname, faculty, year
   )
   SELECT
     v_booking, a.id, p_round_id, x.ord, x.ord = 1,
     x.e->>'student_id', btrim(x.e->>'full_name'), btrim(x.e->>'phone'), lower(btrim(x.e->>'email')),
-    booking_new_code(), NOW(), NOW()
+    booking_new_code(), NOW(), NOW(),
+    NULLIF(btrim(x.e->>'nickname'), ''), NULLIF(btrim(x.e->>'faculty'), ''), NULLIF(btrim(x.e->>'year'), '')
   FROM jsonb_array_elements(p_players) WITH ORDINALITY AS x(e, ord);
 
   RETURN jsonb_build_object(
@@ -797,7 +803,7 @@ FROM PUBLIC, anon, authenticated;
 -- split 4:1 = 12 online + 3 walk-in. Booking opens 18 Oct, closes 20 Oct (may be
 -- extended to 21 Oct: just change booking_closes_at). Staff-break rounds: set
 -- booking_rounds.closed = true once they are decided.
--- Haunted House: add another row with its own numbers + its rounds, nothing else changes.
+-- Haunted House: its row and rounds are in haunted-house.sql.
 -- Re-running this file applies the numbers below to the existing row.
 
 INSERT INTO booking_activities (

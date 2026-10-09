@@ -1,5 +1,5 @@
-import StaffPlaceholder from '@/components/StaffPlaceholder';
+import StaffApp from '@/components/staff/StaffApp';
 
 export default function HauntedHouseAdminPage() {
-  return <StaffPlaceholder role="haunted_house" title="บ้านผีสิง" />;
+  return <StaffApp activity="haunted_house" />;
 }
