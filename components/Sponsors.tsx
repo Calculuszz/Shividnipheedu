@@ -1,20 +1,20 @@
 /* eslint-disable @next/next/no-img-element */
 
 // This year's sponsors, shown on every page that thanks them. Change the list here only.
-// One white strip, edge to edge, all logos in one row (sizes and order from the sponsor
-// artwork แม็ค approved). w × h is the display size; files are 3× that for sharp screens.
+// w × h is the display size: each logo gets the same area (wide ones shorter, tall ones
+// taller) so none of them shouts louder than the rest. Files are 3× that for sharp screens.
 const SPONSORS = [
-  { id: 'codec', name: 'Codec Creation', w: 24, h: 23 },
-  { id: 'merge-clinic', name: 'Merge Clinic', w: 23, h: 24 },
-  // Supplied white-only; recoloured lavender so it shows on the white strip
-  { id: 'jejuvita', name: 'Jejuvita', w: 39, h: 10 },
-  { id: 'cunex', name: 'CUNEX', w: 23, h: 16 },
-  { id: 'major', name: 'Major Cineplex', w: 16, h: 26 },
-  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 24, h: 23 },
-  { id: 'nk-boardgame', name: 'NK Board Game', w: 29, h: 20 },
-  { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 43, h: 14 },
-  { id: 'hand-wrap', name: 'Hand Wrap', w: 25, h: 25 },
-  { id: 'lesgo', name: 'LesGO Clothing', w: 24, h: 25 },
+  { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 50, h: 15 },
+  { id: 'major', name: 'Major Cineplex', w: 19, h: 30 },
+  { id: 'cunex', name: 'CUNEX', w: 58, h: 11 },
+  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 53, h: 14 },
+  { id: 'nk-boardgame', name: 'NK Board Game', w: 34, h: 22 },
+  { id: 'codec', name: 'Codec Creation', w: 28, h: 27 },
+  { id: 'merge-clinic', name: 'Merge Clinic', w: 21, h: 30 },
+  { id: 'hand-wrap', name: 'Hand Wrap', w: 35, h: 22 },
+  { id: 'lesgo', name: 'LesGO Clothing', w: 58, h: 10 },
+  // Supplied white-only; recoloured to the site's plum so it shows on the cream ribbon
+  { id: 'jejuvita', name: 'Jejuvita', w: 56, h: 14 },
 ] as const;
 
 type SponsorsProps = {
@@ -23,22 +23,19 @@ type SponsorsProps = {
   className?: string;
 };
 
-/** "ขอบคุณผู้สนับสนุน" + a full-width white strip with every logo in one row */
+/** "ขอบคุณผู้สนับสนุน" + one cream ribbon of logos, 5 × 2 with thin dividers */
 export default function Sponsors({ placement = 'inline', className = '' }: SponsorsProps) {
-  // Inline, the strip breaks out of the page's padded column to reach both screen edges
-  const position = placement === 'fixed' ? 'fixed inset-x-0 bottom-0 z-40' : 'ml-[calc(50%-50vw)] w-screen';
+  const position = placement === 'fixed' ? 'fixed bottom-3 left-1/2 z-40 -translate-x-1/2 lg:bottom-5' : '';
   return (
-    <section aria-label="ผู้สนับสนุน" className={`${position} ${className}`}>
-      <p className="mb-2 text-center text-xs font-bold tracking-[0.08em] text-halloween-orange">ขอบคุณผู้สนับสนุน</p>
-      <div className="bg-white shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)]">
-        <ul className="mx-auto flex h-10 max-w-[560px] items-center justify-between gap-1 px-3.5">
-          {SPONSORS.map(({ id, name, w, h }) => (
-            <li key={id} className="flex shrink-0 items-center justify-center">
-              <img src={`/sponsors/${id}.webp`} alt={name} width={w} height={h} loading="lazy" />
-            </li>
-          ))}
-        </ul>
-      </div>
+    <section aria-label="ผู้สนับสนุน" className={`mx-auto w-full max-w-[420px] ${position} ${className}`}>
+      <p className="mb-2.5 text-center text-xs font-bold tracking-[0.08em] text-halloween-orange">ขอบคุณผู้สนับสนุน</p>
+      <ul className="grid grid-cols-5 gap-y-2 rounded-[18px] bg-halloween-cream px-2 py-2.5 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)]">
+        {SPONSORS.map(({ id, name, w, h }) => (
+          <li key={id} className="flex h-[34px] items-center justify-center [&:not(:nth-child(5n))]:border-r [&:not(:nth-child(5n))]:border-halloween-purple/20">
+            <img src={`/sponsors/${id}.webp`} alt={name} width={w} height={h} loading="lazy" />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

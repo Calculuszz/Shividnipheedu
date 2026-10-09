@@ -71,12 +71,6 @@ body {
   position: relative;
 }
 
-/* Full-bleed strips (sponsors) are 100vw wide, which includes a desktop scrollbar */
-html,
-body {
-  overflow-x: clip;
-}
-
 /* Thai text used to be set in iannnnn OWL; FC Iconic replaces it everywhere */
 .font-iannnnn-owl {
   font-family: 'FC Iconic', system-ui, sans-serif;
