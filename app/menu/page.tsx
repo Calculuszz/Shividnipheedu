@@ -154,7 +154,7 @@ export default function MenuPage() {
         </div>
 
         {/* Sponsors */}
-        <Sponsors className="shrink-0 px-4 pb-5 pt-3" />
+        <Sponsors className="shrink-0 pb-5 pt-3" />
       </div>
     </div>
   );
