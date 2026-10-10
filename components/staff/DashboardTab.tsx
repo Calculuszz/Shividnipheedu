@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
+import type { StaffWords } from '@/lib/staffWords';
 import { notArrived, phaseChip, phaseLabel, roundName, roundPhase } from '@/lib/staffRounds';
 import type { StaffCtx } from './StaffApp';
 import { Chip, Icon, Notice, Svg, card } from './ui';
@@ -21,8 +22,68 @@ const PLAYER_STATUS_TH: Record<string, string> = {
 };
 const WALKIN_STATUS_TH: Record<string, string> = { checked_in: 'เข้าเล่นแล้ว', queued: 'รอคิว', left: 'ออกจากคิว' };
 
+// Haunted House words for the same statuses (its export goes to the house's own team)
+const HAUNTED_PLAYER_STATUS: Record<string, string> = { booked: 'ยังไม่มา', checked_in: 'ลงทะเบียนแล้ว', released: 'สละสิทธิ์' };
+const HAUNTED_WALKIN_STATUS: Record<string, string> = { checked_in: 'ลงทะเบียนแล้ว', queued: 'รอคิว' };
+
+type Row = Record<string, unknown>;
+
+/**
+ * Haunted House: one sheet per round, booked people first, then walk-ins, as the house's
+ * team asked for ("รายชื่อแบ่งเป็นรอบๆ").
+ */
+function addRoundSheets(
+  workbook: import('exceljs').Workbook,
+  rounds: StaffRound[],
+  players: Row[],
+  walkins: Row[],
+  style: (sheet: import('exceljs').Worksheet) => void
+) {
+  for (const r of rounds) {
+    // Sheet names can't hold ":" so 16:40 is written 16.40
+    const sheet = workbook.addWorksheet(`รอบที่ ${r.round_no} เวลา ${formatTime(r.starts_at).replace(':', '.')}`, {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
+    sheet.columns = [
+      { header: 'ลำดับ', key: 'no', width: 7 },
+      { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
+      { header: 'ชื่อเล่น', key: 'nickname', width: 12 },
+      { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
+      { header: 'คณะ', key: 'faculty', width: 26 },
+      { header: 'ชั้นปี', key: 'year', width: 14 },
+      { header: 'เบอร์โทร', key: 'phone', width: 14 },
+      { header: 'อีเมล', key: 'email', width: 30 },
+      { header: 'ประเภท', key: 'kind', width: 10 },
+      { header: 'สถานะ', key: 'status', width: 16 },
+      { header: 'เวลาลงทะเบียน', key: 'checked_in_at', width: 22 },
+    ];
+    let no = 0;
+    for (const p of players.filter((x) => x.round_no === r.round_no && String(x.live_status) in HAUNTED_PLAYER_STATUS)) {
+      sheet.addRow({
+        ...p,
+        no: ++no,
+        student_id: String(p.student_id ?? ''),
+        kind: 'จอง',
+        status: HAUNTED_PLAYER_STATUS[String(p.live_status)],
+        checked_in_at: toThaiTime(p.checked_in_at),
+      });
+    }
+    for (const x of walkins.filter((x) => x.round_id === r.id && String(x.status) in HAUNTED_WALKIN_STATUS)) {
+      sheet.addRow({
+        ...x,
+        no: ++no,
+        student_id: String(x.student_id ?? ''),
+        kind: 'walk-in',
+        status: HAUNTED_WALKIN_STATUS[String(x.status)],
+        checked_in_at: toThaiTime(x.checked_in_at),
+      });
+    }
+    style(sheet);
+  }
+}
+
 export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
-  const { rounds, now, updatedAt } = ctx;
+  const { rounds, now, updatedAt, words: w } = ctx;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
 
@@ -46,67 +107,63 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
         sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } };
       };
 
-      const booked = workbook.addWorksheet('จองออนไลน์', { views: [{ state: 'frozen', ySplit: 1 }] });
-      booked.columns = [
-        { header: 'รอบที่', key: 'round_no', width: 8 },
-        { header: 'เวลาเล่น', key: 'starts_at', width: 10 },
-        { header: 'ทีม (รหัสการจอง)', key: 'booking_id', width: 12 },
-        { header: 'ลำดับในทีม', key: 'position', width: 10 },
-        { header: 'หัวหน้าทีม', key: 'is_leader', width: 10 },
-        { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
-        { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
-        ...(ctx.activity === 'haunted_house'
-          ? [
-              { header: 'ชื่อเล่น', key: 'nickname', width: 12 },
-              { header: 'คณะ', key: 'faculty', width: 26 },
-              { header: 'ชั้นปี', key: 'year', width: 12 },
-            ]
-          : []),
-        { header: 'เบอร์โทร', key: 'phone', width: 14 },
-        { header: 'อีเมล', key: 'email', width: 30 },
-        { header: 'สถานะ', key: 'live_status', width: 22 },
-        { header: 'เวลาเช็กอิน', key: 'checked_in_at', width: 22 },
-        { header: 'เวลายกเลิก', key: 'cancelled_at', width: 22 },
-        { header: 'เวลาจอง', key: 'created_at', width: 22 },
-        { header: 'หมายเหตุทีม', key: 'notes', width: 36 },
-      ];
-      for (const p of players) {
-        booked.addRow({
-          ...p,
-          starts_at: p.starts_at ? formatTime(String(p.starts_at)) : '',
-          booking_id: String(p.booking_id ?? '').slice(0, 8),
-          is_leader: p.is_leader ? 'ใช่' : '',
-          student_id: String(p.student_id ?? ''),
-          live_status: PLAYER_STATUS_TH[String(p.live_status)] ?? p.live_status,
-          checked_in_at: toThaiTime(p.checked_in_at),
-          cancelled_at: toThaiTime(p.cancelled_at),
-          created_at: toThaiTime(p.created_at),
-        });
-      }
-      style(booked);
+      if (w.solo) addRoundSheets(workbook, rounds, players, walkins, style);
+      else {
+        const booked = workbook.addWorksheet('จองออนไลน์', { views: [{ state: 'frozen', ySplit: 1 }] });
+        booked.columns = [
+          { header: 'รอบที่', key: 'round_no', width: 8 },
+          { header: 'เวลาเล่น', key: 'starts_at', width: 10 },
+          { header: 'ทีม (รหัสการจอง)', key: 'booking_id', width: 12 },
+          { header: 'ลำดับในทีม', key: 'position', width: 10 },
+          { header: 'หัวหน้าทีม', key: 'is_leader', width: 10 },
+          { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
+          { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
+          { header: 'เบอร์โทร', key: 'phone', width: 14 },
+          { header: 'อีเมล', key: 'email', width: 30 },
+          { header: 'สถานะ', key: 'live_status', width: 22 },
+          { header: 'เวลาเช็กอิน', key: 'checked_in_at', width: 22 },
+          { header: 'เวลายกเลิก', key: 'cancelled_at', width: 22 },
+          { header: 'เวลาจอง', key: 'created_at', width: 22 },
+          { header: 'หมายเหตุทีม', key: 'notes', width: 36 },
+        ];
+        for (const p of players) {
+          booked.addRow({
+            ...p,
+            starts_at: p.starts_at ? formatTime(String(p.starts_at)) : '',
+            booking_id: String(p.booking_id ?? '').slice(0, 8),
+            is_leader: p.is_leader ? 'ใช่' : '',
+            student_id: String(p.student_id ?? ''),
+            live_status: PLAYER_STATUS_TH[String(p.live_status)] ?? p.live_status,
+            checked_in_at: toThaiTime(p.checked_in_at),
+            cancelled_at: toThaiTime(p.cancelled_at),
+            created_at: toThaiTime(p.created_at),
+          });
+        }
+        style(booked);
 
-      const walk = workbook.addWorksheet('Walk-in', { views: [{ state: 'frozen', ySplit: 1 }] });
-      walk.columns = [
-        { header: 'รอบที่', key: 'round_no', width: 8 },
-        { header: 'คิวที่', key: 'queue_no', width: 8 },
-        { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
-        { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
-        { header: 'เบอร์โทร', key: 'phone', width: 14 },
-        { header: 'สถานะ', key: 'status', width: 14 },
-        { header: 'เวลามาถึง', key: 'created_at', width: 22 },
-        { header: 'เวลาเข้าเล่น', key: 'checked_in_at', width: 22 },
-      ];
-      for (const w of walkins) {
-        walk.addRow({
-          ...w,
-          round_no: roundNo.get(String(w.round_id)) ?? '',
-          student_id: String(w.student_id ?? ''),
-          status: WALKIN_STATUS_TH[String(w.status)] ?? w.status,
-          created_at: toThaiTime(w.created_at),
-          checked_in_at: toThaiTime(w.checked_in_at),
-        });
+        const walk = workbook.addWorksheet('Walk-in', { views: [{ state: 'frozen', ySplit: 1 }] });
+        walk.columns = [
+          { header: 'รอบที่', key: 'round_no', width: 8 },
+          { header: 'คิวที่', key: 'queue_no', width: 8 },
+          { header: 'รหัสนิสิต', key: 'student_id', width: 14 },
+          { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },
+          { header: 'เบอร์โทร', key: 'phone', width: 14 },
+          { header: 'สถานะ', key: 'status', width: 14 },
+          { header: 'เวลามาถึง', key: 'created_at', width: 22 },
+          { header: 'เวลาเข้าเล่น', key: 'checked_in_at', width: 22 },
+        ];
+        for (const x of walkins) {
+          walk.addRow({
+            ...x,
+            round_no: roundNo.get(String(x.round_id)) ?? '',
+            student_id: String(x.student_id ?? ''),
+            status: WALKIN_STATUS_TH[String(x.status)] ?? x.status,
+            created_at: toThaiTime(x.created_at),
+            checked_in_at: toThaiTime(x.checked_in_at),
+          });
+        }
+        style(walk);
       }
-      style(walk);
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -141,9 +198,16 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
           className="inline-flex min-h-11 items-center gap-1.5 rounded-[10px] border-2 border-halloween-purple px-3 text-sm font-bold hover:bg-halloween-purple/40 disabled:opacity-60"
         >
           <Svg size={18}>{Icon.download}</Svg>
-          {exporting ? 'กำลังเตรียมไฟล์…' : 'Export Excel'}
+          {exporting ? 'กำลังเตรียมไฟล์…' : w.solo ? 'Export รายชื่อแยกรอบ' : 'Export Excel'}
         </button>
       </div>
+      {w.solo && (
+        <p className="-mt-1 text-[13px] leading-relaxed text-halloween-gray">
+          ไฟล์ Excel 1 sheet ต่อรอบ มีเบอร์และอีเมลของนิสิต
+          <br />
+          ส่งเฉพาะทีมบ้านผีสิง ห้ามโพสต์ในกลุ่มใหญ่
+        </p>
+      )}
       {exportError && <Notice>{exportError}</Notice>}
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
@@ -161,10 +225,10 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
           {checkinNow.length
             ? checkinNow.map((r) => (
                 <span key={r.id} className="block">
-                  {roundName(r)} ปิดเช็กอิน {formatTime(r.checkin_closes_at)}
+                  {roundName(r)} ปิด{w.checkin} {formatTime(r.checkin_closes_at)}
                 </span>
               ))
-            : 'ตอนนี้ไม่มีรอบไหนเปิดเช็กอิน'}
+            : `ตอนนี้ไม่มีรอบไหนเปิด${w.checkin}`}
         </Tile>
         <Tile label="คิว walk-in" value={`${sum((r) => r.walkin_queued)} คน`}>
           {queued.length
@@ -176,23 +240,29 @@ export default function DashboardTab({ ctx }: { ctx: StaffCtx }) {
             : 'ไม่มีคิว'}
         </Tile>
         <Tile label="จองออนไลน์" value={String(sum((r) => r.online_taken))} suffix={`จาก ${sum((r) => r.online_cap)}`}>
-          ถูกปล่อย {sum((r) => r.released)} คน
-          <br />
-          ยกเลิกหลังปิดจอง {sum((r) => r.cancelled_late)} คน
+          {w.released} {sum((r) => r.released)} คน
+          {!w.solo && (
+            <>
+              <br />
+              ยกเลิกหลังปิดจอง {sum((r) => r.cancelled_late)} คน
+            </>
+          )}
         </Tile>
       </div>
 
       <h2 className="mt-1.5 text-lg font-bold">รายรอบ</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {rounds.map((r) => (
-          <RoundCard key={r.id} r={r} now={now} />
+          <RoundCard key={r.id} r={r} now={now} w={w} />
         ))}
       </div>
 
       <p className="text-[13px] leading-relaxed text-halloween-gray">
-        ที่ว่าง walk-in = ที่ walk-in ประจำรอบ + คนที่ถูกปล่อย + คนที่ยกเลิกหลังปิดจอง − walk-in ที่เข้าแล้ว
+        {w.solo
+          ? `ที่ว่าง walk-in = ที่ walk-in ประจำรอบ + คนที่${w.released} − walk-in ที่เข้าแล้ว`
+          : 'ที่ว่าง walk-in = ที่ walk-in ประจำรอบ + คนที่ถูกปล่อย + คนที่ยกเลิกหลังปิดจอง − walk-in ที่เข้าแล้ว'}
         <br />
-        “—” = ยังไม่รู้ จะรู้หลังปิดเช็กอินของรอบนั้น
+        “—” = ยังไม่รู้ จะรู้หลังปิด{w.checkin}ของรอบนั้น
       </p>
     </div>
   );
@@ -234,7 +304,7 @@ function Stat({ value, label, className = '' }: { value: number | string; label:
   );
 }
 
-function RoundCard({ r, now }: { r: StaffRound; now: number }) {
+function RoundCard({ r, now, w }: { r: StaffRound; now: number; w: StaffWords }) {
   const phase = roundPhase(r, now);
   const started = phase !== 'upcoming';
   const closedCheckin = now > Date.parse(r.checkin_closes_at);
@@ -244,9 +314,9 @@ function RoundCard({ r, now }: { r: StaffRound; now: number }) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <b className="text-xl">{roundName(r)}</b>
-          <span className="text-sm text-halloween-gray">เล่น {formatTimeRange(r.starts_at, r.ends_at)}</span>
+          <span className="text-sm text-halloween-gray">{w.play} {formatTimeRange(r.starts_at, r.ends_at)}</span>
         </div>
-        <Chip className={`px-2.5 py-1 text-[13px] ${phaseChip(r, now)}`}>{phaseLabel(r, now)}</Chip>
+        <Chip className={`px-2.5 py-1 text-[13px] ${phaseChip(r, now)}`}>{phaseLabel(r, now, w)}</Chip>
       </div>
       {r.closed ? (
         <span className="text-[15px]">{r.closed_reason ? `ปิด (${r.closed_reason}) ` : 'ปิดอยู่ '}ไม่รับจองและไม่รับ walk-in</span>
@@ -257,7 +327,7 @@ function RoundCard({ r, now }: { r: StaffRound; now: number }) {
             <Stat value={r.online_taken} label="จองไว้" />
             <Stat value={started ? r.checked_in : '—'} label="มาแล้ว" />
             <Stat value={waiting} label="ยังไม่มา" className={phase === 'checkin' && waiting ? 'text-halloween-orange' : ''} />
-            <Stat value={closedCheckin ? r.released : '—'} label="ถูกปล่อย" />
+            <Stat value={closedCheckin ? r.released : '—'} label={w.released} />
           </div>
           <span className="border-t border-halloween-purple/80 pt-2 text-[13px] font-bold text-halloween-orange">Walk-in</span>
           <div className="grid grid-cols-3 gap-1">

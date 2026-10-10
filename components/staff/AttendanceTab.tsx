@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookingApiError, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { AttendanceResponse, StaffPlayer } from '@/lib/bookingTypes';
+import type { StaffWords } from '@/lib/staffWords';
 import { focusRound, minutesText, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
 import type { StaffCtx } from './StaffApp';
 import { LeaderChip, Notice, PhoneLink, RoundPicker, btn, card, meta } from './ui';
@@ -31,7 +32,7 @@ function teamsOf(data: AttendanceResponse): Team[] {
 }
 
 export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
-  const { rounds, now } = ctx;
+  const { rounds, now, words: w } = ctx;
   const [roundId, setRoundId] = useState(() => ctx.roundHint ?? focusRound(rounds, now)?.id ?? null);
   const [view, setView] = useState<View>('waiting');
   const [data, setData] = useState<AttendanceResponse | null>(null);
@@ -78,9 +79,9 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
     setRowMsg(null);
     try {
       await staff.checkInById(p.id);
-      setRowMsg({ id: p.id, ok: true, text: `เช็กอิน ${p.full_name} แล้ว` });
+      setRowMsg({ id: p.id, ok: true, text: `${w.checkin} ${p.full_name} แล้ว` });
     } catch (e) {
-      const text = e instanceof BookingApiError ? staffCheckinError(e.code) : { title: staffFail(e), action: '' };
+      const text = e instanceof BookingApiError ? staffCheckinError(e.code, w) : { title: staffFail(e), action: '' };
       setRowMsg({ id: p.id, ok: false, text: `${text.title} ${text.action}`.trim() });
     } finally {
       setBusyId(null);
@@ -114,7 +115,7 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
         sub={(r) => {
           const ph = roundPhase(r, now);
           if (ph === 'closed') return { text: 'ปิด', tone: 'error' };
-          if (ph === 'checkin') return { text: 'เช็กอินอยู่', tone: 'moon' };
+          if (ph === 'checkin') return { text: w.solo ? 'ลงทะเบียน' : 'เช็กอินอยู่', tone: 'moon' };
           if (ph === 'playing') return { text: 'กำลังเล่น' };
           if (ph === 'ended') return { text: 'จบแล้ว' };
           return { text: formatTime(r.starts_at) };
@@ -131,10 +132,10 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
           </div>
           <div className={meta}>
             <div>
-              เล่น <b className="text-halloween-cream">{formatTimeRange(round.starts_at, round.ends_at)}</b>
+              {w.play} <b className="text-halloween-cream">{formatTimeRange(round.starts_at, round.ends_at)}</b>
             </div>
             <div>
-              เช็กอินที่บูธ <b className="text-halloween-cream">{formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)}</b>
+              {w.desk} <b className="text-halloween-cream">{formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)}</b>
             </div>
             <div>
               จองไว้ <b className="text-halloween-cream">{round.online_taken} คน</b>, walk-in เข้าแล้ว{' '}
@@ -147,9 +148,9 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
       <div role="tablist" className="flex gap-1 rounded-xl border-2 border-halloween-purple bg-halloween-charcoal p-1 md:max-w-xl">
         {(
           [
-            ['waiting', `รอเช็กอิน ${count.waiting}`],
-            ['in', `เช็กอินแล้ว ${count.in}`],
-            ['released', `ถูกปล่อย ${count.released}`],
+            ['waiting', w.solo ? `ยังไม่มา ${count.waiting}` : `รอเช็กอิน ${count.waiting}`],
+            ['in', w.solo ? `มาแล้ว ${count.in}` : `เช็กอินแล้ว ${count.in}`],
+            ['released', `${w.released} ${count.released}`],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -173,7 +174,33 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
       {shown && view === 'waiting' && (
         <>
           {count.waiting === 0 ? (
-            <Empty title="ไม่มีคนรอเช็กอิน" text={all.length ? 'ทุกคนในรอบนี้เช็กอินแล้ว หรือถูกปล่อยไปแล้ว' : 'รอบนี้ยังไม่มีคนจอง'} />
+            <Empty
+              title={w.solo ? 'มาครบทุกคนแล้ว' : 'ไม่มีคนรอเช็กอิน'}
+              text={all.length ? `ทุกคนในรอบนี้${w.checkedIn} หรือ${w.released}ไปแล้ว` : 'รอบนี้ยังไม่มีคนจอง'}
+            />
+          ) : w.solo ? (
+            <div className={`${card} grid gap-x-6 py-0 md:grid-cols-2`}>
+              {all
+                .filter((p) => p.live_status === 'booked')
+                .map((p) => (
+                  <div key={p.id} className="border-b border-halloween-purple/80 py-3 last:border-b-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <b className="text-base">{p.full_name}</b>
+                        {p.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {p.nickname}</span>}
+                        {(p.faculty || p.year) && (
+                          <span className="text-sm text-halloween-gray">{[p.faculty, p.year].filter(Boolean).join(' ')}</span>
+                        )}
+                        <PhoneLink phone={p.phone} />
+                      </div>
+                      <CheckInButton w={w} can={canCheckIn} busy={busyId === p.id} onClick={() => checkIn(p)} />
+                    </div>
+                    {rowMsg?.id === p.id && (
+                      <p className={`mt-1.5 text-sm font-bold ${rowMsg.ok ? 'text-halloween-moon' : 'text-halloween-error'}`}>{rowMsg.text}</p>
+                    )}
+                  </div>
+                ))}
+            </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 md:items-start">
               {teams
@@ -205,14 +232,7 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
                                 </div>
                                 <PhoneLink phone={p.phone} />
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => checkIn(p)}
-                                disabled={!canCheckIn || busyId === p.id}
-                                className={`${btn('primary', !canCheckIn)} min-h-11 shrink-0 text-[15px]`}
-                              >
-                                {busyId === p.id ? 'กำลังเช็กอิน…' : canCheckIn ? 'เช็กอิน' : 'ยังไม่เปิด'}
-                              </button>
+                              <CheckInButton w={w} can={canCheckIn} busy={busyId === p.id} onClick={() => checkIn(p)} />
                             </div>
                             {rowMsg?.id === p.id && (
                               <p className={`mt-1.5 text-sm font-bold ${rowMsg.ok ? 'text-halloween-moon' : 'text-halloween-error'}`}>{rowMsg.text}</p>
@@ -226,9 +246,9 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
           )}
           {round && (
             <p className="text-[13px] leading-relaxed text-halloween-gray">
-              กดเช็กอินตรงนี้ได้เหมือนสแกน QR (กดได้เฉพาะตอนเปิดเช็กอิน)
+              กด{w.checkin}ตรงนี้ได้เหมือนสแกน QR (กดได้เฉพาะตอนเปิด{w.checkin})
               <br />
-              หลัง {formatTime(round.checkin_closes_at)} คนที่ยังไม่มาจะย้ายไปแท็บ “ถูกปล่อย” เอง และที่นั่งจะกลายเป็นที่ว่างสำหรับ walk-in
+              หลัง {formatTime(round.checkin_closes_at)} คนที่ยังไม่มาจะย้ายไปแท็บ “{w.released}” เอง และที่นั่งจะกลายเป็นที่ว่างสำหรับ walk-in
             </p>
           )}
         </>
@@ -236,7 +256,7 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
 
       {shown && view === 'in' && (
         count.in === 0 ? (
-          <Empty title="ยังไม่มีใครเช็กอิน" text="" />
+          <Empty title={w.solo ? 'ยังไม่มีใครมา' : 'ยังไม่มีใครเช็กอิน'} text="" />
         ) : (
           <div className={`${card} grid gap-x-6 py-0.5 md:grid-cols-2`}>
             {all
@@ -246,7 +266,11 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
                 <div key={p.id} className="flex items-center gap-2.5 border-b border-halloween-purple/80 py-2.5">
                   <div className="flex flex-1 flex-col">
                     <b className="text-base">{p.full_name}</b>
-                    <span className="text-sm text-halloween-gray">ทีมของ {teams.find((t) => t.bookingId === p.booking_id)?.leader}</span>
+                    {w.solo ? (
+                      p.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {p.nickname}</span>
+                    ) : (
+                      <span className="text-sm text-halloween-gray">ทีมของ {teams.find((t) => t.bookingId === p.booking_id)?.leader}</span>
+                    )}
                   </div>
                   {p.checked_in_at && (
                     <span className="whitespace-nowrap text-sm font-bold text-halloween-moon">มาตอน {formatTime(p.checked_in_at)}</span>
@@ -260,11 +284,11 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
       {shown && view === 'released' && (
         count.released === 0 ? (
           <Empty
-            title="ยังไม่มีคนถูกปล่อย"
+            title={`ยังไม่มีคน${w.released}`}
             text={
               round && now <= Date.parse(round.checkin_closes_at)
-                ? `จะรู้หลังปิดเช็กอินตอน ${formatTime(round.checkin_closes_at)}\nที่นั่งที่ถูกปล่อยจะกลายเป็นที่ว่างสำหรับ walk-in`
-                : 'ทุกคนที่จองไว้มาเช็กอินครบ'
+                ? `จะรู้หลังปิด${w.checkin}ตอน ${formatTime(round.checkin_closes_at)}\nที่นั่งที่${w.released}จะกลายเป็นที่ว่างสำหรับ walk-in`
+                : `ทุกคนที่จองไว้มา${w.checkin}ครบ`
             }
           />
         ) : (
@@ -274,7 +298,11 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
               .map((p) => (
                 <div key={p.id} className="flex flex-col border-b border-halloween-purple/80 py-2.5">
                   <b className="text-base">{p.full_name}</b>
-                  <span className="text-sm text-halloween-gray">ทีมของ {teams.find((t) => t.bookingId === p.booking_id)?.leader}</span>
+                  {w.solo ? (
+                    p.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {p.nickname}</span>
+                  ) : (
+                    <span className="text-sm text-halloween-gray">ทีมของ {teams.find((t) => t.bookingId === p.booking_id)?.leader}</span>
+                  )}
                   <PhoneLink phone={p.phone} />
                 </div>
               ))}
@@ -282,6 +310,14 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
         )
       )}
     </div>
+  );
+}
+
+function CheckInButton({ w, can, busy, onClick }: { w: StaffWords; can: boolean; busy: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} disabled={!can || busy} className={`${btn('primary', !can)} min-h-11 shrink-0 text-[15px]`}>
+      {busy ? `กำลัง${w.checkin}…` : can ? w.checkin : 'ยังไม่เปิด'}
+    </button>
   );
 }
 

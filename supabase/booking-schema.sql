@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS booking_walkins (
 );
 
 -- Upgrades for databases created from an earlier version of this file.
+ALTER TABLE booking_walkins ADD COLUMN IF NOT EXISTS nickname TEXT;  -- Haunted House walk-ins
 ALTER TABLE booking_activities ADD COLUMN IF NOT EXISTS room_name TEXT;
 -- Haunted House asks for these too (NULL for Escape Room players); see haunted-house.sql
 ALTER TABLE booking_players ADD COLUMN IF NOT EXISTS nickname TEXT;

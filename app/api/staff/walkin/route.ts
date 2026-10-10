@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { badRequest, forbidden, isUuid, readJson, roundInActivity, ruleError, serverError, staffActivity, str } from '@/lib/booking';
 
-// POST { round_id, student_id, full_name, phone } -> add a walk-in.
+// POST { round_id, student_id, full_name, phone, nickname? } -> add a walk-in (nickname: Haunted House, required there).
 // Seat free now = checked in straight away, otherwise queued. Someone who already
 // booked, played or is queued is refused (a released booking doesn't count).
 export async function POST(request: Request) {
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
   const body = await readJson(request);
   try {
     if (!(await roundInActivity(body.round_id, staff.activity))) return badRequest('ROUND_NOT_FOUND');
+    const nickname = str(body.nickname, 40);
+    if (staff.activity === 'haunted_house' && !nickname) return badRequest('INVALID_PLAYER');
 
     const { data, error } = await supabaseAdmin.rpc('booking_add_walkin', {
       p_round_id: body.round_id,
@@ -21,6 +23,10 @@ export async function POST(request: Request) {
       p_staff: staff.role,
     });
     if (error) return ruleError(error, 'Add walk-in');
+    if (nickname && data?.walkin_id) {
+      const { error: nickError } = await supabaseAdmin.from('booking_walkins').update({ nickname }).eq('id', data.walkin_id);
+      if (nickError) console.error('Walk-in nickname error:', nickError);
+    }
     return NextResponse.json(data);
   } catch (error) {
     console.error('Add walk-in error:', error);

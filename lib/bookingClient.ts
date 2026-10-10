@@ -106,17 +106,19 @@ export function removeMember(code: string, playerId: string) {
 
 // ---- Staff side (needs the activity group's login cookie) ----
 
+/** Faculty and year come back for the Haunted House only */
+type CheckInResult = { player_id: string; full_name: string; round_no: number; faculty?: string | null; year?: string | null };
+
 export const staff = {
   dashboard: () => call<{ rounds: StaffRound[]; now: string }>('/api/staff/dashboard'),
   attendance: (roundId: string) => call<AttendanceResponse>(`/api/staff/attendance?round=${q(roundId)}`),
   search: (text: string) => call<{ players: StaffPlayer[] }>(`/api/staff/attendance?q=${q(text)}`),
-  checkInByCode: (code: string) =>
-    call<{ player_id: string; full_name: string; round_no: number }>('/api/staff/check-in', { body: { code } }),
+  checkInByCode: (code: string) => call<CheckInResult>('/api/staff/check-in', { body: { code } }),
   checkInById: (playerId: string) =>
-    call<{ player_id: string; full_name: string; round_no: number }>('/api/staff/check-in', {
+    call<CheckInResult>('/api/staff/check-in', {
       body: { player_id: playerId },
     }),
-  addWalkin: (input: { round_id: string; student_id: string; full_name: string; phone: string }) =>
+  addWalkin: (input: { round_id: string; student_id: string; full_name: string; phone: string; nickname?: string }) =>
     call<{ walkin_id: string; status: 'checked_in' | 'queued' }>('/api/staff/walkin', { body: input }),
   callNextWalkin: (roundId: string) =>
     call<{ walkin: { walkin_id: string; full_name: string; phone: string; queue_no: number } | null }>(

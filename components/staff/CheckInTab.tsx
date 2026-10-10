@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { BookingApiError, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffPlayer, StaffRound } from '@/lib/bookingTypes';
+import type { StaffWords } from '@/lib/staffWords';
 import { maskId, minutesText, notArrived, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
 import BookingScanner from './BookingScanner';
 import type { StaffCtx } from './StaffApp';
@@ -13,7 +14,7 @@ import { staffFail } from './useStaffRounds';
 type Result = { id: string; ok: boolean; title: string; action?: string; walkin?: boolean };
 
 export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
-  const { rounds, now } = ctx;
+  const { rounds, now, words: w } = ctx;
   const [scanning, setScanning] = useState(false);
   const audio = useRef<AudioContext | null>(null);
 
@@ -70,14 +71,14 @@ export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
     setResult(null);
     try {
       await staff.checkInById(p.id);
-      setResult({ id: p.id, ok: true, title: `เช็กอิน ${p.full_name} แล้ว` });
+      setResult({ id: p.id, ok: true, title: `${w.checkin} ${p.full_name} แล้ว` });
       setPlayers((list) =>
         list?.map((x) => (x.id === p.id ? { ...x, live_status: 'checked_in', checked_in_at: new Date(now).toISOString() } : x)) ?? null
       );
       void ctx.refresh();
     } catch (e) {
       const code = e instanceof BookingApiError ? e.code : '';
-      const text = code ? staffCheckinError(code) : { title: staffFail(e), action: undefined };
+      const text = code ? staffCheckinError(code, w) : { title: staffFail(e), action: undefined };
       setResult({ id: p.id, ok: false, ...text });
       if (lastQ.current) void search(lastQ.current);
     } finally {
@@ -88,13 +89,22 @@ export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
       <div className="flex flex-col gap-3.5 lg:sticky lg:top-[88px]">
-        <OpenRoundCard open={open} next={next} now={now} onList={(id) => ctx.go('attendance', id)} />
+        <OpenRoundCard w={w} open={open} next={next} now={now} onList={(id) => ctx.go('attendance', id)} />
+        {/* Registration lasts 5 minutes at the Haunted House, so the next window is always in view */}
+        {w.solo && open && next && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border-2 border-dashed border-halloween-purple px-3.5 py-2.5 text-sm">
+            <span className="text-halloween-gray">รอบถัดไป</span>
+            <span>
+              <b>{roundName(next)}</b> เปิด{w.checkin} <b>{formatTime(next.checkin_opens_at)}</b>
+            </span>
+          </div>
+        )}
 
         <button type="button" onClick={startScan} className={`${btn()} min-h-[72px] w-full text-[22px]`}>
           <Svg size={28}>{Icon.scan}</Svg>
           สแกน QR
         </button>
-        <p className="-mt-1 text-center text-sm text-halloween-gray">สแกนทีละคน ทุกคนในทีมมี QR ของตัวเอง</p>
+        <p className="-mt-1 text-center text-sm text-halloween-gray">{w.scanHint}</p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -131,6 +141,7 @@ export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
           {players?.map((p) => (
             <PlayerResult
               key={p.id}
+              w={w}
               p={p}
               round={byId.get(p.round_id)}
               now={now}
@@ -146,6 +157,7 @@ export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
       {scanning && (
         <BookingScanner
           rounds={rounds}
+          words={w}
           now={now}
           audio={audio.current}
           onCheckedIn={() => void ctx.refresh()}
@@ -161,11 +173,13 @@ export default function CheckInTab({ ctx }: { ctx: StaffCtx }) {
 }
 
 function OpenRoundCard({
+  w,
   open,
   next,
   now,
   onList,
 }: {
+  w: StaffWords;
   open: StaffRound | null;
   next: StaffRound | null;
   now: number;
@@ -174,22 +188,22 @@ function OpenRoundCard({
   if (!open) {
     return (
       <div className={`${card} flex flex-col gap-1.5`}>
-        <span className="text-sm font-bold text-halloween-gray">ตอนนี้ยังไม่มีรอบไหนเปิดเช็กอิน</span>
+        <span className="text-sm font-bold text-halloween-gray">ตอนนี้ยังไม่มีรอบไหนเปิด{w.checkin}</span>
         {next ? (
           <>
             <span className="text-[22px] font-bold">รอบถัดไป: {roundName(next)}</span>
             <div className={meta}>
               <div>
-                เปิดเช็กอิน <b className="text-halloween-cream">{formatTime(next.checkin_opens_at)}</b> (อีก{' '}
+                เปิด{w.checkin} <b className="text-halloween-cream">{formatTime(next.checkin_opens_at)}</b> (อีก{' '}
                 {minutesText(Date.parse(next.checkin_opens_at) - now)})
               </div>
               <div>
-                เล่น <b className="text-halloween-cream">{formatTimeRange(next.starts_at, next.ends_at)}</b>
+                {w.play} <b className="text-halloween-cream">{formatTimeRange(next.starts_at, next.ends_at)}</b>
               </div>
             </div>
           </>
         ) : (
-          <span className="text-lg font-bold">เช็กอินครบทุกรอบแล้ว</span>
+          <span className="text-lg font-bold">{w.checkin}ครบทุกรอบแล้ว</span>
         )}
       </div>
     );
@@ -199,17 +213,17 @@ function OpenRoundCard({
   const pct = open.online_taken ? Math.round((open.checked_in / open.online_taken) * 100) : 0;
   return (
     <div className={`${card} flex flex-col gap-2 border-halloween-moon`}>
-      <span className="text-sm font-bold text-halloween-moon">ตอนนี้เปิดเช็กอิน</span>
+      <span className="text-sm font-bold text-halloween-moon">ตอนนี้เปิด{w.checkin}</span>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[26px] font-bold">{roundName(open)}</span>
         <span className="text-lg font-bold text-halloween-moon">ปิดใน {minutesText(Date.parse(open.checkin_closes_at) - now)}</span>
       </div>
       <div className={meta}>
         <div>
-          เล่น <b className="text-halloween-cream">{formatTimeRange(open.starts_at, open.ends_at)}</b>
+          {w.play} <b className="text-halloween-cream">{formatTimeRange(open.starts_at, open.ends_at)}</b>
         </div>
         <div>
-          เช็กอินที่บูธ <b className="text-halloween-cream">{formatTimeRange(open.checkin_opens_at, open.checkin_closes_at)}</b>
+          {w.desk} <b className="text-halloween-cream">{formatTimeRange(open.checkin_opens_at, open.checkin_closes_at)}</b>
         </div>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-halloween-purple/80" aria-hidden="true">
@@ -234,6 +248,7 @@ function OpenRoundCard({
 }
 
 function PlayerResult({
+  w,
   p,
   round,
   now,
@@ -242,6 +257,7 @@ function PlayerResult({
   onCheckIn,
   onWalkin,
 }: {
+  w: StaffWords;
   p: StaffPlayer;
   round: StaffRound | undefined;
   now: number;
@@ -261,26 +277,35 @@ function PlayerResult({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <b className="text-[17px]">{p.full_name}</b>
-            {p.is_leader && <LeaderChip />}
-            {p.live_status === 'checked_in' && <Chip className="bg-halloween-moon text-halloween-dark">Checked in</Chip>}
+            {p.is_leader && !w.solo && <LeaderChip />}
+            {w.solo && booked && <Chip className="bg-halloween-purple/80 text-halloween-cream">ยังไม่มา</Chip>}
+            {p.live_status === 'checked_in' && (
+              <Chip className="bg-halloween-moon text-halloween-dark">{w.solo ? w.checkedIn : 'Checked in'}</Chip>
+            )}
           </div>
           <div className={meta}>
             <div>
               <b className="text-halloween-cream">รอบที่ {p.round_no}</b>
-              {round && ` (เล่น ${formatTime(round.starts_at)})`}
+              {round && ` (${w.play} ${formatTime(round.starts_at)})`}
             </div>
-            <div>รหัส {maskId(p.student_id)}</div>
-            {p.live_status === 'checked_in' && p.checked_in_at && <div>เช็กอินแล้วตอน {formatTime(p.checked_in_at)}</div>}
-            {p.live_status === 'released' && <div className="text-halloween-error">เลยเวลาเช็กอิน ที่นั่งถูกปล่อยแล้ว</div>}
+            {w.solo ? (p.faculty || p.year) && <div>{[p.faculty, p.year].filter(Boolean).join(' ')}</div> : <div>รหัส {maskId(p.student_id)}</div>}
+            {p.live_status === 'checked_in' && p.checked_in_at && (
+              <div>
+                {w.solo ? 'มาตอน' : 'เช็กอินแล้วตอน'} {formatTime(p.checked_in_at)}
+              </div>
+            )}
+            {p.live_status === 'released' && (
+              <div className="text-halloween-error">{w.solo ? `มาช้า ${w.released}แล้ว` : 'เลยเวลาเช็กอิน ที่นั่งถูกปล่อยแล้ว'}</div>
+            )}
           </div>
         </div>
         {booked && (
           <button type="button" onClick={onCheckIn} disabled={!canCheckIn || busy} className={`${btn('primary', !canCheckIn)} shrink-0`}>
-            {busy ? 'กำลังเช็กอิน…' : canCheckIn ? 'เช็กอิน' : now < opens ? (
+            {busy ? `กำลัง${w.checkin}…` : canCheckIn ? w.checkin : now < opens ? (
               <span className="text-sm">
                 ยังไม่ถึงเวลา
                 <br />
-                เช็กอินได้ {formatTime(p.checkin_opens_at)}
+                {w.solo ? 'เปิด' : 'เช็กอินได้'} {formatTime(p.checkin_opens_at)}
               </span>
             ) : (
               <span className="text-sm">เลยเวลาแล้ว</span>

@@ -5,13 +5,14 @@ import jsQR from 'jsqr';
 import { BookingApiError, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
+import type { StaffWords } from '@/lib/staffWords';
 import { openCamera, scanFeedback } from '@/lib/scanner';
 import { minutesText, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
 import { Icon, Svg, btn } from './ui';
 import { staffFail } from './useStaffRounds';
 
 type Result =
-  | { ok: true; name: string; round: StaffRound | undefined }
+  | { ok: true; name: string; round: StaffRound | undefined; detail?: string }
   | { ok: false; title: string; action: string; walkin?: boolean; warn?: boolean };
 
 // Event entry tickets (from /register) look like SHIVIDNIPHEEDU-<id>-<time>
@@ -23,6 +24,7 @@ const SUCCESS_SHOWN_MS = 3000;
 
 export default function BookingScanner({
   rounds,
+  words: w,
   now,
   audio,
   onCheckedIn,
@@ -30,6 +32,7 @@ export default function BookingScanner({
   onWalkin,
 }: {
   rounds: StaffRound[];
+  words: StaffWords;
   now: number;
   audio: AudioContext | null;
   onCheckedIn: () => void;
@@ -47,10 +50,10 @@ export default function BookingScanner({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The camera effect runs once; it reads the latest rounds and callback from here
   const roundsRef = useRef(rounds);
-  const callbacks = useRef({ onCheckedIn });
+  const callbacks = useRef({ onCheckedIn, w });
   useEffect(() => {
     roundsRef.current = rounds;
-    callbacks.current = { onCheckedIn };
+    callbacks.current = { onCheckedIn, w };
   });
 
   const open = rounds.find((r) => roundPhase(r, now) === 'checkin');
@@ -83,15 +86,20 @@ export default function BookingScanner({
       }
       try {
         const data = await staff.checkInByCode(text);
-        show({ ok: true, name: data.full_name, round: roundsRef.current.find((r) => r.round_no === data.round_no) });
+        show({
+          ok: true,
+          name: data.full_name,
+          detail: [data.faculty, data.year].filter(Boolean).join(' '),
+          round: roundsRef.current.find((r) => r.round_no === data.round_no),
+        });
         callbacks.current.onCheckedIn();
       } catch (e) {
         if (e instanceof BookingApiError && e.code !== 'NETWORK' && e.code !== 'SERVER_ERROR' && e.code !== 'UNAUTHORIZED') {
-          show({ ok: false, ...staffCheckinError(e.code) });
+          show({ ok: false, ...staffCheckinError(e.code, callbacks.current.w) });
         } else {
           // Let the same QR be tried again straight away
           last.current = null;
-          show({ ok: false, title: 'เช็กอินไม่สำเร็จ', action: `${staffFail(e)} ลองสแกนใหม่อีกครั้ง` });
+          show({ ok: false, title: `${callbacks.current.w.checkin}ไม่สำเร็จ`, action: `${staffFail(e)} ลองสแกนใหม่อีกครั้ง` });
         }
       }
     };
@@ -138,7 +146,7 @@ export default function BookingScanner({
   }, [audio]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-halloween-cream" role="dialog" aria-modal="true" aria-label="สแกน QR เช็กอิน">
+    <div className="fixed inset-0 z-50 bg-black text-halloween-cream" role="dialog" aria-modal="true" aria-label={`สแกน QR ${w.checkin}`}>
       <video
         ref={videoRef}
         className="absolute inset-0 h-full w-full object-cover"
@@ -160,14 +168,14 @@ export default function BookingScanner({
           {open ? (
             <>
               <b className="text-[17px]">
-                {roundName(open)} เช็กอินถึง {formatTime(open.checkin_closes_at)}
+                {roundName(open)} {w.checkin}ถึง {formatTime(open.checkin_closes_at)}
               </b>
               <span className="text-sm font-bold text-halloween-moon">
                 ปิดใน {minutesText(Date.parse(open.checkin_closes_at) - now)}, มาแล้ว {open.checked_in} จาก {open.online_taken} คน
               </span>
             </>
           ) : (
-            <b className="text-[17px]">ตอนนี้ยังไม่มีรอบไหนเปิดเช็กอิน</b>
+            <b className="text-[17px]">ตอนนี้ยังไม่มีรอบไหนเปิด{w.checkin}</b>
           )}
         </div>
         <button type="button" onClick={onClose} className={`${btn('ghost')} min-h-11 bg-black/40 text-[15px]`}>
@@ -192,15 +200,16 @@ export default function BookingScanner({
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-halloween-moon text-halloween-dark">
                 <Svg size={36}>{Icon.check}</Svg>
               </span>
-              <b className="text-[26px] text-halloween-moon">เช็กอินแล้ว</b>
+              <b className="text-[26px] text-halloween-moon">{w.checkedIn}</b>
               <b className="text-[22px]">{result.name}</b>
+              {result.detail && <span className="text-sm text-halloween-gray">{result.detail}</span>}
               {result.round && (
                 <>
                   <span className="text-xl font-bold text-halloween-orange">{roundName(result.round)}</span>
                   <span className="text-[15px] leading-relaxed text-halloween-gray">
-                    เล่น {formatTimeRange(result.round.starts_at, result.round.ends_at)}
+                    {w.play} {formatTimeRange(result.round.starts_at, result.round.ends_at)}
                     <br />
-                    ให้รอหน้าห้องได้เลย
+                    {w.waitAt}
                   </span>
                 </>
               )}
