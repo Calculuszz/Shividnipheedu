@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip, Markdown } from '@/components/booking';
+import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip } from '@/components/booking';
 import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, CONTACT_LINE, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
 import Doodle from '@/components/Doodle';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -238,19 +238,58 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// The room's story from the brief, set in different voices so it reads like a scene
+// (the room has no name, so there's no title above it).
+function Story() {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="display-font text-[17px] text-halloween-moon">THE ROOM</span>
+      <p className="text-[22px] leading-snug font-bold text-halloween-moon">
+        ทุกโรงเรียนมีเรื่องเล่า…
+        <br />
+        แต่โรงเรียนร้างแห่งนี้มี “รายชื่อ”
+        <br />
+        ที่ไม่เคยถูกลบออกไป
+      </p>
+      <p className="text-base leading-relaxed">
+        พวกคุณคือ <b className="text-halloween-orange">ชมรมวิจัยสิ่งลี้ลับ</b> ที่ออกตามล่าเรื่องเหนือธรรมชาติ
+        คืนนี้เป้าหมายคือโรงเรียนร้างที่ลือกันว่าผีดุที่สุดในย่าน ทุกคนเข้าไปด้วยความตื่นเต้น
+        คิดว่าจะได้แค่ภาพและหลักฐานกลับไปทำรายงาน
+      </p>
+      <p className="text-[15px] italic text-halloween-gray">แต่เมื่อก้าวเข้าไปได้ไม่นาน ประตูก็ปิดลงด้านหลังอย่างเงียบงัน</p>
+      <div className="relative mx-1.5 mt-3.5 mb-1 rotate-[1.2deg] rounded-[6px_14px_8px_16px] bg-halloween-moon p-4 text-[15px] leading-relaxed text-halloween-charcoal shadow-[0_10px_20px_-8px_rgba(0,0,0,0.5)]">
+        <Tape className="left-1/2 -translate-x-1/2 -rotate-[4deg]" />
+        ในห้องเรียนหนึ่ง พวกคุณพบ <b>ลิสต์รายชื่อ</b> ในนั้นมีชื่อของผู้ที่เคยเข้ามาในโรงเรียนนี้และไม่เคยได้ออกไปอีกเลย
+        ทุกชื่อถูกขีดฆ่าด้วย<span className="font-bold text-[#b3261e]">หมึกสีแดง</span>ทีละคน ผ่านมาหลายสิบปี
+        รายชื่อนั้นถูกเติมต่อเรื่อยมา
+      </div>
+      <div className="px-1 pt-3 pb-1 text-center">
+        <p className="text-[15px] text-halloween-gray">เมื่อไล่ลงไปจนถึงบรรทัดสุดท้าย พวกคุณก็นิ่งงัน</p>
+        <p className="mt-1.5 text-[21px] leading-snug font-bold text-halloween-orange -rotate-[1.5deg] [text-shadow:0_0_16px_rgba(234,123,41,0.4)]">
+          ชื่อ 15 ชื่อสุดท้าย
+          <br />
+          คือชื่อของพวกคุณทุกคน
+        </p>
+        <p className="mt-1 text-base font-bold text-halloween-moon">และหมึกของมันยังไม่แห้ง</p>
+      </div>
+      <p className="text-base leading-relaxed">
+        ทุกคนในรายชื่อก่อนหน้านี้ตายไปแล้วโดยฝีมือ “ใครบางคน” แต่ไม่มีใครรู้ว่าคือใคร
+        มีเพียงเบาะแสว่าฆาตกรอยู่ในกลุ่มผีที่ยังวนเวียนอยู่ในโรงเรียน{' '}
+        <b className="text-halloween-orange">
+          ถ้าไม่หาตัวให้เจอ ชื่อของพวกคุณก็จะ<span className="line-through decoration-2">ถูกขีดฆ่า</span>ตามไปทีละคน
+        </b>
+      </p>
+    </div>
+  );
+}
+
 function RoomCard({ activity, rounds }: { activity: ActivityInfo; rounds?: Round[] }) {
   const first = rounds?.[0];
   const playMinutes = first ? Math.round((Date.parse(first.ends_at) - Date.parse(first.starts_at)) / 60_000) : null;
 
   return (
     <Card tone="orange" className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <span className="display-font text-[17px] text-halloween-moon">THE ROOM</span>
-        <h2 className="display-font text-3xl text-halloween-orange -rotate-2 origin-left">
-          {activity.room_name ?? 'รอประกาศชื่อห้อง'}
-        </h2>
-      </div>
-      {activity.details_md && <Markdown text={activity.details_md} />}
+      <Story />
       <dl className="border-t-2 border-dashed border-halloween-cream/25">
         {playMinutes !== null && <StatRow label="Play time" value={`${playMinutes} min / round`} />}
         <StatRow label="Team size" value={`${activity.online_seats + activity.walkin_seats} players / round`} />
@@ -290,7 +329,6 @@ function Footer() {
           นโยบายความเป็นส่วนตัว
         </Link>
       </span>
-      <span>SHI VIDNI PHEEDU · Halloween 2026</span>
     </div>
   );
 }

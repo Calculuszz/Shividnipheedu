@@ -802,8 +802,8 @@ FROM PUBLIC, anon, authenticated;
 -- ============================================
 -- 22 Oct 2569 (2026), 1 room, 20 min play + 5 min buffer, 15 players per round
 -- split 4:1 = 12 online + 3 walk-in. Booking opens 18 Oct, closes 20 Oct (may be
--- extended to 21 Oct: just change booking_closes_at). Staff-break rounds: set
--- booking_rounds.closed = true once they are decided.
+-- extended to 21 Oct: just change booking_closes_at). 9 rounds with a staff break
+-- between round 5 (ends 19:00) and round 6 (starts 19:30).
 -- Haunted House: its row and rounds are in haunted-house.sql.
 -- Re-running this file applies the numbers below to the existing row.
 
@@ -815,7 +815,7 @@ INSERT INTO booking_activities (
   NULL,
   E'- **ห้องมืด** ภายในห้องมีแสงน้อยมาก โปรดเดินอย่างระมัดระวัง\n- **เสียงดัง** มีเสียงประกอบดังและเสียงที่เกิดขึ้นกะทันหัน\n- **แสงกะพริบ** มีแสงไฟกะพริบ อาจไม่เหมาะกับผู้ที่ไวต่อแสง\n\nไม่แนะนำสำหรับผู้ที่มีโรคหัวใจ โรคลมชัก ผู้ที่ตั้งครรภ์ หรือผู้ที่กลัวที่มืดหรือที่แคบ หากรู้สึกไม่สบายระหว่างเล่น แจ้งทีมงานได้ทันที',
   1, 4, 12, 3,
-  '30 minutes', '15 minutes',
+  '30 minutes', '10 minutes',
   '2026-10-18 09:00:00+07', '2026-10-20 23:59:00+07'
 ) ON CONFLICT (id) DO UPDATE SET
   health_notice = EXCLUDED.health_notice,
@@ -830,18 +830,25 @@ INSERT INTO booking_activities (
 -- Room name, story and rules are only filled while empty, so text edited later
 -- isn't overwritten by a re-run.
 UPDATE booking_activities SET
-  room_name = COALESCE(room_name, '[ชื่อห้อง]'),
-  details_md = COALESCE(details_md, E'**ธีม:** [ธีมสั้นๆ]\n\n[เรื่องย่อของห้อง 2–3 ประโยค]'),
+  -- The room has no name (left NULL). The landing sets this story out in its own layout.
+  details_md = COALESCE(details_md, E'ทุกโรงเรียนมีเรื่องเล่า… แต่โรงเรียนร้างแห่งนี้มี "รายชื่อ" ที่ไม่เคยถูกลบออกไป\n\nพวกคุณคือ **ชมรมวิจัยสิ่งลี้ลับ** ที่ออกตามล่าเรื่องเหนือธรรมชาติ คืนนี้เป้าหมายคือโรงเรียนร้างที่ลือกันว่าผีดุที่สุดในย่าน ทุกคนเข้าไปด้วยความตื่นเต้น คิดว่าจะได้แค่ภาพและหลักฐานกลับไปทำรายงาน\n\nแต่เมื่อก้าวเข้าไปได้ไม่นาน ประตูก็ปิดลงด้านหลังอย่างเงียบงัน\n\nในห้องเรียนหนึ่ง พวกคุณพบ **ลิสต์รายชื่อ** ในนั้นมีชื่อของผู้ที่เคยเข้ามาในโรงเรียนนี้และไม่เคยได้ออกไปอีกเลย ทุกชื่อถูกขีดฆ่าด้วยหมึกสีแดงทีละคน ผ่านมาหลายสิบปี รายชื่อนั้นถูกเติมต่อเรื่อยมา\n\nเมื่อไล่ลงไปจนถึงบรรทัดสุดท้าย พวกคุณก็นิ่งงัน\n\n**ชื่อ 15 ชื่อสุดท้ายคือชื่อของพวกคุณทุกคน**\n\nและหมึกของมันยังไม่แห้ง\n\nทุกคนในรายชื่อก่อนหน้านี้ตายไปแล้วโดยฝีมือ "ใครบางคน" แต่ไม่มีใครรู้ว่าคือใคร มีเพียงเบาะแสว่าฆาตกรอยู่ในกลุ่มผีที่ยังวนเวียนอยู่ในโรงเรียน ถ้าไม่หาตัวให้เจอ ชื่อของพวกคุณก็จะถูกขีดฆ่าตามไปทีละคน'),
   rules_md = COALESCE(rules_md, E'1. [กฎข้อที่ 1]\n2. [กฎข้อที่ 2]\n3. [กฎข้อที่ 3]\n4. [กฎข้อที่ 4]')
 WHERE id = 'escape_room';
 
--- Round 1 plays 17:00-17:20, then every 25 minutes; round 10 plays 20:45-21:05.
--- Check-in for each round opens 30 minutes before it starts (16:30 for round 1).
+-- Rounds 1-5 play every 25 minutes from 17:00 (17:00-17:20 … 18:40-19:00), then a break,
+-- then rounds 6-9 every 25 minutes from 19:30 (… 20:45-21:05).
+-- Check-in opens 30 minutes before a round and lasts 10 minutes (16:30-16:40 for round 1).
 INSERT INTO booking_rounds (activity_id, round_no, starts_at, ends_at)
 SELECT
   'escape_room',
   n,
-  TIMESTAMPTZ '2026-10-22 17:00:00+07' + (n - 1) * INTERVAL '25 minutes',
-  TIMESTAMPTZ '2026-10-22 17:20:00+07' + (n - 1) * INTERVAL '25 minutes'
-FROM generate_series(1, 10) AS n
+  s,
+  s + INTERVAL '20 minutes'
+FROM (
+  SELECT n, CASE WHEN n <= 5
+    THEN TIMESTAMPTZ '2026-10-22 17:00:00+07' + (n - 1) * INTERVAL '25 minutes'
+    ELSE TIMESTAMPTZ '2026-10-22 19:30:00+07' + (n - 6) * INTERVAL '25 minutes'
+  END AS s
+  FROM generate_series(1, 9) AS n
+) t
 ON CONFLICT (activity_id, round_no) DO NOTHING;

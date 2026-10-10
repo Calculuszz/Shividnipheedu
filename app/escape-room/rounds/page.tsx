@@ -91,8 +91,11 @@ function RoundPageContent() {
     setSelectedId(round.id);
   }
 
+  // The Continue bar is fixed to the bottom of the screen
+  const hasBar = !readOnly && !walkin && rounds.length > 0;
+
   return (
-    <BookingPage activity={ACTIVITY} backHref={paths.home}>
+    <BookingPage activity={ACTIVITY} backHref={paths.home} bottomBar={hasBar}>
       <div className="relative flex flex-col gap-1.5">
         {step && <span className="text-[15px] font-bold text-halloween-moon">{step}</span>}
         <h1 className="display-font whitespace-nowrap pr-16 text-[34px] leading-[1.05] text-halloween-orange -rotate-2 origin-left">{title}</h1>
@@ -175,9 +178,8 @@ function RoundPageContent() {
         </>
       )}
 
-      {!readOnly && !walkin && rounds.length > 0 && (
+      {hasBar && (
         <>
-          <div aria-hidden="true" className="h-28 shrink-0" />
           <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md rounded-t-[20px] border-t-2 border-halloween-orange bg-halloween-dark/95 p-4 shadow-[0_-12px_30px_rgba(26,2,41,0.7)] backdrop-blur-sm">
             <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
               <div className="min-w-0">
