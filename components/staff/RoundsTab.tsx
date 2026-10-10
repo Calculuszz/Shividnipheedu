@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getBookingState, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
+import type { StaffWords } from '@/lib/staffWords';
 import { phaseChip, phaseLabel, roundName, roundPhase } from '@/lib/staffRounds';
 import type { StaffCtx } from './StaffApp';
 import { Chip, Notice, btn, card } from './ui';
@@ -11,10 +12,9 @@ import { staffFail } from './useStaffRounds';
 
 type Defaults = { online: number; walkin: number };
 
-const REASONS = ['พักสตาฟ', 'ห้องมีปัญหา'];
 
 export default function RoundsTab({ ctx }: { ctx: StaffCtx }) {
-  const { rounds, now } = ctx;
+  const { rounds, now, words: w } = ctx;
   const [defaults, setDefaults] = useState<Defaults | null>(null);
   const [editing, setEditing] = useState<StaffRound | null>(null);
   const [saved, setSaved] = useState('');
@@ -57,8 +57,8 @@ export default function RoundsTab({ ctx }: { ctx: StaffCtx }) {
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <b className="text-lg">{roundName(r)}</b>
-                  <span className="text-sm text-halloween-gray">เล่น {formatTime(r.starts_at)}</span>
-                  <Chip className={phaseChip(r, now)}>{r.closed && r.closed_reason ? `ปิด (${r.closed_reason})` : phaseLabel(r, now)}</Chip>
+                  <span className="text-sm text-halloween-gray">{w.play} {formatTime(r.starts_at)}</span>
+                  <Chip className={phaseChip(r, now)}>{r.closed && r.closed_reason ? `ปิด (${r.closed_reason})` : phaseLabel(r, now, w)}</Chip>
                 </div>
                 <span className={`text-sm leading-normal ${custom ? 'text-halloween-orange' : 'text-halloween-gray'}`}>
                   {r.closed ? (
@@ -92,12 +92,13 @@ export default function RoundsTab({ ctx }: { ctx: StaffCtx }) {
       <p className="text-[13px] leading-relaxed text-halloween-gray">
         ปิดรอบ = หยุดรับจองและหยุดรับ walk-in ทันที คนที่จองไว้แล้วยังมาเล่นได้ตามปกติ
         <br />
-        รอบที่เปิดเช็กอินแล้วแก้ไม่ได้
+        รอบที่เปิด{w.checkin}แล้วแก้ไม่ได้
       </p>
 
       {editing && (
         <RoundSheet
           round={rounds.find((r) => r.id === editing.id) ?? editing}
+          w={w}
           defaults={defaults}
           onClose={() => setEditing(null)}
           onSaved={(text) => {
@@ -148,16 +149,19 @@ function Stepper({
 
 function RoundSheet({
   round,
+  w,
   defaults,
   onClose,
   onSaved,
 }: {
   round: StaffRound;
+  w: StaffWords;
   defaults: Defaults | null;
   onClose: () => void;
   onSaved: (text: string) => void;
 }) {
   const [closed, setClosed] = useState(round.closed);
+  const REASONS = w.closeReasons;
   const preset = round.closed_reason && !REASONS.includes(round.closed_reason) ? 'other' : round.closed_reason ?? REASONS[0];
   const [reason, setReason] = useState<string>(preset);
   const [otherReason, setOtherReason] = useState(preset === 'other' ? round.closed_reason ?? '' : '');
@@ -241,7 +245,7 @@ function RoundSheet({
         <div className="flex flex-col gap-0.5">
           <b className="text-[22px]">แก้{roundName(round)}</b>
           <span className="text-sm leading-relaxed text-halloween-gray">
-            เล่น {formatTimeRange(round.starts_at, round.ends_at)}
+            {w.play} {formatTimeRange(round.starts_at, round.ends_at)}
             <br />
             จองไว้แล้ว {round.online_taken} คน
           </span>

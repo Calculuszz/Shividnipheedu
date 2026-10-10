@@ -295,6 +295,8 @@ body > * {
   --halloween-slate-blue: #3a0a10;
   --halloween-ash-gray: #c4aaa5;
   --halloween-moon: #ecd9bd;
+  /* Lighter than the red accent so an error never looks like a button */
+  --halloween-error: #ff9a85;
 }
 
 .theme-haunted .image-background {

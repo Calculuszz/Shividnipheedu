@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         staff.activity,
         'round_no'
       ),
-      all('booking_walkins', 'round_id, queue_no, student_id, full_name, phone, status, created_at, checked_in_at', staff.activity, 'queue_no'),
+      all('booking_walkins', 'round_id, queue_no, student_id, full_name, nickname, phone, status, created_at, checked_in_at', staff.activity, 'queue_no'),
       all('bookings', 'id, status, notes', staff.activity, 'created_at'),
       // Haunted House answers (not in booking_players_live, which predates them)
       all('booking_players', 'id, nickname, faculty, year', staff.activity, 'created_at'),

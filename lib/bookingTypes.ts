@@ -155,6 +155,10 @@ export interface StaffPlayer {
   checked_in_at: string | null;
   checkin_opens_at: string;
   checkin_closes_at: string;
+  /** Haunted House only */
+  nickname?: string | null;
+  faculty?: string | null;
+  year?: string | null;
 }
 
 export interface Walkin {
@@ -162,6 +166,8 @@ export interface Walkin {
   queue_no: number;
   student_id: string;
   full_name: string;
+  /** Haunted House only */
+  nickname?: string | null;
   phone: string;
   status: WalkinStatus;
   created_at: string;

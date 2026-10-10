@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNow } from '@/hooks/useBooking';
 import type { StaffRound } from '@/lib/bookingTypes';
+import { STAFF_WORDS, type StaffActivity, type StaffWords } from '@/lib/staffWords';
 import AttendanceTab from './AttendanceTab';
 import CheckInTab from './CheckInTab';
 import DashboardTab from './DashboardTab';
@@ -13,8 +14,8 @@ import { toLogin, useStaffRounds } from './useStaffRounds';
 
 export type Tab = 'checkin' | 'attendance' | 'dashboard' | 'walkin' | 'rounds';
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'checkin', label: 'เช็กอิน', icon: Icon.scan },
+const tabsFor = (w: StaffWords): { id: Tab; label: string; icon: React.ReactNode }[] => [
+  { id: 'checkin', label: w.checkin, icon: Icon.scan },
   { id: 'attendance', label: 'รายชื่อ', icon: Icon.list },
   { id: 'dashboard', label: 'ภาพรวม', icon: Icon.grid },
   { id: 'walkin', label: 'Walk-in', icon: Icon.walkin },
@@ -24,6 +25,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 /** What every tab gets: the polled rounds, a clock that ticks, and a way to refetch now. */
 export type StaffCtx = {
   activity: StaffActivity;
+  /** This activity's words for the booth (เช็กอิน / ลงทะเบียน …) */
+  words: StaffWords;
   rounds: StaffRound[];
   now: number;
   updatedAt: string | null;
@@ -36,12 +39,10 @@ export type StaffCtx = {
 
 const tabFromHash = (): Tab => {
   const h = window.location.hash.slice(1);
-  return TABS.some((t) => t.id === h) ? (h as Tab) : 'checkin';
+  return ['checkin', 'attendance', 'dashboard', 'walkin', 'rounds'].includes(h) ? (h as Tab) : 'checkin';
 };
 
-export type StaffActivity = 'escape_room' | 'haunted_house';
-
-const STAFF_TITLE: Record<StaffActivity, string> = { escape_room: 'Escape Room', haunted_house: 'Haunted House' };
+export type { StaffActivity };
 
 // Staff back office for one bookable activity (issue #8; the Haunted House reuses it in
 // its own colours). Phone first: bottom tab bar on a phone, tabs in the header on a tablet / laptop.
@@ -51,6 +52,8 @@ export default function StaffApp({ activity }: { activity: StaffActivity }) {
   const [roundHint, setRoundHint] = useState<string | null>(null);
   const { rounds, error, updatedAt, refresh } = useStaffRounds(ready);
   const now = useNow(5000);
+  const words = STAFF_WORDS[activity];
+  const TABS = tabsFor(words);
 
   useEffect(() => {
     fetch('/api/admin/login', { credentials: 'same-origin' })
@@ -77,14 +80,14 @@ export default function StaffApp({ activity }: { activity: StaffActivity }) {
 
   if (!ready) return <div className="min-h-screen bg-halloween-dark" />;
 
-  const ctx: StaffCtx | null = rounds ? { activity, rounds, now, updatedAt, refresh, go, roundHint } : null;
+  const ctx: StaffCtx | null = rounds ? { activity, words, rounds, now, updatedAt, refresh, go, roundHint } : null;
 
   return (
     <div className={`min-h-screen bg-halloween-dark text-halloween-cream ${activity === 'haunted_house' ? 'theme-haunted' : ''}`}>
       <header className="sticky top-0 z-30 border-b-2 border-halloween-purple bg-halloween-charcoal">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <div className="flex flex-1 flex-col gap-0.5 md:flex-none">
-            <span className="display-font text-[22px] leading-none tracking-wide text-halloween-orange">{STAFF_TITLE[activity]}</span>
+            <span className="display-font text-[22px] leading-none tracking-wide text-halloween-orange">{words.title}</span>
             <span className="text-[13px] text-halloween-gray">Staff / หลังบ้าน</span>
           </div>
           <nav aria-label="เมนูหลังบ้าน" className="hidden flex-1 justify-center gap-1 md:flex">

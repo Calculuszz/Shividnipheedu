@@ -139,3 +139,6 @@ SELECT
   TIMESTAMPTZ '2026-10-22 16:55:00+07' + k * INTERVAL '20 minutes'
 FROM generate_series(0, 10) AS k
 ON CONFLICT (activity_id, round_no) DO NOTHING;
+
+-- Walk-ins at the Haunted House give a nickname too (staff call people by it).
+ALTER TABLE booking_walkins ADD COLUMN IF NOT EXISTS nickname TEXT;

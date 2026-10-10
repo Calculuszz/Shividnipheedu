@@ -1,6 +1,7 @@
 import { errorMessage } from '@/lib/bookingText';
 import { formatTime } from '@/lib/bookingTime';
 import type { StaffRound } from '@/lib/bookingTypes';
+import { STAFF_WORDS, type StaffWords } from '@/lib/staffWords';
 
 // What staff at the booth need to know about a round, worked out from the server-synced clock.
 
@@ -18,7 +19,7 @@ export function roundPhase(r: StaffRound, now: number): RoundPhase {
 export const roundName = (r: Pick<StaffRound, 'round_no'>) => `รอบที่ ${r.round_no}`;
 
 /** Short status for a chip: "เช็กอินถึง 17:10", "กำลังเล่น", "ปิดรอบ" … */
-export function phaseLabel(r: StaffRound, now: number) {
+export function phaseLabel(r: StaffRound, now: number, w: StaffWords = STAFF_WORDS.escape_room) {
   switch (roundPhase(r, now)) {
     case 'closed':
       return 'ปิดรอบ';
@@ -27,11 +28,11 @@ export function phaseLabel(r: StaffRound, now: number) {
     case 'playing':
       return 'กำลังเล่น';
     case 'waiting_start':
-      return `เริ่มเล่น ${formatTime(r.starts_at)}`;
+      return `เริ่ม${w.play} ${formatTime(r.starts_at)}`;
     case 'checkin':
-      return `เช็กอินถึง ${formatTime(r.checkin_closes_at)}`;
+      return `${w.checkin}ถึง ${formatTime(r.checkin_closes_at)}`;
     default:
-      return `เปิดเช็กอิน ${formatTime(r.checkin_opens_at)}`;
+      return `เปิด${w.checkin} ${formatTime(r.checkin_opens_at)}`;
   }
 }
 
@@ -81,7 +82,25 @@ export const maskId = (id: string) => (id.length >= 7 ? `${id.slice(0, 4)}••
  * Scan / check-in results in staff words: what happened, then what to do next.
  * (errorMessage() is written for students.)
  */
-export function staffCheckinError(code: string): { title: string; action: string; walkin?: boolean; warn?: boolean } {
+export function staffCheckinError(
+  code: string,
+  w: StaffWords = STAFF_WORDS.escape_room
+): { title: string; action: string; walkin?: boolean; warn?: boolean } {
+  if (w.solo) {
+    switch (code) {
+      case 'ALREADY_CHECKED_IN':
+        return { title: 'ลงทะเบียนไปแล้ว', action: `ไม่ต้องทำอะไรเพิ่ม ${w.waitAt}`, warn: true };
+      case 'CHECKIN_NOT_OPEN':
+        return { title: 'ยังไม่ถึงเวลาลงทะเบียน', action: 'บอกให้กลับมาตอนเปิดลงทะเบียนของรอบตัวเอง (เวลาอยู่ในอีเมลยืนยัน)', warn: true };
+      case 'CHECKIN_CLOSED':
+        return { title: 'มาช้า สละสิทธิ์แล้ว', action: 'ถ้ายังอยากเล่น ให้ต่อคิว walk-in', walkin: true };
+      case 'NOT_FOUND':
+        return {
+          title: 'ไม่ใช่ตั๋วบ้านผีสิง',
+          action: 'อาจเป็นตั๋ว Escape Room ให้เปิดอีเมลยืนยันบ้านผีสิง หรือค้นหาด้วยชื่อแทน',
+        };
+    }
+  }
   switch (code) {
     case 'ALREADY_CHECKED_IN':
       return { title: 'เช็กอินแล้ว', action: 'คนนี้เช็กอินไปแล้ว ไม่ต้องทำอะไรเพิ่ม ให้รอหน้าห้อง', warn: true };
@@ -99,6 +118,6 @@ export function staffCheckinError(code: string): { title: string; action: string
         action: 'อาจยกเลิกไปแล้ว หรือเอา QR ลงทะเบียนงานมาสแกน ให้ค้นหาด้วยชื่อแทน',
       };
     default:
-      return { title: 'เช็กอินไม่สำเร็จ', action: errorMessage(code) };
+      return { title: `${w.checkin}ไม่สำเร็จ`, action: errorMessage(code) };
   }
 }

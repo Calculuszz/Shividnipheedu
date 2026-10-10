@@ -9,6 +9,21 @@ export const dynamic = 'force-dynamic';
 const PLAYER_FIELDS =
   'id, booking_id, round_id, round_no, position, is_leader, student_id, full_name, phone, live_status, checked_in_at, checkin_opens_at, checkin_closes_at';
 
+type Row = { id: string } & Record<string, unknown>;
+
+// The Haunted House also shows nickname, faculty and year. They live on booking_players
+// (the live view predates them), so they are read separately and merged in.
+async function withExtras<T extends Row>(activity: string, players: T[]) {
+  if (activity !== 'haunted_house' || !players.length) return players;
+  const { data, error } = await supabaseAdmin
+    .from('booking_players')
+    .select('id, nickname, faculty, year')
+    .in('id', players.map((p) => p.id));
+  if (error) throw error;
+  const extra = new Map((data ?? []).map((x) => [x.id, x]));
+  return players.map((p) => ({ ...p, nickname: null, faculty: null, year: null, ...extra.get(p.id), id: p.id }));
+}
+
 // GET ?round=<id>  -> that round's players (waiting / checked in / released), walk-ins and seat numbers
 // GET ?q=6631 | ?q=name -> search players of the whole activity for manual check-in
 export async function GET(request: Request) {
@@ -31,7 +46,7 @@ export async function GET(request: Request) {
         .order('round_no')
         .limit(30);
       if (error) throw error;
-      return NextResponse.json({ players: data ?? [] });
+      return NextResponse.json({ players: await withExtras(staff.activity, (data ?? []) as Row[]) });
     }
 
     if (!(await roundInActivity(roundId, staff.activity))) return badRequest();
@@ -47,7 +62,7 @@ export async function GET(request: Request) {
         .order('position'),
       supabaseAdmin
         .from('booking_walkins')
-        .select('id, queue_no, student_id, full_name, phone, status, created_at, checked_in_at')
+        .select('id, queue_no, student_id, full_name, nickname, phone, status, created_at, checked_in_at')
         .eq('round_id', roundId!)
         .neq('status', 'left')
         .order('queue_no'),
@@ -64,7 +79,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       round: round.data,
-      players: players.data ?? [],
+      players: await withExtras(staff.activity, (players.data ?? []) as Row[]),
       notes: Object.fromEntries((notes ?? []).map((n) => [n.id, n.notes])),
       walkins: walkins.data ?? [],
       now: new Date().toISOString(),

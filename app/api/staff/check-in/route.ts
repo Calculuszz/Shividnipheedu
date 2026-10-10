@@ -32,7 +32,11 @@ export async function POST(request: Request) {
       p_staff: staff.role,
     });
     if (error) return ruleError(error, 'Staff check-in');
-    return NextResponse.json(data);
+    if (staff.activity !== 'haunted_house') return NextResponse.json(data);
+
+    // The Haunted House result card also shows faculty and year
+    const { data: extra } = await supabaseAdmin.from('booking_players').select('faculty, year').eq('id', playerId).maybeSingle();
+    return NextResponse.json({ ...data, faculty: extra?.faculty ?? null, year: extra?.year ?? null });
   } catch (error) {
     console.error('Staff check-in error:', error);
     return serverError();
