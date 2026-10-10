@@ -243,23 +243,24 @@ function Story() {
   return (
     <div className="flex flex-col gap-2">
       <span className="display-font text-[17px] text-halloween-moon">THE ROOM</span>
-      <p className="text-[22px] leading-snug font-bold text-halloween-moon">
-        ทุกโรงเรียนมีเรื่องเล่า…
-        <br />
-        แต่โรงเรียนร้างแห่งนี้มี “รายชื่อ”
-        <br />
-        ที่ไม่เคยถูกลบออกไป
-      </p>
+      <div>
+        <p className="text-2xl leading-snug font-bold text-halloween-moon">ทุกโรงเรียนมีเรื่องเล่า…</p>
+        <p className="mt-1 text-[19px] leading-normal font-bold text-halloween-cream">
+          แต่โรงเรียนร้างแห่งนี้มี <span className="text-halloween-orange">“รายชื่อ”</span>
+          <br />
+          ที่ไม่เคยถูกลบออกไป
+        </p>
+      </div>
       <p className="text-base leading-relaxed">
         พวกคุณคือ <b className="text-halloween-orange">ชมรมวิจัยสิ่งลี้ลับ</b> ที่ออกตามล่าเรื่องเหนือธรรมชาติ
         คืนนี้เป้าหมายคือโรงเรียนร้างที่ลือกันว่าผีดุที่สุดในย่าน ทุกคนเข้าไปด้วยความตื่นเต้น
         คิดว่าจะได้แค่ภาพและหลักฐานกลับไปทำรายงาน
       </p>
       <p className="text-[15px] italic text-halloween-gray">แต่เมื่อก้าวเข้าไปได้ไม่นาน ประตูก็ปิดลงด้านหลังอย่างเงียบงัน</p>
-      <div className="relative mx-1.5 mt-3.5 mb-1 rotate-[1.2deg] rounded-[6px_14px_8px_16px] bg-halloween-moon p-4 text-[15px] leading-relaxed text-halloween-charcoal shadow-[0_10px_20px_-8px_rgba(0,0,0,0.5)]">
-        <Tape className="left-1/2 -translate-x-1/2 -rotate-[4deg]" />
+      <div className="relative mx-1.5 mt-3.5 mb-1 rotate-[1.2deg] rounded-[6px_14px_8px_16px] bg-halloween-cream p-4 text-[15px] leading-relaxed text-halloween-charcoal shadow-[0_10px_20px_-8px_rgba(0,0,0,0.5)]">
+        <Tape className="left-1/2 -translate-x-1/2 -rotate-[4deg] !bg-[#cdb98f]/80" />
         ในห้องเรียนหนึ่ง พวกคุณพบ <b>ลิสต์รายชื่อ</b> ในนั้นมีชื่อของผู้ที่เคยเข้ามาในโรงเรียนนี้และไม่เคยได้ออกไปอีกเลย
-        ทุกชื่อถูกขีดฆ่าด้วย<span className="font-bold text-[#b3261e]">หมึกสีแดง</span>ทีละคน ผ่านมาหลายสิบปี
+        ทุกชื่อถูกขีดฆ่าด้วย<span className="mx-0.5 text-[17px] font-bold text-[#c0261d] underline decoration-[#c0261d] decoration-2 underline-offset-4">หมึกสีแดง</span>ทีละคน ผ่านมาหลายสิบปี
         รายชื่อนั้นถูกเติมต่อเรื่อยมา
       </div>
       <div className="px-1 pt-3 pb-1 text-center">
