@@ -2,7 +2,7 @@
 
 import { BookingPage, Card, ErrorNotice, Markdown } from '@/components/booking';
 import LoadingScreen from '@/components/LoadingScreen';
-import { CheckInRuleNotice, HealthRows, CONTACT_LINE, MoonCorner } from '../_shared';
+import { CheckInRuleNotice, HealthRows, MoonCorner } from '../_shared';
 import { useBookingState } from '@/hooks/useBooking';
 import { bookingPaths } from '@/lib/bookingRules';
 
@@ -54,7 +54,6 @@ export default function RulesPage() {
         )}
       </Card>
 
-      <p className="text-center text-[15px] leading-normal text-halloween-gray">{CONTACT_LINE}</p>
     </BookingPage>
   );
 }

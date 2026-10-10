@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip } from '@/components/booking';
-import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, CONTACT_LINE, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
+import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
 import Doodle from '@/components/Doodle';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useBookingState, useRounds, useMyBooking } from '@/hooks/useBooking';
@@ -100,7 +100,6 @@ export default function EscapeRoomHome() {
 
       <HealthCard activity={activity} />
 
-      <Footer />
     </BookingPage>
   );
 }
@@ -313,22 +312,5 @@ function RoomCard({ activity, rounds }: { activity: ActivityInfo; rounds?: Round
         </svg>
       </Link>
     </Card>
-  );
-}
-
-function Footer() {
-  return (
-    <div className="flex flex-col items-center gap-1.5 text-center text-sm text-halloween-cream/80 pt-5 pb-2">
-      <span>Banshi x Vidva x Nitade</span>
-      <span>{CONTACT_LINE}</span>
-      <span className="flex gap-3.5">
-        <Link href={paths.rules} className="text-halloween-orange hover:text-halloween-moon">
-          กฎของห้อง
-        </Link>
-        <Link href={paths.privacy} className="text-halloween-orange hover:text-halloween-moon">
-          นโยบายความเป็นส่วนตัว
-        </Link>
-      </span>
-    </div>
   );
 }
