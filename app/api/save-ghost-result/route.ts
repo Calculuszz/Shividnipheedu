@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { booByName } from '@/app/what-ghost/quiz';
+import { sessionStudent } from '@/lib/studentAuth';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { studentId, ghostResult } = body;
+    // Only your own result: the student comes from the login session, not the request
+    const studentId = sessionStudent(request);
+    if (!studentId) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-    if (!studentId || !ghostResult) {
+    const body = await request.json();
+    const { ghostResult } = body;
+
+    if (!ghostResult) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

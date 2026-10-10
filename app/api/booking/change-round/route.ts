@@ -1,6 +1,6 @@
 import { NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { badRequest, isUuid, normalizeCode, readJson, ruleError, serverError } from '@/lib/booking';
+import { badRequest, isUuid, normalizeCode, readJson, refuseFinalBooking, ruleError, serverError } from '@/lib/booking';
 import { roundChanged, roundInfo, sendAll } from '@/lib/bookingEmail';
 import { codeMiss, codeMissLimited } from '@/lib/bookingCodeLimit';
 
@@ -13,6 +13,8 @@ export async function POST(request: Request) {
   if (!code || !isUuid(body.round_id)) return badRequest();
 
   try {
+    const final = await refuseFinalBooking(code);
+    if (final) return final;
     const { data, error } = await supabaseAdmin.rpc('booking_change_round', {
       p_leader_code: code,
       p_new_round_id: body.round_id,

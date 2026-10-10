@@ -7,6 +7,7 @@ import FieldError from '@/components/FieldError';
 import Doodle from '@/components/Doodle';
 import FloatingGhost from '@/components/FloatingGhost';
 import Sponsors from '@/components/Sponsors';
+import { forgetAllBookings } from '@/lib/bookingStorage';
 
 function LoginForm() {
   const router = useRouter();
@@ -37,13 +38,15 @@ function LoginForm() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({ studentId: studentId.trim() }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('studentId', studentId);
+        // A different person on this device: drop whatever the last one booked
+        if (localStorage.getItem('studentId') !== data.user.student_id) forgetAllBookings();
+        localStorage.setItem('studentId', data.user.student_id);
         localStorage.setItem('userData', JSON.stringify(data.user));
         router.push('/menu');
       } else {

@@ -27,11 +27,11 @@ export default function EscapeRoomHome() {
 
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
-  const myBooking = useMyBooking(code);
+  const myBooking = useMyBooking(code, ACTIVITY);
 
   useEffect(() => {
     // Remembered code no longer resolves to a booking (cancelled, expired) — stop asking for it.
-    if (code && myBooking.error?.code === 'NOT_FOUND') forgetCode(ACTIVITY);
+    if (code && (myBooking.error?.code === 'NOT_FOUND' || myBooking.error?.code === 'WRONG_ACTIVITY')) forgetCode(ACTIVITY);
   }, [code, myBooking.error]);
 
   const stillChecking = state.loading || rounds.loading || (code !== null && myBooking.loading);

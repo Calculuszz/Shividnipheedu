@@ -18,6 +18,14 @@ export function errorMessage(code: string, detail?: string, ctx: Ctx = {}): stri
     case 'ALREADY_BOOKED':
       // Never say which round: that would leak someone else's booking
       return 'รหัสนิสิตนี้มีการจองอยู่แล้ว (1 คนจองได้ 1 รอบ)';
+    case 'NOT_REGISTERED':
+      return detail ? `รหัสนิสิต ${detail} ยังไม่ได้ลงทะเบียนเข้างาน ให้ลงทะเบียนก่อนแล้วค่อยจอง` : 'ยังไม่ได้ลงทะเบียนเข้างาน ให้ลงทะเบียนก่อนแล้วค่อยจอง';
+    case 'NOT_YOU':
+      return 'จองได้ด้วยรหัสนิสิตของคนที่เข้าสู่ระบบอยู่เท่านั้น เข้าสู่ระบบใหม่แล้วลองอีกครั้ง';
+    case 'NOT_ALLOWED':
+      return 'การจองนี้แก้ไข เปลี่ยนรอบ หรือยกเลิกไม่ได้';
+    case 'WRONG_ACTIVITY':
+      return 'รหัสนี้เป็นการจองของอีกกิจกรรม เปิดจากหน้าของกิจกรรมนั้นแทน';
     case 'NOT_ENOUGH_SEATS':
       return detail !== undefined ? `รอบนี้เหลือ ${detail} ที่นั่ง` : 'ที่นั่งไม่พอ';
     case 'BOOKING_NOT_OPEN':

@@ -143,7 +143,7 @@ function BookForm() {
         ],
       });
       rememberCode(ACTIVITY, result.code);
-      saveLastBooking(result);
+      saveLastBooking(ACTIVITY, result);
       router.push(paths.confirmed);
     } catch (e) {
       const code = e instanceof BookingApiError ? e.code : '';
