@@ -14,3 +14,6 @@ export { default as SeatConflict } from './SeatConflict';
 export { default as CancelSeatDialog } from './CancelSeatDialog';
 export { default as CancelTeamDialog } from './CancelTeamDialog';
 export { default as RemoveMemberDialog } from './RemoveMemberDialog';
+export { default as BookingIcon, ArrowRight } from './Icons';
+export { default as StatusNote } from './StatusNote';
+export { default as BookingTicket } from './BookingTicket';

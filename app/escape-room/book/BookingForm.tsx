@@ -1,24 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookingPage, Button, Card, ErrorNotice } from '@/components/booking';
+import { BookingPage, Button, Card, CheckField, ErrorNotice } from '@/components/booking';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
 import { book, BookingApiError, studentStatus } from '@/lib/bookingClient';
 import { bookingPaths, isStudentId, roundPick } from '@/lib/bookingRules';
 import { rememberCode, saveLastBooking } from '@/lib/bookingStorage';
 import { errorMessage } from '@/lib/bookingText';
-import { formatDateEn, formatTimeRange } from '@/lib/bookingTime';
+import { formatTimeRange } from '@/lib/bookingTime';
 import type { PlayerInput } from '@/lib/bookingTypes';
 import Doodle from '@/components/Doodle';
+import { rulesAccepted } from '../_shared';
 import PlayerFields from './PlayerFields';
-import { newPlayer, playerComplete, playerErrors, studentCanSubmit, toPlayerInput, type PlayerDraft } from './bookingFormModel';
+import { FIELD_ORDER, newPlayer, playerComplete, playerErrors, studentCanSubmit, toPlayerInput, type PlayerDraft } from './bookingFormModel';
 
 const ACTIVITY = 'escape_room';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const FIELD_LABELS: Partial<Record<keyof PlayerInput, string>> = {
-  full_name: 'ชื่อ', student_id: 'รหัสนิสิต', phone: 'เบอร์โทร', email: 'อีเมล', pdpa: 'PDPA', rules: 'การรับทราบกฎ',
-};
 
 export default function BookingForm({ initialRoundId, leaderId }: { initialRoundId: string; leaderId: string }) {
   const router = useRouter();
@@ -27,6 +26,8 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   const [roundId] = useState(initialRoundId);
   const [players, setPlayers] = useState<PlayerDraft[]>(() => [newPlayer('leader', leaderId)]);
   const [notes, setNotes] = useState('');
+  const [pdpa, setPdpa] = useState(false);
+  const [consentTouched, setConsentTouched] = useState(false);
   const [adding, setAdding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -49,8 +50,9 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   const pending = players.some(p => !studentCanSubmit(p));
   const teamValid = !!activity && players.length >= activity.team_min && players.length <= activity.team_max;
   const roundValid = !!round && roundPick(round, players.length).selectable && (seatLimit === null || players.length <= seatLimit);
+  // The button stays pressable; a missing field is pointed out when it is pressed
   const ready = validUrl && teamValid && roundValid && state.data?.state === 'open' && !state.loading && !rounds.loading &&
-    !state.error && !rounds.error && !pending && errors.every(e => Object.keys(e).length === 0) && !busy;
+    !state.error && !rounds.error && !busy;
 
   const updatePlayer = (key: string, change: (p: PlayerDraft) => PlayerDraft) => {
     setPlayers(current => current.map(p => p.key === key ? change(p) : p));
@@ -83,6 +85,11 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     const currentRequests = requests.current;
     return () => { currentRequests.clear(); };
   }, [leaderId, validUrl, verifyStudent]);
+
+  // Came here without ticking the rules (deep link, new tab): start from the rules
+  useEffect(() => {
+    if (!rulesAccepted()) router.replace(paths.rules);
+  }, [router, paths.rules]);
 
   useEffect(() => {
     if (!addedPlayerKey) return;
@@ -156,6 +163,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   async function confirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!ready || actionLock.current) return;
+    if (!checkFields()) return;
     actionLock.current = true;
     setSubmitting(true);
     setFormError('');
@@ -170,7 +178,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
         return;
       }
       if (!roundPick(selected, players.length).selectable) { setFormError(errorMessage('ROUND_CLOSED')); return; }
-      const result = await book({ round_id: roundId, players: players.map(toPlayerInput), notes });
+      const result = await book({ round_id: roundId, players: players.map(p => toPlayerInput(p, { pdpa, rules: rulesAccepted() })), notes });
       saveLastBooking(ACTIVITY, result);
       rememberCode(ACTIVITY, result.code);
       setSubmitted(true);
@@ -195,13 +203,35 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     }
   }
 
-  const issues = errors.flatMap((fields, index) => Object.entries(fields).map(([field, message]) => ({
-    key: `${players[index].key}-${field}`, playerKey: players[index].key, field,
-    text: `${FIELD_LABELS[field as keyof PlayerInput]} ของผู้เล่นคนที่ ${index + 1}: ${message}`,
-  })));
+  /** Shows every problem under its field and jumps to the first one. True when all is filled in. */
+  function checkFields() {
+    setPlayers(current => current.map((p, i) => Object.keys(errors[i]).length > 0
+      ? { ...p, expanded: true, touched: { ...p.touched, full_name: true, student_id: true, phone: true, email: true } } : p));
+    setConsentTouched(true);
+    let target: string | null = null;
+    for (const [i, p] of players.entries()) {
+      const field = FIELD_ORDER.find(([name]) => errors[i][name]);
+      if (field) { target = `player-${p.key}-${field[1]}`; break; }
+      if (!studentCanSubmit(p)) {
+        // Not looked up yet (or still looking): check it now, press again once it is done
+        if (p.check.status === 'idle') void verifyStudent(p.key, p.student_id);
+        target = `player-${p.key}-sid`;
+        break;
+      }
+    }
+    target ??= !pdpa ? 'booking-pdpa' : null;
+    if (!target) return true;
+    const id = target;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      el?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      el?.focus({ preventScroll: true });
+    });
+    return false;
+  }
 
   return (
-    <BookingPage activity={ACTIVITY} backHref={`${paths.rounds}?leader=${encodeURIComponent(leaderId)}`} title="Who's playing?" step="Step 2 of 2">
+    <BookingPage activity={ACTIVITY} backHref={`${paths.rounds}?leader=${encodeURIComponent(leaderId)}`} title="Who's playing?" step="Step 3 of 3">
       <Doodle name="bat-small" className="pointer-events-none absolute right-8 top-24 w-9" />
       <form aria-label="Booking form" noValidate onSubmit={confirm} className="flex flex-col gap-3.5">
         {!validUrl && <ErrorNotice title="ข้อมูลลิงก์ไม่ครบหรือไม่ถูกต้อง">กรุณาเริ่มจากขั้นตอนเลือกรอบและระบุรหัสนิสิตหัวหน้าทีม 10 หลัก</ErrorNotice>}
@@ -214,9 +244,9 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
         {state.data && state.data.state !== 'open' && <ErrorNotice>{errorMessage(state.data.state === 'not_open' ? 'BOOKING_NOT_OPEN' : 'BOOKING_CLOSED')}</ErrorNotice>}
         {round && <Card className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-halloween-gray">Round {round.round_no} · {formatDateEn(round.starts_at)}</p>
+            <p className="text-sm text-halloween-gray">Round {round.round_no}</p>
             <p className="text-xl font-bold">{formatTimeRange(round.starts_at, round.ends_at)}</p>
-            <p className="text-sm text-halloween-gray">Check-in {formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)} at the booth</p>
+            <p className="text-sm text-halloween-gray">Check-in {formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)}</p>
           </div>
           <button type="button" onClick={changeRound} disabled={busy} className="min-h-11 px-2 font-bold text-halloween-orange disabled:opacity-40">Change</button>
         </Card>}
@@ -233,7 +263,6 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
           {adding && <p role="status" className="mt-3 text-halloween-moon">Checking seats… ตรวจที่นั่งล่าสุดของรอบนี้</p>}
           {players.length >= activity.team_max && <p className="mt-3 text-halloween-moon">ทีมละไม่เกิน {activity.team_max} คน</p>}
           {addError && <ErrorNotice className="mt-3">{addError}{seatsBlocked && <Button variant="link" onClick={changeRound}>Pick another round</Button>}</ErrorNotice>}
-          <p className="mt-2 text-sm text-halloween-gray">กด + ทุกครั้ง ระบบจะตรวจที่นั่งล่าสุดของรอบนี้</p>
         </Card>}
         {players.map((player, index) => <PlayerFields key={player.key} player={player} number={index + 1} errors={errors[index]}
           disabled={busy} canRemove={!!activity && players.length > activity.team_min}
@@ -248,12 +277,12 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
           <p id="notes-count" className="text-right text-sm text-halloween-gray">{notes.length}/500</p>
         </Card>
         <div className="-mx-4 mt-2 flex flex-col gap-3 rounded-t-[26px] border-t-2 border-halloween-orange bg-halloween-charcoal px-4 pb-2 pt-4 shadow-[0_-10px_30px_rgba(0,0,0,0.35)]">
-          {issues.length > 0 && <ErrorNotice title={`ยังยืนยันไม่ได้ — แก้ไขอีก ${issues.length} รายการ`}>
-            <ul className="list-inside list-disc">{issues.map(issue => <li key={issue.key}>
-              <button type="button" className="text-left underline decoration-dotted" onClick={() => updatePlayer(issue.playerKey, p => ({ ...p, expanded: true, touched: { ...p.touched, [issue.field]: true } }))}>{issue.text}</button>
-            </li>)}</ul>
-          </ErrorNotice>}
-          {pending && <p role="status" className="text-sm text-halloween-gray">{checking ? 'กำลังตรวจสอบรหัสนิสิต…' : 'กรุณาตรวจสอบรหัสนิสิตของทุกคนให้เรียบร้อย (ออกจากช่องรหัสนิสิตเพื่อเริ่มตรวจสอบ)'}</p>}
+          <CheckField id="booking-pdpa" checked={pdpa} onChange={setPdpa}
+            error={consentTouched && !pdpa ? 'กรุณายอมรับเงื่อนไข PDPA' : undefined}>
+            ยินยอมให้เก็บและใช้ข้อมูลส่วนบุคคล (ชื่อ รหัสนิสิต เบอร์โทร อีเมล) เพื่อการจองและเช็กอินกิจกรรมนี้เท่านั้น ตาม{' '}
+            <Link href={paths.privacy} target="_blank" rel="noopener noreferrer" className="font-bold text-halloween-orange underline">นโยบายความเป็นส่วนตัว</Link>
+          </CheckField>
+          {pending && checking && <p role="status" className="text-sm text-halloween-gray">กำลังตรวจสอบรหัสนิสิต…</p>}
           {activity && !teamValid && <ErrorNotice>{errorMessage('TEAM_SIZE', undefined, { teamMin: activity.team_min, teamMax: activity.team_max })}</ErrorNotice>}
           {round && !roundValid && <ErrorNotice title="รอบนี้ยังยืนยันไม่ได้">
             {seatLimit !== null ? errorMessage('NOT_ENOUGH_SEATS', String(seatLimit)) : round.online_left < players.length ? errorMessage('NOT_ENOUGH_SEATS', String(round.online_left)) : errorMessage('ROUND_CLOSED')}
@@ -261,7 +290,6 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
           </ErrorNotice>}
           {formError && <ErrorNotice>{formError}</ErrorNotice>}
           <Button type="submit" disabled={!ready} loading={submitting} loadingText="Confirming booking…">{submitted ? 'จองสำเร็จ กำลังเปิดหน้ายืนยัน…' : 'Confirm booking'}</Button>
-          <p className="text-center text-sm text-halloween-gray">ปุ่มจะกดได้เมื่อกรอกช่องที่มี * ครบทุกคน · ระบบตรวจที่นั่งอีกครั้งตอนกดยืนยัน</p>
         </div>
       </form>
     </BookingPage>

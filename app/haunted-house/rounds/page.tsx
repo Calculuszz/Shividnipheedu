@@ -7,7 +7,7 @@ import { BookingPage, Button, Card, CheckField, ErrorNotice, InfoNotice, RoundLi
 import { useBookingState, useRounds } from '@/hooks/useBooking';
 import { checkStudent } from '@/lib/bookingClient';
 import { roundPick } from '@/lib/bookingRules';
-import { formatDateTh, formatTimeRange } from '@/lib/bookingTime';
+import { formatTimeRange } from '@/lib/bookingTime';
 import { ACTIVITY, REGISTER_POINT, ROUND_LABELS, paths, registerWindow, useStudent } from '../_shared';
 
 // Page 3 of the brief: the round table, registration details and the advance-booking tick box.
@@ -68,9 +68,10 @@ export default function HauntedRoundsPage() {
     <BookingPage activity={ACTIVITY} backHref={paths.rules} step="Step 2 of 3" title="Choose a round">
       <Doodle name="moon" className="absolute right-5 top-[70px] w-10 rotate-[18deg] pointer-events-none" />
       {list[0] && (
-        <p className="text-sm font-bold">
-          {formatDateTh(list[0].starts_at)}
-          <span className="ml-3 font-normal text-halloween-gray">ที่ว่างที่เห็น = ที่จองออนไลน์ (1 ที่ = 1 คน)</span>
+        <p className="text-sm text-halloween-gray">
+          <b className="text-halloween-cream">หมายเหตุ:</b> ที่ว่างที่เห็นเป็นที่สำหรับจองออนไลน์เท่านั้น
+          <br />
+          ทุกรอบมีที่แยกไว้ให้สำหรับ walk-in
         </p>
       )}
 

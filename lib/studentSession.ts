@@ -18,6 +18,7 @@ function clearLocal() {
     localStorage.removeItem('userData');
     // The next person ticks the Haunted House rules for themselves
     sessionStorage.removeItem('haunted:rules-accepted');
+    sessionStorage.removeItem('escape:rules-accepted');
   } catch {}
   forgetAllBookings();
 }

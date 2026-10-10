@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import Link from 'next/link';
 import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip } from '@/components/booking';
 import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
 import Doodle from '@/components/Doodle';
@@ -9,7 +8,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { useBookingState, useRounds, useMyBooking } from '@/hooks/useBooking';
 import { forgetCode, getRememberedCode } from '@/lib/bookingStorage';
 import { bookingPaths } from '@/lib/bookingRules';
-import { formatDateTh, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
+import { formatDateTh, formatDayTimeEn, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
 import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
 
 const ACTIVITY = 'escape_room';
@@ -64,10 +63,10 @@ export default function EscapeRoomHome() {
 
       {!myBookingData && state.data.state === 'open' && (
         <div className="flex flex-col gap-2.5">
-          <Button href={paths.start}>Book a slot</Button>
+          <Button href={paths.rules} arrow className="!text-xl">Book a slot</Button>
           {activity.booking_closes_at && (
             <p className="text-center text-[15px] leading-normal text-halloween-gray">
-              Online booking closes at {formatDayTimeTh(activity.booking_closes_at)}
+              Online booking closes at {formatDayTimeEn(activity.booking_closes_at)}
             </p>
           )}
         </div>
@@ -88,7 +87,7 @@ export default function EscapeRoomHome() {
         <div className="flex flex-col gap-2.5">
           {activity.booking_opens_at && (
             <p className="text-center text-[17px] font-bold">
-              Online booking opens {formatDayTimeTh(activity.booking_opens_at)}
+              Online booking opens {formatDayTimeEn(activity.booking_opens_at)}
             </p>
           )}
           <Button disabled>Book a slot</Button>
@@ -303,15 +302,6 @@ function RoomCard({ activity, rounds }: { activity: ActivityInfo; rounds?: Round
         <Doodle name="ghost" className="w-8 h-auto" />
         <span className="text-xl font-bold">1 คนจองได้ 1 รอบ</span>
       </div>
-      <Link
-        href={paths.rules}
-        className="self-start flex items-center gap-1.5 min-h-11 text-base font-bold text-halloween-orange hover:text-halloween-moon"
-      >
-        Room rules &amp; health
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
     </Card>
   );
 }

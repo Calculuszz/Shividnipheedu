@@ -16,7 +16,7 @@ export const paths = bookingPaths(ACTIVITY);
 export const VENUE_BUILDING = 'อาคารวิศวฯ 100 ปี';
 export const VENUE_FACULTY = 'คณะวิศวกรรมศาสตร์';
 /** Where players register before their round */
-export const REGISTER_POINT = 'ใต้อาคารวิศวฯ 100 ปี ฝั่งลิฟต์ปกติ';
+export const REGISTER_POINT = 'ใต้อาคารวิศวฯ 100 ปี';
 
 export const ROUND_LABELS: RoundLabels = {
   round: (n) => `รอบที่ ${n}`,

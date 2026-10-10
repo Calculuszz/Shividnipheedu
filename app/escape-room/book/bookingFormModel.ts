@@ -10,6 +10,11 @@ export type PlayerDraft = PlayerInput & {
 };
 export type PlayerErrors = Partial<Record<keyof PlayerInput, string>>;
 
+/** Fields in the order they sit on screen: the first one with a problem gets the focus */
+export const FIELD_ORDER = [
+  ['full_name', 'name'], ['student_id', 'sid'], ['phone', 'phone'], ['email', 'email'],
+] as const;
+
 export function newPlayer(key: string, studentId = ''): PlayerDraft {
   return { key, student_id: studentId, full_name: '', phone: '', email: '', pdpa: false, rules: false,
     expanded: true, touched: {}, check: { sid: studentId, status: 'idle' } };
@@ -29,8 +34,6 @@ export function playerErrors(player: PlayerDraft, players: PlayerDraft[]): Playe
   if (!player.phone.trim()) errors.phone = 'กรุณากรอกเบอร์โทรศัพท์';
   else if (!isPhone(player.phone)) errors.phone = 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง เช่น 0812345678 หรือ +66812345678';
   if (!isEmail(player.email.trim())) errors.email = 'กรุณากรอกอีเมลให้ถูกต้อง';
-  if (!player.pdpa) errors.pdpa = 'กรุณายอมรับเงื่อนไข PDPA ของผู้เล่นคนนี้';
-  if (!player.rules) errors.rules = 'กรุณารับทราบกฎของห้องและคำเตือนด้านสุขภาพ';
   return errors;
 }
 
@@ -48,7 +51,7 @@ export function playerComplete(player: PlayerDraft, players: PlayerDraft[]) {
   return Object.keys(playerErrors(player, players)).length === 0 && studentChecked(player);
 }
 
-export function toPlayerInput(player: PlayerDraft): PlayerInput {
+export function toPlayerInput(player: PlayerDraft, consent: { pdpa: boolean; rules: boolean }): PlayerInput {
   return { student_id: player.student_id, full_name: player.full_name.trim(), phone: normalizePhone(player.phone),
-    email: player.email.trim(), pdpa: player.pdpa, rules: player.rules };
+    email: player.email.trim(), pdpa: consent.pdpa, rules: consent.rules };
 }

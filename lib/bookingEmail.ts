@@ -20,7 +20,7 @@ export type RoundInfo = {
 };
 
 const LOCATION = 'อาคารวิศวฯ 100 ปี คณะวิศวกรรมศาสตร์';
-const HAUNTED_POINT = 'ใต้อาคารวิศวฯ 100 ปี ฝั่งลิฟต์ปกติ';
+const HAUNTED_POINT = 'ใต้อาคารวิศวฯ 100 ปี';
 const TZ = 'Asia/Bangkok';
 
 function siteUrl() {

@@ -1,43 +1,69 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useSearchParams, redirect } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams, redirect } from 'next/navigation';
 import Doodle from '@/components/Doodle';
 import { BookingPage, Button, Card, ErrorNotice, InfoNotice, RoundList } from '@/components/booking';
-import { ALMOST_FULL_THRESHOLD } from '@/components/booking/RoundList';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
+import { BookingApiError, checkStudent } from '@/lib/bookingClient';
 import { bookingPaths, isStudentId, roundPick } from '@/lib/bookingRules';
 import { errorMessage } from '@/lib/bookingText';
-import { formatDateEn, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
+import { formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
 import type { Round } from '@/lib/bookingTypes';
+import { checkSession } from '@/lib/studentSession';
+import { rulesAccepted } from '../_shared';
 
 const ACTIVITY = 'escape_room';
-
-function Legend() {
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-halloween-gray" aria-label="Seat availability legend">
-      <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-[3px] bg-halloween-moon" aria-hidden="true" />
-        ว่าง
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-[3px] bg-halloween-orange" aria-hidden="true" />
-        เหลือน้อย (≤{ALMOST_FULL_THRESHOLD})
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-[3px] border-2 border-dashed border-halloween-error" aria-hidden="true" />
-        เต็ม / ปิด
-      </span>
-    </div>
-  );
-}
 
 function RoundPageContent() {
   const searchParams = useSearchParams();
   const stateResult = useBookingState(ACTIVITY);
   const roundsResult = useRounds(ACTIVITY);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [checkError, setCheckError] = useState('');
+  const router = useRouter();
   const paths = bookingPaths(ACTIVITY);
+
+  // Straight from "Book a slot": the logged-in student is the leader. Look up whether they
+  // already have a booking (1 person, 1 round), then show the rounds to pick or to view.
+  const needsCheck = !searchParams.get('leader') && searchParams.get('view') !== 'readonly';
+  useEffect(() => {
+    if (!needsCheck) return;
+    if (!rulesAccepted()) {
+      router.replace(bookingPaths(ACTIVITY).rules);
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      const user = await checkSession();
+      const id = user === 'offline' ? localStorage.getItem('studentId') : user?.student_id;
+      if (!alive) return;
+      if (!id || !isStudentId(id)) {
+        router.replace('/');
+        return;
+      }
+      try {
+        const taken = await checkStudent(ACTIVITY, id);
+        const rounds = bookingPaths(ACTIVITY).rounds;
+        if (alive) router.replace(taken ? `${rounds}?view=readonly` : `${rounds}?leader=${encodeURIComponent(id)}`);
+      } catch (e) {
+        if (alive) setCheckError(e instanceof BookingApiError ? e.message : errorMessage('SERVER_ERROR'));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [needsCheck, router]);
+
+  if (needsCheck) {
+    return (
+      <BookingPage activity={ACTIVITY} backHref={paths.home}>
+        {checkError
+          ? <ErrorNotice>{checkError}</ErrorNotice>
+          : <p role="status" className="py-6 text-center text-halloween-gray">Loading rounds…</p>}
+      </BookingPage>
+    );
+  }
 
   if (stateResult.loading || roundsResult.loading) {
     return (
@@ -72,7 +98,7 @@ function RoundPageContent() {
   const readOnly = searchParams.get('view') === 'readonly';
   const walkin = !readOnly && bookingState.state === 'closed';
   const title = readOnly ? 'ROUNDS' : walkin ? 'WALK-IN ROUNDS' : 'PICK YOUR ROUND';
-  const step = readOnly || walkin ? undefined : 'Step 1 of 2';
+  const step = readOnly || walkin ? undefined : 'Step 2 of 3';
   const leader = searchParams.get('leader');
   const validLeader = leader !== null && isStudentId(leader);
   const selectedRound = rounds.find((round) => round.id === selectedId) ?? null;
@@ -80,9 +106,6 @@ function RoundPageContent() {
   const effectiveSelectedId = selectedRoundIsPickable ? selectedId : null;
   const currentSelectedRound = selectedRoundIsPickable ? selectedRound : null;
 
-  const durationMinutes = rounds.length > 0
-    ? Math.round((Date.parse(rounds[0].ends_at) - Date.parse(rounds[0].starts_at)) / 60_000)
-    : null;
   const continueHref = currentSelectedRound && validLeader
     ? `${paths.book}?${new URLSearchParams({ round: currentSelectedRound.id, leader }).toString()}`
     : undefined;
@@ -101,18 +124,12 @@ function RoundPageContent() {
         <h1 className="display-font whitespace-nowrap pr-16 text-[34px] leading-[1.05] text-halloween-orange -rotate-2 origin-left">{title}</h1>
         <Doodle name="moon" className="absolute -right-1 -top-2 w-11 rotate-[18deg]" />
       </div>
-      {rounds.length > 0 && durationMinutes !== null && (
-        <div className="flex flex-col gap-1">
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-halloween-cream">
-            <span>{formatDateEn(rounds[0].starts_at)}</span>
-            <span className="font-normal text-halloween-gray">{durationMinutes} min / round</span>
-          </p>
-          {!readOnly && !walkin && bookingState.activity.booking_closes_at && (
-            <p className="text-sm font-bold text-halloween-orange">
-              Online booking closes at {formatDayTimeTh(bookingState.activity.booking_closes_at)}
-            </p>
-          )}
-        </div>
+      {rounds.length > 0 && !readOnly && !walkin && (
+        <p className="text-sm text-halloween-gray">
+          <b className="text-halloween-cream">หมายเหตุ:</b> ที่ว่างที่เห็นเป็นที่สำหรับจองออนไลน์เท่านั้น
+          <br />
+          ทุกรอบมีที่แยกไว้ให้สำหรับ walk-in
+        </p>
       )}
 
       {walkin && (
@@ -147,23 +164,15 @@ function RoundPageContent() {
         </div>
       )}
 
-      {!readOnly && !walkin && (
-        <div className="flex flex-col gap-1 text-sm leading-relaxed text-halloween-gray">
-          <p>รอบที่เต็มหรือปิดรับจองแล้วเลือกไม่ได้</p>
-          <p>ที่นั่งที่แสดงคือที่นั่งจองออนไลน์ (1 ที่นั่ง = 1 คน)</p>
-        </div>
-      )}
-
       {rounds.length === 0 ? (
         <InfoNotice>ยังไม่มีรอบให้เลือกในขณะนี้</InfoNotice>
       ) : (
         <>
-          {!walkin && <Legend />}
           {!readOnly && !walkin && !validLeader && (
             <ErrorNotice>
-              ไม่พบรหัสนิสิตของหัวหน้าทีม กรุณากรอกรหัสนิสิตอีกครั้ง
+              ไม่พบรหัสนิสิตของหัวหน้าทีม
               <span className="mt-2 block">
-                <Button href={paths.start} variant="secondary">กลับไปกรอกรหัสนิสิต</Button>
+                <Button href={paths.rounds} variant="secondary">เริ่มใหม่</Button>
               </span>
             </ErrorNotice>
           )}

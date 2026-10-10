@@ -46,6 +46,12 @@ export function formatDateTh(iso: string) {
   });
 }
 
+/** "20 Oct 23:59" (booking open / close times in English sentences) */
+export function formatDayTimeEn(iso: string) {
+  const day = new Date(iso).toLocaleDateString('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' });
+  return `${day} ${formatTime(iso)}`;
+}
+
 /** "20 ต.ค. 23:59" (booking open / close times) */
 export function formatDayTimeTh(iso: string) {
   const day = new Date(iso).toLocaleDateString('th-TH', { timeZone: TZ, day: 'numeric', month: 'short' });

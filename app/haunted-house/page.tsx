@@ -6,7 +6,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { BookingPage, Button, Card, ErrorNotice, InfoNotice, StickyNote, Tape } from '@/components/booking';
 import { useBookingState, useMyBooking, useRounds } from '@/hooks/useBooking';
 import { forgetCode, getRememberedCode } from '@/lib/bookingStorage';
-import { formatDateTh, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
+import { formatDateTh, formatDayTimeEn, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
 import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
 import { ACTIVITY, Hero, REGISTER_POINT, VENUE_BUILDING, VENUE_FACULTY, paths, playMinutes, registerWindow } from './_shared';
 
@@ -58,10 +58,10 @@ export default function HauntedHouseHome() {
 
       {!booked && state.data.state === 'open' && (
         <div className="flex flex-col gap-2.5">
-          <Button href={paths.rules}>Book a round</Button>
+          <Button href={paths.rules} arrow className="!text-xl">Book a round</Button>
           {activity.booking_closes_at && (
             <p className="text-center text-[15px] text-halloween-gray">
-              Online booking closes {formatDayTimeTh(activity.booking_closes_at)}
+              Online booking closes {formatDayTimeEn(activity.booking_closes_at)}
             </p>
           )}
         </div>
@@ -70,7 +70,7 @@ export default function HauntedHouseHome() {
       {!booked && state.data.state === 'not_open' && (
         <div className="flex flex-col gap-2.5">
           {activity.booking_opens_at && (
-            <p className="text-center text-[17px] font-bold">Online booking opens {formatDayTimeTh(activity.booking_opens_at)}</p>
+            <p className="text-center text-[17px] font-bold">Online booking opens {formatDayTimeEn(activity.booking_opens_at)}</p>
           )}
           <Button disabled>Book a round</Button>
           <p className="text-center text-[15px] text-halloween-gray">ยังไม่เปิดรับจอง ปุ่มจะกดได้เมื่อถึงเวลาเปิด</p>
