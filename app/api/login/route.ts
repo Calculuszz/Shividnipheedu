@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { clientIp, hit, underLimit } from '@/lib/rateLimit';
-import { clearStudentSession, sameEmail, sessionStudent, setStudentSession } from '@/lib/studentAuth';
+import { clearStudentSession, sessionStudent, setStudentSession } from '@/lib/studentAuth';
 
 // Only what the student pages use (menu, my ticket, ghost quiz) - never email etc.
 const PUBLIC_FIELDS = 'student_id, full_name, qr_code, attended, attended_at, ghost_result';
@@ -11,7 +11,7 @@ const PUBLIC_FIELDS = 'student_id, full_name, qr_code, attended, attended_at, gh
 const MISS_LIMIT = 20;
 const MISS_WINDOW_MS = 60_000;
 
-// POST { studentId, email } -> log in: both must match the registration.
+// POST { studentId } -> log in (the registration desk checks who people are in person).
 export async function POST(request: Request) {
   try {
     const missKey = `login-miss:${clientIp(request)}`;
@@ -21,22 +21,17 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const studentId = String(body?.studentId ?? '').trim();
-    const email = String(body?.email ?? '').trim();
 
-    const { data, error } =
-      studentId && email
-        ? await supabase.from('registrations').select(`${PUBLIC_FIELDS}, email`).eq('student_id', studentId).maybeSingle()
-        : { data: null, error: null };
+    const { data: user, error } = studentId
+      ? await supabase.from('registrations').select(PUBLIC_FIELDS).eq('student_id', studentId).maybeSingle()
+      : { data: null, error: null };
     if (error) throw error;
 
-    // Same answer for an unknown ID and a wrong email: never confirm which part was right
-    if (!data || !sameEmail(data.email, email)) {
+    if (!user) {
       hit(missKey, MISS_WINDOW_MS);
-      return NextResponse.json({ error: 'NO_MATCH' }, { status: 404 });
+      return NextResponse.json({ error: 'ไม่พบรหัสนิสิตนี้ในระบบ' }, { status: 404 });
     }
 
-    const { email: _email, ...user } = data;
-    void _email;
     const res = NextResponse.json({ success: true, user });
     setStudentSession(res, user.student_id);
     return res;

@@ -13,11 +13,9 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [studentId, setStudentId] = useState('');
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldError, setFieldError] = useState('');
-  const [emailError, setEmailError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -29,11 +27,10 @@ function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const missingId = !studentId.trim();
-    const missingEmail = !email.trim();
-    if (missingId) setFieldError('ยังไม่ได้ใส่รหัสนิสิตเลยนะ');
-    if (missingEmail) setEmailError('ใส่อีเมลที่ใช้ตอนลงทะเบียนด้วยนะ');
-    if (missingId || missingEmail) return;
+    if (!studentId.trim()) {
+      setFieldError('ยังไม่ได้ใส่รหัสนิสิตเลยนะ');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -41,7 +38,7 @@ function LoginForm() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: studentId.trim(), email: email.trim() }),
+        body: JSON.stringify({ studentId: studentId.trim() }),
       });
 
       const data = await response.json();
@@ -55,7 +52,7 @@ function LoginForm() {
       } else {
         setError(
           response.status === 404
-            ? 'รหัสนิสิตหรืออีเมลไม่ตรงกับที่ลงทะเบียนไว้ ลองเช็คอีกทีนะ'
+            ? 'ผีหาชื่อคุณไม่เจอ ลองเช็ครหัสนิสิตอีกทีนะ'
             : response.status === 429
               ? 'ลองผิดหลายครั้งเกินไป รอสักนาทีแล้วลองใหม่นะ'
               : 'ประตูติดขัดนิดหน่อย ลองใหม่อีกครั้งนะ'
@@ -131,38 +128,12 @@ function LoginForm() {
                   placeholder="Enter your student ID"
                   inputMode="numeric"
                   autoComplete="username"
-                  enterKeyHint="next"
+                  enterKeyHint="go"
                   required
                   aria-invalid={!!fieldError}
                   suppressHydrationWarning
                 />
                 {fieldError && <FieldError message={fieldError} />}
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-base text-halloween-cream font-bold mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailError('');
-                  }}
-                  className={`w-full bg-halloween-dark border-2 rounded-lg px-4 py-3 text-halloween-cream text-base focus:border-halloween-orange focus:outline-none transition-colors ${
-                    emailError ? 'border-halloween-error' : 'border-halloween-purple'
-                  }`}
-                  placeholder="อีเมลที่ใช้ตอนลงทะเบียน"
-                  inputMode="email"
-                  autoComplete="email"
-                  enterKeyHint="go"
-                  required
-                  aria-invalid={!!emailError}
-                  suppressHydrationWarning
-                />
-                {emailError && <FieldError message={emailError} />}
               </div>
 
               {error && (

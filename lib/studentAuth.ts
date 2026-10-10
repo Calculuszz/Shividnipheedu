@@ -1,9 +1,8 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { NextResponse } from 'next/server';
 
-// Who is logged in on the student side. Login (student ID + the email they registered
-// with) sets a signed, httpOnly cookie; routes that act for a student read it here
-// instead of trusting a student ID sent by the page.
+// Who is logged in on the student side. Login sets a signed, httpOnly cookie; routes
+// that act for a student read it here instead of trusting a student ID sent by the page.
 export const STUDENT_COOKIE = 'student_session';
 const SESSION_DAYS = 14;
 
@@ -21,10 +20,6 @@ function same(a: string, b: string) {
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 }
-
-/** Emails are compared the way people type them: case and spaces don't matter */
-export const sameEmail = (a: string | null | undefined, b: string | null | undefined) =>
-  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 
 export function setStudentSession(res: NextResponse, studentId: string) {
   const expires = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
