@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { CheckField, LeaderBadge, TextField } from '@/components/booking';
-import { bookingPaths, maskStudentId } from '@/lib/bookingRules';
+import { LeaderBadge, TextField } from '@/components/booking';
+import { maskStudentId } from '@/lib/bookingRules';
 import type { PlayerInput } from '@/lib/bookingTypes';
 import { studentChecked, type PlayerDraft, type PlayerErrors } from './bookingFormModel';
 
@@ -19,7 +18,6 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
   const shown = (field: keyof PlayerInput) => player.touched[field] ? errors[field] : undefined;
   const hasError = Object.entries(errors).some(([field]) => player.touched[field as keyof PlayerInput]);
   const prefix = `player-${player.key}`;
-  const paths = bookingPaths();
 
   return (
     <section id={prefix} aria-label={`Player ${number}`} className={`scroll-mt-4 hand-cut border-2 bg-halloween-charcoal p-4 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.45)] ${hasError ? 'border-halloween-error' : 'border-halloween-orange'}`}>
@@ -60,15 +58,6 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
             onChange={e => onChange('phone', e.target.value)} onBlur={() => onBlur('phone')} error={shown('phone')} />
           <TextField id={`${prefix}-email`} label="Email" required type="email" maxLength={200} autoComplete="email" value={player.email}
             onChange={e => onChange('email', e.target.value)} onBlur={() => onBlur('email')} error={shown('email')} />
-          <div className="flex flex-col gap-2 border-t border-dashed border-halloween-purple pt-3">
-            <CheckField id={`${prefix}-pdpa`} checked={player.pdpa} onChange={v => onChange('pdpa', v)} error={shown('pdpa')}>
-              ยินยอมให้เก็บและใช้ข้อมูลส่วนบุคคล (ชื่อ รหัสนิสิต เบอร์โทร อีเมล) เพื่อการจองและเช็กอินกิจกรรมนี้เท่านั้น ตาม{' '}
-              <Link href={paths.privacy} target="_blank" rel="noopener noreferrer" className="font-bold text-halloween-orange underline">นโยบายความเป็นส่วนตัว</Link>
-            </CheckField>
-            <CheckField id={`${prefix}-rules`} checked={player.rules} onChange={v => onChange('rules', v)} error={shown('rules')}>
-              รับทราบ<Link href={paths.rules} target="_blank" rel="noopener noreferrer" className="font-bold text-halloween-orange underline">กฎของห้อง</Link>และคำเตือนด้านสุขภาพแล้ว
-            </CheckField>
-          </div>
         </fieldset>
       </div>
     </section>

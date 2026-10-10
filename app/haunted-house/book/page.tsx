@@ -3,61 +3,84 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BookingPage, Button, Card, CheckField, ErrorNotice, Sheet, StickyNote, TextField } from '@/components/booking';
+import { BookingIcon, BookingPage, Button, Card, CheckField, ErrorNotice, Sheet, Tape, TextField } from '@/components/booking';
 import { useRounds } from '@/hooks/useBooking';
 import { BookingApiError, book } from '@/lib/bookingClient';
-import { isEmail, roundPick } from '@/lib/bookingRules';
+import { roundPick } from '@/lib/bookingRules';
 import { rememberCode, saveLastBooking } from '@/lib/bookingStorage';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { Round } from '@/lib/bookingTypes';
-import { FACULTIES, YEARS } from '@/lib/registrationOptions';
 import { ACTIVITY, paths, rulesAccepted, useStudent } from '../_shared';
 
-type Field = 'nickname' | 'faculty' | 'year' | 'phone' | 'email' | 'pdpa' | 'confirm';
+type Field = 'nickname' | 'phone' | 'pdpa' | 'confirm';
 
 const digits = (v: string) => v.replace(/[^0-9]/g, '');
-const maskId = (id: string) => `${id.slice(0, 4)}•••${id.slice(-3)}`;
 
-function SelectField({
-  id,
-  label,
-  value,
-  options,
-  placeholder,
-  error,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  options: string[];
-  placeholder: string;
-  error?: string;
-  onChange: (v: string) => void;
-}) {
+// "Everyone who came into this house never left": the house's register, written in blood.
+// The only thing a player writes here is their nickname; the rest comes from registration.
+function RegisterNote({ value, error, onChange }: { value: string; error?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[15px] font-bold text-halloween-cream">
-        {label} <span className="text-halloween-error" aria-hidden="true">*</span>
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-invalid={!!error || undefined}
-        className={`w-full min-h-[52px] px-3.5 py-3 rounded-lg border-2 bg-halloween-dark text-halloween-cream text-[17px] outline-none focus:border-halloween-orange ${
-          error ? 'border-halloween-error' : 'border-halloween-purple'
-        }`}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-      {error && <span className="text-sm font-bold text-halloween-error">{error}</span>}
-    </div>
+    <section className="paper-note paper-aged mx-1 mt-2.5 px-5 pt-[26px] pb-5">
+      <Tape className="left-1/2 -translate-x-1/2 rotate-3 !bg-[#cdb98f]/80" />
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <filter id="bleed">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3.5" />
+        </filter>
+      </svg>
+
+      {/* bloody fingerprint, top right */}
+      <svg width="74" height="58" viewBox="0 0 74 58" aria-hidden="true" className="absolute top-3.5 right-2.5 rotate-[18deg] opacity-55 [filter:url(#bleed)]">
+        <ellipse cx="30" cy="26" rx="22" ry="17" fill="#8a0a10" opacity=".55" />
+        <path d="M14 26c2-9 10-14 18-13s14 7 13 15M18 28c1-7 7-11 13-10s10 6 9 11M22 29c1-4 5-7 9-6s7 4 6 8" fill="none" stroke="#e6d2b0" strokeWidth="1.6" opacity=".7" />
+        <path d="M48 30q14 2 22 10" stroke="#8a0a10" strokeWidth="7" strokeLinecap="round" fill="none" opacity=".5" />
+        <circle cx="66" cy="12" r="2.4" fill="#8a0a10" />
+        <circle cx="8" cy="50" r="1.8" fill="#8a0a10" />
+      </svg>
+
+      <p className="text-[17px] leading-normal">ทุกคนที่เข้ามาในบ้านหลังนี้</p>
+      <div className="relative mt-0.5 pb-[30px]">
+        <p className="relative text-[31px] font-bold leading-[1.15] text-[#8f0b12] [filter:url(#bleed)] [text-shadow:0_1px_0_#5c0007,0_0_8px_rgba(143,11,18,0.3)]">
+          ยังไม่มีใครได้ออกไป
+        </p>
+        {/* blood running off the line */}
+        <svg width="300" height="40" viewBox="0 0 300 40" aria-hidden="true" className="absolute left-0 top-[30px] [filter:url(#bleed)]">
+          <g fill="#8f0b12">
+            <path d="M12 0h5v12a2.5 2.5 0 0 1-5 0z" />
+            <path d="M44 0h7v24a3.5 3.5 0 0 1-7 0z" />
+            <path d="M97 0h4v8a2 2 0 0 1-4 0z" />
+            <path d="M150 0h6v31a3 3 0 0 1-6 0z" />
+            <path d="M205 0h5v16a2.5 2.5 0 0 1-5 0z" />
+            <path d="M262 0h8v20a4 4 0 0 1-8 0z" />
+            <circle cx="47.5" cy="34" r="2.6" />
+            <circle cx="153" cy="39" r="1.6" />
+          </g>
+        </svg>
+      </div>
+
+      <div className="mt-2.5">
+        <label htmlFor="hh-nick" className="block text-base font-bold">
+          คนต่อไป มีชื่อว่า <span className="text-[var(--blood)]" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="hh-nick"
+          type="text"
+          required
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="ชื่อเล่นของคุณ"
+          autoComplete="nickname"
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'hh-nick-err' : undefined}
+          className="block w-full border-0 border-b-2 border-dashed border-[#160204]/50 bg-transparent px-0.5 pb-0.5 text-[30px] font-bold text-[#a3101a] outline-none placeholder:font-normal placeholder:text-[#160204]/30 focus:border-[#a3101a] [text-shadow:0_0_1px_#a3101a,0_0_7px_rgba(163,16,26,0.35)] placeholder:[text-shadow:none]"
+        />
+        {error && (
+          <p id="hh-nick-err" className="mt-1.5 text-sm font-bold text-[var(--blood)]">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -68,7 +91,7 @@ function BookForm() {
   const rounds = useRounds(ACTIVITY);
 
   const [roundId, setRoundId] = useState(params.get('round') ?? '');
-  const [form, setForm] = useState({ nickname: '', faculty: '', year: '', phone: '', email: '' });
+  const [form, setForm] = useState({ nickname: '', phone: '' });
   const [pdpa, setPdpa] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -111,10 +134,7 @@ function BookForm() {
   const validate = () => {
     const e: Partial<Record<Field, string>> = {};
     if (!form.nickname.trim()) e.nickname = 'ใส่ชื่อเล่นด้วยนะ';
-    if (!form.faculty) e.faculty = 'เลือกคณะด้วยนะ';
-    if (!form.year) e.year = 'เลือกชั้นปีด้วยนะ';
     if (!/^0[0-9]{9}$/.test(digits(form.phone))) e.phone = 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก เช่น 0812345678';
-    if (!isEmail(form.email)) e.email = 'อีเมลไม่ถูกต้อง';
     if (!pdpa) e.pdpa = 'ติ๊กยินยอมการเก็บข้อมูลก่อนนะ';
     if (!confirm) e.confirm = 'ติ๊กยืนยันความถูกต้องก่อนนะ';
     setErrors(e);
@@ -133,12 +153,11 @@ function BookForm() {
             student_id: student.student_id,
             full_name: student.full_name,
             phone: digits(form.phone),
-            email: form.email.trim(),
+            // Email, faculty and year come from the event registration (filled in on the server)
+            email: '',
             pdpa: true,
             rules: rulesAccepted(),
             nickname: form.nickname.trim(),
-            faculty: form.faculty,
-            year: form.year,
           },
         ],
       });
@@ -180,43 +199,46 @@ function BookForm() {
       <Card className="flex flex-col -rotate-[0.6deg]">
         <div className="flex items-center justify-between">
           <span className="text-[15px] font-bold text-halloween-moon">YOUR ROUND</span>
-          <Link href={paths.rounds} className="min-h-11 flex items-center text-[15px] font-bold text-halloween-orange">
+          <Link href={paths.rounds} className="min-h-11 flex items-center text-lg font-bold text-halloween-orange">
             Change
           </Link>
         </div>
-        <span className="text-[15px] text-halloween-gray">รอบที่ {round.round_no}</span>
+        <span className="flex items-center gap-1.5 text-[15px] text-halloween-gray">
+          <BookingIcon name="round" size={16} />
+          รอบที่ {round.round_no}
+        </span>
         <span className="text-[34px] leading-[1.05] font-bold">{formatTimeRange(round.starts_at, round.ends_at)}</span>
         <div className="my-3.5 border-t-2 border-dashed border-halloween-moon/45" />
-        <span className="text-[17px] font-bold">ลงทะเบียนหน้างาน {formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)}</span>
+        <span className="flex items-center gap-2 text-[17px] font-bold">
+          <BookingIcon name="clock" size={20} />
+          ลงทะเบียนหน้างาน {formatTimeRange(round.checkin_opens_at, round.checkin_closes_at)}
+        </span>
       </Card>
 
-      <StickyNote title="ข้อมูลจากตอนลงทะเบียนงาน" className="mt-2">
-        <div className="flex justify-between gap-3 py-1">
-          <span className="opacity-75">ชื่อ-นามสกุล</span>
-          <b className="text-right">{student.full_name}</b>
-        </div>
-        <div className="flex justify-between gap-3 py-1">
-          <span className="opacity-75">รหัสนิสิต</span>
-          <b>{maskId(student.student_id)}</b>
-        </div>
-      </StickyNote>
+      <RegisterNote value={form.nickname} error={errors.nickname} onChange={(v) => set('nickname', v)} />
 
-      <TextField id="hh-nick" label="ชื่อเล่น" required value={form.nickname} onChange={(e) => set('nickname', e.target.value)} error={errors.nickname} autoComplete="nickname" />
-      <SelectField id="hh-faculty" label="คณะ" value={form.faculty} options={FACULTIES} placeholder="เลือกคณะ" error={errors.faculty} onChange={(v) => set('faculty', v)} />
-      <SelectField id="hh-year" label="ชั้นปี" value={form.year} options={YEARS} placeholder="เลือกชั้นปี" error={errors.year} onChange={(v) => set('year', v)} />
-      <TextField id="hh-phone" label="เบอร์โทรศัพท์" required inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} hint="ตัวเลข 10 หลัก" error={errors.phone} />
-      <TextField id="hh-email" label="อีเมล" required type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(e) => set('email', e.target.value)} hint="ส่งตั๋วไปที่อีเมลนี้" error={errors.email} />
+      <TextField
+        id="hh-phone"
+        label="เบอร์โทรที่ติดต่อได้วันงาน"
+        icon={<BookingIcon name="phone" size={18} />}
+        required
+        inputMode="tel"
+        autoComplete="tel"
+        value={form.phone}
+        onChange={(e) => set('phone', e.target.value)}
+        error={errors.phone}
+      />
 
       <CheckField id="hh-pdpa" checked={pdpa} onChange={(v) => { setPdpa(v); setErrors((e) => ({ ...e, pdpa: undefined })); }} error={errors.pdpa}>
-        ยินยอมให้เก็บชื่อ รหัสนิสิต ชื่อเล่น คณะ ชั้นปี เบอร์โทร และอีเมล เพื่อใช้จัดกิจกรรมบ้านผีสิงเท่านั้น และลบหลังจบงาน
+        ยินยอมให้เก็บชื่อเล่นและเบอร์โทร และใช้ข้อมูลจากตอนลงทะเบียนงาน (ชื่อ รหัสนิสิต คณะ ชั้นปี อีเมล) เพื่อจัดกิจกรรมบ้านผีสิงเท่านั้น และลบหลังจบงาน
       </CheckField>
       <CheckField id="hh-confirm" checked={confirm} onChange={(v) => { setConfirm(v); setErrors((e) => ({ ...e, confirm: undefined })); }} error={errors.confirm}>
-        ยืนยันความถูกต้อง หากการจองสำเร็จแล้วจะไม่สามารถแก้ไขข้อมูล, เปลี่ยนรอบ หรือยกเลิกการจองได้
+        ยืนยันความถูกต้อง หากการจองสำเร็จแล้วจะไม่สามารถแก้ไขข้อมูล เปลี่ยนรอบ หรือยกเลิกการจองได้
       </CheckField>
 
       {submitError && <ErrorNotice>{submitError}</ErrorNotice>}
 
-      <Button onClick={submit} loading={sending} loadingText="กำลังจอง…">
+      <Button onClick={submit} loading={sending} loadingText="กำลังจอง…" arrow>
         Confirm booking
       </Button>
 

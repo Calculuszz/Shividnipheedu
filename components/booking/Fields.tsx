@@ -13,14 +13,17 @@ type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> &
   error?: string;
   /** Digits look better spaced out (student ID, booking code) */
   mono?: boolean;
+  /** Small icon before the label */
+  icon?: ReactNode;
 };
 
 // Text box from the booking design: 52px tall, purple border, orange on focus.
-export function TextField({ id, label, required, hint, error, mono, ...input }: TextFieldProps) {
+export function TextField({ id, label, required, hint, error, mono, icon, ...input }: TextFieldProps) {
   const describedBy = error ? `${id}-err` : hint ? `${id}-hint` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[15px] font-bold text-halloween-cream">
+      <label htmlFor={id} className={`text-[15px] font-bold text-halloween-cream ${icon ? 'flex items-center gap-1.5' : ''}`}>
+        {icon}
         {label} {required && <span className="text-halloween-error" aria-hidden="true">*</span>}
       </label>
       <input

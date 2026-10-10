@@ -23,6 +23,23 @@ export function MoonCorner() {
   );
 }
 
+// The rules page has to be ticked before rounds and the form (same as the Haunted House)
+const RULES_KEY = 'escape:rules-accepted';
+export function acceptRules() {
+  try {
+    sessionStorage.setItem(RULES_KEY, '1');
+  } catch {
+    // Private mode: the rules page asks again
+  }
+}
+export function rulesAccepted() {
+  try {
+    return sessionStorage.getItem(RULES_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function ChulaOnlyNote() {
   return (
     <StickyNote title="Chula students only">Escape Room สงวนสิทธิ์สำหรับนิสิตจุฬาลงกรณ์มหาวิทยาลัยเท่านั้น</StickyNote>

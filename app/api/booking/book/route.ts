@@ -52,10 +52,10 @@ export async function POST(request: Request) {
     const ids = players.map((p) => p.student_id);
     const { data: registered, error: regError } = await supabaseAdmin
       .from('registrations')
-      .select('student_id')
+      .select('student_id, email, department, year')
       .in('student_id', ids);
     if (regError) throw regError;
-    const known = new Set((registered ?? []).map((r) => r.student_id));
+    const known = new Map((registered ?? []).map((r) => [r.student_id, r]));
     const missing = ids.find((id) => !known.has(id));
     if (missing) return NextResponse.json({ error: 'NOT_REGISTERED', detail: missing }, { status: 400 });
 
@@ -68,6 +68,16 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (roundError) throw roundError;
     const haunted = roundRow?.activity_id === 'haunted_house';
+    if (haunted) {
+      // The form only asks for nickname and phone: email, faculty and year are what
+      // the student gave when registering for the event.
+      for (const p of players) {
+        const reg = known.get(p.student_id)!;
+        p.email = reg.email || p.email;
+        p.faculty = reg.department || p.faculty;
+        p.year = reg.year || p.year;
+      }
+    }
     if (
       haunted &&
       players.some(

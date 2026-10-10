@@ -16,6 +16,15 @@
   /* Error: coral red leaning off the palette orange, so it never reads as the lime 'success' */
   --halloween-error: #ff6b5b;
 
+  /* Paper notes (status note on My booking, the Haunted House register) */
+  --paper: #f5eee6;
+  --paper-ink: #24033a;
+  --blood: #c0261d;
+  --stamp: #4d6b0f;
+  /* Main buttons: raised on a hard shadow so they stand out from same-colour accents */
+  --btn-bg: #ea7b29;
+  --btn-shadow: #bbd03c;
+
   --background: var(--halloween-dark);
   --foreground: var(--halloween-cream);
 }
@@ -187,6 +196,66 @@ body > * {
   background: rgba(74, 49, 103, 0.3);
 }
 
+/* ===== Main button: sits on a hard shadow, sinks into it when pressed ===== */
+.btn-raised {
+  background: var(--btn-bg);
+  color: var(--halloween-dark);
+  border: 2px solid var(--halloween-dark);
+  box-shadow: 0 6px 0 var(--btn-shadow);
+  margin-bottom: 6px;
+  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
+}
+.btn-raised:hover {
+  filter: brightness(1.06);
+}
+.btn-raised:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--btn-shadow);
+}
+
+/* ===== Paper note: cream paper, tape, red ink (story page, My booking, the house register) ===== */
+.paper-note {
+  position: relative;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 6px 14px 8px 16px;
+  transform: rotate(-1deg);
+  box-shadow: 0 10px 20px -8px rgba(0, 0, 0, 0.6);
+}
+.paper-aged {
+  background-color: #e6d2b0;
+  background-image:
+    radial-gradient(circle at 86% 12%, rgba(120, 72, 30, 0.22) 0 26px, transparent 46px),
+    radial-gradient(ellipse at 10% 92%, rgba(120, 72, 30, 0.18) 0 30px, transparent 70px),
+    radial-gradient(circle at 70% 64%, rgba(140, 20, 24, 0.12) 0 6px, transparent 14px);
+  box-shadow: 0 14px 26px -8px rgba(0, 0, 0, 0.75);
+}
+.ink {
+  color: var(--blood);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--blood);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.ink-struck {
+  text-decoration: line-through;
+  text-decoration-color: var(--blood);
+  text-decoration-thickness: 3px;
+}
+.paper-stamp {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  padding: 4px 10px;
+  border: 3px solid var(--stamp);
+  border-radius: 6px;
+  color: var(--stamp);
+  font-size: 16px;
+  font-weight: 700;
+  transform: rotate(-8deg);
+}
+
 /* ===== Hand-made touches ===== */
 
 /* Cards cut slightly unevenly, like paper cut by hand */
@@ -297,6 +366,12 @@ body > * {
   --halloween-moon: #ecd9bd;
   /* Lighter than the red accent so an error never looks like a button */
   --halloween-error: #ff9a85;
+  --paper: #ecd9bd;
+  --paper-ink: #160204;
+  --blood: #b3141c;
+  --stamp: #5a1a20;
+  --btn-bg: #ecd9bd;
+  --btn-shadow: #e5383b;
 }
 
 .theme-haunted .image-background {
