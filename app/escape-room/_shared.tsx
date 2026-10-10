@@ -2,21 +2,6 @@ import { StickyNote, InfoNotice, Card, Markdown } from '@/components/booking';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 import type { ActivityInfo } from '@/lib/bookingTypes';
 
-// The event's Instagram until the room has its own contact
-export const CONTACT_LINE = (
-  <>
-    ติดต่อผู้จัด: IG{' '}
-    <a
-      href="https://www.instagram.com/shividni.pheedu/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="font-bold text-halloween-orange hover:text-halloween-moon"
-    >
-      @shividni.pheedu
-    </a>
-  </>
-);
-
 // Not in the API yet
 export const VENUE_BUILDING = 'อาคารวิศวฯ 100 ปี';
 export const VENUE_FACULTY = 'คณะวิศวกรรมศาสตร์';

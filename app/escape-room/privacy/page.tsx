@@ -1,5 +1,5 @@
 import { BookingPage, Card } from '@/components/booking';
-import { CONTACT_LINE, MoonCorner } from '../_shared';
+import { MoonCorner } from '../_shared';
 import { bookingPaths } from '@/lib/bookingRules';
 
 const paths = bookingPaths('escape_room');
@@ -46,7 +46,6 @@ export default function PrivacyPage() {
         <p className="text-base leading-relaxed">ขอดู แก้ไข หรือลบข้อมูลได้ที่ Line ID : starter2157</p>
       </Card>
 
-      <p className="text-center text-[15px] leading-normal text-halloween-gray">{CONTACT_LINE}</p>
     </BookingPage>
   );
 }
