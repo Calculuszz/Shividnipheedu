@@ -64,9 +64,9 @@ export async function roundInfo(roundId: string): Promise<RoundInfo | null> {
 
 function roundBlock(r: RoundInfo) {
   const rows: [string, string][] = [
-    ['กิจกรรม', r.room_name ? `${r.activity_name} · ${r.room_name}` : r.activity_name],
+    ['กิจกรรม', r.room_name ? `${r.activity_name} (${r.room_name})` : r.activity_name],
     ['วันที่', date(r.starts_at)],
-    ['รอบ', `รอบ ${r.round_no} · ${time(r.starts_at)}–${time(r.ends_at)} น.`],
+    ['รอบ', `รอบที่ ${r.round_no} เล่น ${time(r.starts_at)}–${time(r.ends_at)} น.`],
     ['เช็กอินที่บูธ', `${time(r.checkin_opens_at)}–${time(r.checkin_closes_at)} น.`],
     ['สถานที่', LOCATION],
   ];
@@ -122,7 +122,7 @@ async function qrAttachment(code: string) {
 async function send(to: Person, subject: string, heading: string, body: string, r: RoundInfo, code?: string) {
   const result = await sendEmail({
     to: to.email,
-    subject: `${subject} · ${r.activity_name}`,
+    subject: `${subject} (${r.activity_name})`,
     html: layout(to.full_name, heading, body, r.activity_id),
     attachments: code ? await qrAttachment(code) : undefined,
   });
@@ -151,7 +151,7 @@ ${roundBlock(r)}${codeBlock(p.code)}${checkinRule}
 }
 
 // Haunted House: one person per booking, no changes or cancelling, register at the point
-export function hauntedConfirmed(p: Person & { code: string }, r: RoundInfo) {
+function hauntedBlock(r: RoundInfo) {
   const rows: [string, string][] = [
     ['กิจกรรม', 'บ้านผีสิง (Haunted House)'],
     ['วันที่', date(r.starts_at)],
@@ -159,18 +159,21 @@ export function hauntedConfirmed(p: Person & { code: string }, r: RoundInfo) {
     ['ลงทะเบียน', `${time(r.checkin_opens_at)}–${time(r.checkin_closes_at)} น.`],
     ['จุดลงทะเบียน', HAUNTED_POINT],
   ];
-  const table = `<table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:15px">${rows
+  return `<table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:15px">${rows
     .map(
       ([k, v]) =>
         `<tr><td style="padding:8px 0;color:#7a0a19;font-weight:bold;width:120px;vertical-align:top">${k}</td><td style="padding:8px 0;color:#2d2d2d">${esc(v)}</td></tr>`
     )
     .join('')}</table>`;
+}
+
+export function hauntedConfirmed(p: Person & { code: string }, r: RoundInfo) {
   return send(
     p,
     'ยืนยันการจองบ้านผีสิง',
     'จองบ้านผีสิงสำเร็จแล้ว',
     `<p style="font-size:16px">การจองลงทะเบียนเข้าร่วมกิจกรรมบ้านผีสิงของท่านได้เสร็จสมบูรณ์แล้ว กรุณามาลงทะเบียนตามเวลาที่กำหนด และโปรดมาก่อนเวลาเล่นกิจกรรมขั้นต่ำ 10 นาที ไม่เช่นนั้นจะถือว่าสละสิทธิ์</p>
-${table}${codeBlock(p.code)}
+${hauntedBlock(r)}${codeBlock(p.code)}
 <p style="font-size:14px;color:#666666">การจองนี้แก้ไขข้อมูล เปลี่ยนรอบ หรือยกเลิกไม่ได้</p>`,
     r,
     p.code
@@ -218,15 +221,34 @@ export function removedFromTeam(p: Person, r: RoundInfo) {
   );
 }
 
-export function seatReleased(p: Person, r: RoundInfo) {
+// Sent shortly before a round's check-in opens (see /api/booking/remind), with the QR to show at the desk
+export function checkinReminder(p: Person & { code: string }, r: RoundInfo) {
+  const opens = time(r.checkin_opens_at);
+  const closes = time(r.checkin_closes_at);
+  if (r.activity_id === 'haunted_house') {
+    return send(
+      p,
+      `ใกล้ถึงเวลาลงทะเบียน รอบที่ ${r.round_no}`,
+      `เปิดลงทะเบียน ${opens} น.`,
+      `<p style="font-size:16px">ลงทะเบียนรอบที่ ${r.round_no} ได้ ${opens}–${closes} น. ที่${HAUNTED_POINT}</p>
+<p style="font-size:16px;font-weight:bold;color:#b3261e">มาช้ากว่า ${closes} น. ถือว่าสละสิทธิ์ทุกกรณี</p>
+${hauntedBlock(r)}${codeBlock(p.code)}`,
+      r,
+      p.code
+    );
+  }
   return send(
     p,
-    'ที่นั่งถูกปล่อยแล้ว',
-    'ที่นั่งของคุณถูกปล่อยแล้ว',
-    `<p style="font-size:16px">คุณไม่ได้เช็กอินภายใน ${time(r.checkin_closes_at)} น. ที่นั่งจึงถูกปล่อยให้ walk-in ตามกติกา ยังมาเล่นแบบ walk-in ได้ถ้ารอบยังมีที่ ติดต่อที่บูธ</p>${roundBlock(r)}`,
-    r
+    `ใกล้ถึงเวลาเช็กอิน รอบที่ ${r.round_no}`,
+    `เปิดเช็กอิน ${opens} น.`,
+    `<p style="font-size:16px">เช็กอินรอบที่ ${r.round_no} ที่บูธได้ ${opens}–${closes} น.</p>
+<p style="font-size:16px;font-weight:bold;color:#b3261e">มาไม่ทัน ${closes} น. ที่นั่งจะถูกปล่อยให้ walk-in</p>
+${roundBlock(r)}${codeBlock(p.code)}`,
+    r,
+    p.code
   );
 }
+
 
 export function newLeader(p: Person, r: RoundInfo) {
   return send(
