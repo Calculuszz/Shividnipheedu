@@ -51,7 +51,7 @@ export default function EscapeRoomHome() {
   const myBookingData = code && !myBooking.error ? myBooking.data : null;
 
   return (
-    <BookingPage backHref="/menu">
+    <BookingPage backHref="/menu" footer={<Footer />}>
       <Hero />
 
       {myBookingData && <MyBookingSummary booking={myBookingData} />}
@@ -100,7 +100,6 @@ export default function EscapeRoomHome() {
 
       <HealthCard activity={activity} />
 
-      <Footer />
     </BookingPage>
   );
 }
