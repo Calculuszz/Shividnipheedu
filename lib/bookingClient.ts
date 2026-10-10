@@ -74,18 +74,23 @@ export function getRounds(activity: ActivityId) {
 }
 
 export async function checkStudent(activity: ActivityId, studentId: string) {
-  const data = await call<{ taken: boolean }>('/api/booking/check-student', {
+  return (await studentStatus(activity, studentId)).taken;
+}
+
+/** Booked already, and registered for the event (only registered students can be booked) */
+export function studentStatus(activity: ActivityId, studentId: string) {
+  return call<{ taken: boolean; registered: boolean }>('/api/booking/check-student', {
     body: { activity, student_id: studentId },
   });
-  return data.taken;
 }
 
 export function book(request: BookRequest) {
   return call<BookResult>('/api/booking/book', { body: request });
 }
 
-export function findBooking(code: string) {
-  return call<MyBooking>('/api/booking/find', { body: { code } });
+/** `activity`: the page's own activity. Another activity's code answers WRONG_ACTIVITY. */
+export function findBooking(code: string, activity?: ActivityId) {
+  return call<MyBooking>('/api/booking/find', { body: { code, activity } });
 }
 
 export function changeRound(code: string, roundId: string) {

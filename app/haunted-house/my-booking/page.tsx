@@ -16,7 +16,7 @@ export default function HauntedMyBookingPage() {
   const remembered = useSyncExternalStore(noSubscription, () => getRememberedCode(ACTIVITY), () => null);
   const [typedCode, setTypedCode] = useState<string | null>(null);
   const code = typedCode ?? remembered;
-  const booking = useMyBooking(code);
+  const booking = useMyBooking(code, ACTIVITY);
 
   if (code && booking.loading) {
     return (
@@ -41,7 +41,7 @@ function FindTicket({ onFound }: { onFound: (code: string) => void }) {
     setBusy(true);
     setError('');
     try {
-      const data = await findBooking(value);
+      const data = await findBooking(value, ACTIVITY);
       if (data.activity?.id !== ACTIVITY) throw new BookingApiError(404, 'NOT_FOUND');
       rememberCode(ACTIVITY, data.me.code);
       onFound(data.me.code);

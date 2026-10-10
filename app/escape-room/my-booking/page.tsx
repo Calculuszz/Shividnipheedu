@@ -379,7 +379,7 @@ export default function MyBookingPage() {
     setLoading(true);
     setError('');
     try {
-      const result = await findBooking(trimmed);
+      const result = await findBooking(trimmed, DEFAULT_ACTIVITY);
       setBooking(result);
       setCode(result.me.code);
 
@@ -394,7 +394,7 @@ export default function MyBookingPage() {
     } catch (caught) {
       if (caught instanceof BookingApiError && caught.status === 404) {
         if (remembered) forgetCode(DEFAULT_ACTIVITY);
-        setError('No booking found');
+        setError(caught.code === 'WRONG_ACTIVITY' ? caught.message : 'No booking found');
       } else {
         setError(caught instanceof Error ? caught.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง');
       }

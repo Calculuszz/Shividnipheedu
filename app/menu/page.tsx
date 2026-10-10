@@ -8,6 +8,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 import { booByName } from '@/app/what-ghost/quiz';
 import PickABooCard from './PickABooCard';
+import { checkSession, logOut } from '@/lib/studentSession';
 
 // Plain items are orange; the booking items take their activity's theme colours
 const THEMES = {
@@ -45,12 +46,23 @@ export default function MenuPage() {
 
     const data = JSON.parse(userDataStr);
     setUserData(data);
+
+    // The server's session decides: none (expired, or logged in before email was
+    // asked) means logging in again
+    let alive = true;
+    checkSession().then((user) => {
+      if (!alive) return;
+      if (user === null) router.push('/');
+      else if (user !== 'offline') setUserData(user);
+    });
+    return () => {
+      alive = false;
+    };
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setNavigating(true);
-    localStorage.removeItem('studentId');
-    localStorage.removeItem('userData');
+    await logOut();
     router.push('/');
   };
 

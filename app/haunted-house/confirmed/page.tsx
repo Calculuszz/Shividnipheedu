@@ -11,8 +11,9 @@ import type { BookResult } from '@/lib/bookingTypes';
 import { ACTIVITY, REGISTER_POINT, paths } from '../_shared';
 
 const noSubscription = () => () => {};
+const readLastRaw = () => readLastBookingRaw(ACTIVITY);
 function useLastBooking() {
-  const raw = useSyncExternalStore(noSubscription, readLastBookingRaw, () => undefined);
+  const raw = useSyncExternalStore(noSubscription, readLastRaw, () => undefined);
   return useMemo(() => (raw === undefined ? undefined : parseLastBooking(raw)), [raw]);
 }
 

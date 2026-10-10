@@ -19,8 +19,9 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 // Server snapshot undefined = not read yet, avoids a hydration mismatch
 const noSubscription = () => () => {};
+const readLastRaw = () => readLastBookingRaw(ACTIVITY);
 function useLastBooking() {
-  const raw = useSyncExternalStore(noSubscription, readLastBookingRaw, () => undefined);
+  const raw = useSyncExternalStore(noSubscription, readLastRaw, () => undefined);
   const result = useMemo(() => (raw === undefined ? undefined : parseLastBooking(raw)), [raw]);
   return result;
 }

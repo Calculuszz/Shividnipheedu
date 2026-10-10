@@ -1,6 +1,6 @@
 import { NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { badRequest, normalizeCode, readJson, ruleError, serverError } from '@/lib/booking';
+import { badRequest, normalizeCode, readJson, refuseFinalBooking, ruleError, serverError } from '@/lib/booking';
 import { memberCancelled, newLeader, roundInfo, seatCancelled, sendAll } from '@/lib/bookingEmail';
 import { codeMiss, codeMissLimited } from '@/lib/bookingCodeLimit';
 
@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   if (!code) return badRequest();
 
   try {
+    const final = await refuseFinalBooking(code);
+    if (final) return final;
     const { data, error } = await supabaseAdmin.rpc('booking_cancel_seat', { p_code: code });
     if (error) {
       codeMiss(request, error);

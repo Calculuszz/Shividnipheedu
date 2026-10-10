@@ -93,6 +93,8 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 | `ADMIN_PASSWORD_ESCAPE_ROOM` / `ADMIN_PASSWORD_HAUNTED_HOUSE` | ➖ | Escape Room / Haunted House staff. Each password must be different |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | ➖ | Without them, registration still works but no email is sent |
 | `NEXT_PUBLIC_SITE_URL` | ➖ | Falls back to the Vercel production domain, then `http://localhost:3000` |
+| `STUDENT_SESSION_SECRET` | ➖ | Signs the student login cookie. Falls back to `ADMIN_SESSION_SECRET`, then the service role key |
+| `CRON_SECRET` | ➖ | Bearer token for `/api/booking/remind`. Copy it from Supabase › Vault › `reminder_cron_secret` |
 
 ### 4. Run the dev server
 

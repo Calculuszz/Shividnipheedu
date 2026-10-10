@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation';
 import { BookingPage, Button, Card, ErrorNotice } from '@/components/booking';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
-import { book, BookingApiError, checkStudent } from '@/lib/bookingClient';
+import { book, BookingApiError, studentStatus } from '@/lib/bookingClient';
 import { bookingPaths, isStudentId, roundPick } from '@/lib/bookingRules';
 import { rememberCode, saveLastBooking } from '@/lib/bookingStorage';
 import { errorMessage } from '@/lib/bookingText';
@@ -63,10 +63,11 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     setPlayers(current => current.map(p => p.key === key && p.student_id === sid
       ? { ...p, check: { sid, status: 'checking', error: p.check.sid === sid ? p.check.error : undefined }, touched: { ...p.touched, student_id: true } } : p));
     try {
-      const taken = await checkStudent(ACTIVITY, sid);
+      const { taken, registered } = await studentStatus(ACTIVITY, sid);
       if (requests.current.get(key) !== token) return;
+      const blocked = !registered ? errorMessage('NOT_REGISTERED', sid) : taken ? errorMessage('ALREADY_BOOKED') : null;
       setPlayers(current => current.map(p => p.key === key && p.student_id === sid
-        ? { ...p, check: taken ? { sid, status: 'blocked', error: errorMessage('ALREADY_BOOKED') } : { sid, status: 'available' } } : p));
+        ? { ...p, check: blocked ? { sid, status: 'blocked', error: blocked } : { sid, status: 'available' } } : p));
     } catch (e) {
       if (requests.current.get(key) !== token) return;
       const message = e instanceof BookingApiError ? e.message : errorMessage('SERVER_ERROR');
@@ -170,7 +171,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
       }
       if (!roundPick(selected, players.length).selectable) { setFormError(errorMessage('ROUND_CLOSED')); return; }
       const result = await book({ round_id: roundId, players: players.map(toPlayerInput), notes });
-      saveLastBooking(result);
+      saveLastBooking(ACTIVITY, result);
       rememberCode(ACTIVITY, result.code);
       setSubmitted(true);
       router.push(paths.confirmed);

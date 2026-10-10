@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getActivity, normalizeCode, readJson, serverError } from '@/lib/booking';
+import { changesAllowed, getActivity, normalizeCode, readJson, serverError } from '@/lib/booking';
 import { codeMissLimited, recordCodeMiss } from '@/lib/bookingCodeLimit';
 
 type LivePlayer = {
@@ -22,7 +22,8 @@ type LivePlayer = {
 export async function POST(request: Request) {
   if (codeMissLimited(request)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
 
-  const code = normalizeCode((await readJson(request)).code);
+  const body = await readJson(request);
+  const code = normalizeCode(body.code);
   try {
     const { data: me, error } = code
       ? await supabaseAdmin
@@ -35,6 +36,10 @@ export async function POST(request: Request) {
     if (!me) {
       recordCodeMiss(request);
       return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
+    }
+    // Each activity's pages only open their own bookings
+    if (typeof body.activity === 'string' && body.activity !== me.activity_id) {
+      return NextResponse.json({ error: 'WRONG_ACTIVITY' }, { status: 404 });
     }
 
     const [team, round, booking, activity] = await Promise.all([
@@ -56,7 +61,8 @@ export async function POST(request: Request) {
     if (booking.error) throw booking.error;
 
     const now = Date.now();
-    const active = me.live_status === 'booked';
+    // Haunted House bookings can't be changed or cancelled (the routes refuse too)
+    const active = me.live_status === 'booked' && changesAllowed(me.activity_id);
     const leader = me.is_leader && active;
     const beforeBookingClose = !activity?.booking_closes_at || now <= Date.parse(activity.booking_closes_at);
     const beforeCheckinClose = now <= Date.parse(me.checkin_closes_at);

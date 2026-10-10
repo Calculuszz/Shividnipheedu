@@ -6,7 +6,7 @@ import { clientIp, hit, underLimit } from '@/lib/rateLimit';
 const LIMIT = 40;
 const WINDOW_MS = 60_000;
 
-// POST { activity, student_id } -> { taken } only. Never says which round (page 2a, form 3).
+// POST { activity, student_id } -> { taken, registered } only. Never says which round (page 2a, form 3).
 export async function POST(request: Request) {
   const key = `check-student:${clientIp(request)}`;
   if (!underLimit(key, LIMIT)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
@@ -19,12 +19,13 @@ export async function POST(request: Request) {
   if (!/^[0-9]{10}$/.test(studentId)) return badRequest('INVALID_STUDENT_ID');
 
   try {
-    const { data, error } = await supabaseAdmin.rpc('booking_student_taken', {
-      p_activity_id: activity,
-      p_student_id: studentId,
-    });
-    if (error) throw error;
-    return NextResponse.json({ taken: data === true });
+    const [taken, reg] = await Promise.all([
+      supabaseAdmin.rpc('booking_student_taken', { p_activity_id: activity, p_student_id: studentId }),
+      supabaseAdmin.from('registrations').select('student_id').eq('student_id', studentId).maybeSingle(),
+    ]);
+    if (taken.error) throw taken.error;
+    if (reg.error) throw reg.error;
+    return NextResponse.json({ taken: taken.data === true, registered: !!reg.data });
   } catch (error) {
     console.error('Check student error:', error);
     return serverError();

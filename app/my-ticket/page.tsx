@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import LoadingScreen from '@/components/LoadingScreen';
+import { checkSession, type SessionUser } from '@/lib/studentSession';
 
 export default function MyTicketPage() {
   const router = useRouter();
@@ -12,32 +13,20 @@ export default function MyTicketPage() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      // Check if user is logged in
-      const studentId = localStorage.getItem('studentId');
-
-      if (!studentId) {
-        router.push('/');
-        return;
+      // Fresh from the server (latest attended status); no session means logging in again
+      const fresh = await checkSession();
+      let data: SessionUser | null = fresh === 'offline' ? null : fresh;
+      if (fresh === 'offline') {
+        try {
+          data = JSON.parse(localStorage.getItem('userData') ?? 'null');
+        } catch {}
       }
-
-      // Fetch fresh data (via the server) to get latest attended status
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId }),
-      }).catch(() => null);
-      const data = response && response.ok ? (await response.json()).user : null;
-
       if (!data) {
-        console.error('Error fetching user data');
         router.push('/');
         return;
       }
 
       setUserData(data);
-
-      // Update localStorage with fresh data
-      localStorage.setItem('userData', JSON.stringify(data));
 
       // Generate QR code
       QRCode.toDataURL(data.qr_code, {

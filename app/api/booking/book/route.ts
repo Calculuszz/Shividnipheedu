@@ -4,6 +4,7 @@ import { badRequest, isUuid, readJson, ruleError, serverError, str } from '@/lib
 import { bookingConfirmed, hauntedConfirmed, roundInfo, sendAll } from '@/lib/bookingEmail';
 import { FACULTIES, YEARS } from '@/lib/registrationOptions';
 import { clientIp, hit, underLimit } from '@/lib/rateLimit';
+import { sessionStudent } from '@/lib/studentAuth';
 
 // Generous: a whole faculty may book from the same campus IP when booking opens.
 const LIMIT = 30;
@@ -12,12 +13,16 @@ const WINDOW_MS = 60_000;
 type BookedPlayer = { full_name: string; email: string; code: string; is_leader: boolean };
 
 // POST { round_id, players: [{student_id, full_name, phone, email, pdpa, rules}], notes }
-// First player is the leader. Seats, team size, duplicates and one-round-per-person
+// First player is the leader and must be the logged-in student; every player must be
+// registered for the event. Seats, team size, duplicates and one-round-per-person
 // are all checked inside booking_book_team under a lock on the round.
 export async function POST(request: Request) {
   const key = `book:${clientIp(request)}`;
   if (!underLimit(key, LIMIT)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
   hit(key, WINDOW_MS);
+
+  const me = sessionStudent(request);
+  if (!me) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
   const body = await readJson(request);
   if (!isUuid(body.round_id) || !Array.isArray(body.players) || body.players.length === 0 || body.players.length > 20) {
@@ -39,7 +44,21 @@ export async function POST(request: Request) {
     };
   });
 
+  // You book for yourself: the leader (Haunted House: the only player) is whoever logged in
+  if (players[0].student_id !== me) return NextResponse.json({ error: 'NOT_YOU' }, { status: 403 });
+
   try {
+    // Chula students who registered for the event only
+    const ids = players.map((p) => p.student_id);
+    const { data: registered, error: regError } = await supabaseAdmin
+      .from('registrations')
+      .select('student_id')
+      .in('student_id', ids);
+    if (regError) throw regError;
+    const known = new Set((registered ?? []).map((r) => r.student_id));
+    const missing = ids.find((id) => !known.has(id));
+    if (missing) return NextResponse.json({ error: 'NOT_REGISTERED', detail: missing }, { status: 400 });
+
     // The Haunted House also needs nickname, faculty, year and a 10-digit phone.
     // The database checks what both activities share; these are checked here.
     const { data: roundRow, error: roundError } = await supabaseAdmin

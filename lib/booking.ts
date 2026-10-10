@@ -68,6 +68,20 @@ export function normalizeCode(raw: unknown): string | null {
   return /^[A-Z0-9]{6}$/.test(body) ? `SVP-${body}` : null;
 }
 
+// Activities whose bookings can't be changed, moved or cancelled once made (brief).
+const NO_CHANGES = new Set(['haunted_house']);
+export const changesAllowed = (activityId: string) => !NO_CHANGES.has(activityId);
+
+/**
+ * For the change / cancel routes: a 403 when this code belongs to an activity whose
+ * bookings are final, else null. Checked on the server, whatever page sent the request.
+ */
+export async function refuseFinalBooking(code: string) {
+  const { data, error } = await supabaseAdmin.from('booking_players').select('activity_id').eq('code', code).maybeSingle();
+  if (error) throw error;
+  return data && !changesAllowed(data.activity_id) ? NextResponse.json({ error: 'NOT_ALLOWED' }, { status: 403 }) : null;
+}
+
 export const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export async function readJson(request: Request): Promise<Record<string, unknown>> {
@@ -87,6 +101,8 @@ const RULE_STATUS: Record<string, number> = {
   NOT_FOUND: 404,
   ROUND_NOT_FOUND: 404,
   NOT_LEADER: 403,
+  NOT_ALLOWED: 403,
+  NOT_REGISTERED: 400,
   ROUND_CLOSED: 409,
   BOOKING_NOT_OPEN: 409,
   BOOKING_CLOSED: 409,

@@ -70,8 +70,8 @@ export function useRounds(activity: ActivityId): Loaded<RoundsResponse> {
 }
 
 /** A booking by personal code. Pass null to wait (e.g. until the user types a code). */
-export function useMyBooking(code: string | null): Loaded<MyBooking> {
-  return useLoad(code ? `find:${code}` : null, () => findBooking(code!));
+export function useMyBooking(code: string | null, activity?: ActivityId): Loaded<MyBooking> {
+  return useLoad(code ? `find:${activity ?? ''}:${code}` : null, () => findBooking(code!, activity));
 }
 
 /** Server-synced clock that ticks, for countdowns ("check-in closes in 3 min"). */

@@ -19,11 +19,11 @@ export default function HauntedHouseHome() {
   const code = useRememberedCode();
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
-  const myBooking = useMyBooking(code);
+  const myBooking = useMyBooking(code, ACTIVITY);
 
   useEffect(() => {
     // The remembered booking is gone (or was never valid): stop asking for it
-    if (code && myBooking.error?.code === 'NOT_FOUND') forgetCode(ACTIVITY);
+    if (code && (myBooking.error?.code === 'NOT_FOUND' || myBooking.error?.code === 'WRONG_ACTIVITY')) forgetCode(ACTIVITY);
   }, [code, myBooking.error]);
 
   if (state.loading || rounds.loading || (code !== null && myBooking.loading)) {
