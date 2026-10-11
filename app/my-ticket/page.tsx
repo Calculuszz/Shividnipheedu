@@ -12,23 +12,8 @@ export default function MyTicketPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      // Fresh from the server (latest attended status); no session means logging in again
-      const fresh = await checkSession();
-      let data: SessionUser | null = fresh === 'offline' ? null : fresh;
-      if (fresh === 'offline') {
-        try {
-          data = JSON.parse(localStorage.getItem('userData') ?? 'null');
-        } catch {}
-      }
-      if (!data) {
-        router.push('/');
-        return;
-      }
-
+    const show = (data: SessionUser) => {
       setUserData(data);
-
-      // Generate QR code
       QRCode.toDataURL(data.qr_code, {
         width: 400,
         margin: 2,
@@ -37,6 +22,28 @@ export default function MyTicketPage() {
           light: '#1a0229',
         },
       }).then((url) => setQrCodeUrl(url));
+    };
+
+    const fetchUserData = async () => {
+      // The ticket saved on this phone shows straight away: at the gate everyone opens it at
+      // once and the signal is often bad. The server copy (latest attended status) follows.
+      let saved: SessionUser | null = null;
+      try {
+        saved = JSON.parse(localStorage.getItem('userData') ?? 'null');
+      } catch {}
+      if (saved?.qr_code) show(saved);
+
+      const fresh = await checkSession();
+      if (fresh === 'offline') {
+        if (!saved?.qr_code) router.push('/');
+        return;
+      }
+      // No session (logged out, or someone else's phone): log in again
+      if (!fresh) {
+        router.push('/');
+        return;
+      }
+      if (fresh.qr_code !== saved?.qr_code || fresh.attended !== saved?.attended) show(fresh);
     };
 
     fetchUserData();

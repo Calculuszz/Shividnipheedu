@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { bookingState, getActivity, intervalMinutes, serverError } from '@/lib/booking';
+import { SHARED_CACHE, bookingState, getActivity, intervalMinutes, serverError } from '@/lib/booking';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
         booking_opens_at: a.booking_opens_at,
         booking_closes_at: a.booking_closes_at,
       },
-    });
+    }, { headers: SHARED_CACHE });
   } catch (error) {
     console.error('Booking state error:', error);
     return serverError();

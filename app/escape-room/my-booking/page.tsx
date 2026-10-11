@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Doodle from '@/components/Doodle';
 import BookingPage from '@/components/booking/BookingPage';
 import BookingTicket from '@/components/booking/BookingTicket';
@@ -16,10 +16,10 @@ import CancelTeamDialog from '@/components/booking/CancelTeamDialog';
 import RemoveMemberDialog from '@/components/booking/RemoveMemberDialog';
 import { isStaleError } from '@/components/booking/DialogParts';
 import { PlayerStatusChip } from '@/components/booking/Status';
-import { BookingApiError, changeRound, findBooking, myBookingCode } from '@/lib/bookingClient';
+import { BookingApiError, changeRound, findBooking, myBooking } from '@/lib/bookingClient';
 import { errorMessage } from '@/lib/bookingText';
 import { bookingPaths, DEFAULT_ACTIVITY } from '@/lib/bookingRules';
-import { forgetCode, getRememberedCode, rememberCode } from '@/lib/bookingStorage';
+import { forgetCode, getRememberedCode, readBookingView, rememberCode, saveBookingView } from '@/lib/bookingStorage';
 import { formatDayTimeTh, formatTime, formatTimeRange, serverNow } from '@/lib/bookingTime';
 import type { MyBooking, TeamMember } from '@/lib/bookingTypes';
 
@@ -375,6 +375,25 @@ export default function MyBookingPage() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
 
+  // A booking is on screen (maybe the copy saved on this phone): a network error while
+  // refreshing keeps it there instead of falling back to the search form
+  const shown = useRef(false);
+
+  const apply = useMemo(() => (result: MyBooking) => {
+    setBooking(result);
+    setCode(result.me.code);
+    if (result.me.status === 'cancelled' || result.me.status === 'removed') {
+      forgetCode(DEFAULT_ACTIVITY);
+      setCancelledStatus(result.me.status);
+      setView('cancelled');
+    } else {
+      rememberCode(DEFAULT_ACTIVITY, result.me.code);
+      saveBookingView(DEFAULT_ACTIVITY, result);
+      setView(result.me.status === 'released' ? 'released' : 'booking');
+    }
+    shown.current = true;
+  }, []);
+
   const load = useMemo(() => async (value: string, remembered = false) => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -386,22 +405,15 @@ export default function MyBookingPage() {
     setLoading(true);
     setError('');
     try {
-      const result = await findBooking(trimmed, DEFAULT_ACTIVITY);
-      setBooking(result);
-      setCode(result.me.code);
-
-      if (result.me.status === 'cancelled' || result.me.status === 'removed') {
-        forgetCode(DEFAULT_ACTIVITY);
-        setCancelledStatus(result.me.status);
-        setView('cancelled');
-      } else {
-        rememberCode(DEFAULT_ACTIVITY, result.me.code);
-        setView(result.me.status === 'released' ? 'released' : 'booking');
-      }
+      apply(await findBooking(trimmed, DEFAULT_ACTIVITY));
     } catch (caught) {
       if (caught instanceof BookingApiError && caught.status === 404) {
         if (remembered) forgetCode(DEFAULT_ACTIVITY);
+        shown.current = false;
         setError(caught.code === 'WRONG_ACTIVITY' ? caught.message : 'No booking found');
+      } else if (shown.current) {
+        // Offline or the server is busy: keep showing the saved booking (QR still works)
+        return;
       } else {
         setError(caught instanceof Error ? caught.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง');
       }
@@ -409,22 +421,27 @@ export default function MyBookingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apply]);
 
   useEffect(() => {
     const restoreRememberedBooking = async () => {
       await Promise.resolve();
-      // This device's booking, or the logged-in student's own (new phone, a teammate)
-      const remembered = getRememberedCode(DEFAULT_ACTIVITY) ?? (await myBookingCode(DEFAULT_ACTIVITY).catch(() => null));
+      const remembered = getRememberedCode(DEFAULT_ACTIVITY);
+      // Show the copy saved on this phone straight away, then fetch the current one
+      const saved = readBookingView(DEFAULT_ACTIVITY);
+      if (saved && (!remembered || saved.booking.me.code === remembered)) apply(saved.booking);
       if (remembered) {
         setCode(remembered);
         await load(remembered, true);
-      } else {
-        setLoading(false);
+        return;
       }
+      // Nothing on this phone: the logged-in student's own booking (new phone, a teammate), one call
+      const mine = await myBooking(DEFAULT_ACTIVITY).catch(() => null);
+      if (mine) apply(mine.booking);
+      setLoading(false);
     };
     void restoreRememberedBooking();
-  }, [load]);
+  }, [load, apply]);
 
   useEffect(() => {
     if (view !== 'booking') return;
