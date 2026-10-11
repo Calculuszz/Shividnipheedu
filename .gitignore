@@ -48,3 +48,10 @@ nul
 
 # Claude Code settings
 .claude/
+
+# Local files kept out of the repo (videos, PDFs, pnpm workspace file)
+/docs/promo-video/
+/docs/*.mp4
+/docs/team-workflow.pdf
+/docs/tech-cheatsheet.pdf
+/pnpm-workspace.yaml
