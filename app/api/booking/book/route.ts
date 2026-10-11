@@ -52,11 +52,13 @@ export async function POST(request: Request) {
   try {
     // Chula students who registered for the event only
     const ids = players.map((p) => p.student_id);
-    const { data: registered, error: regError } = await supabaseAdmin
-      .from('registrations')
-      .select('student_id, full_name, email, department, year')
-      .in('student_id', ids);
+    // Both lookups at once: one Supabase round trip instead of two before booking
+    const [{ data: registered, error: regError }, { data: roundRow, error: roundError }] = await Promise.all([
+      supabaseAdmin.from('registrations').select('student_id, full_name, email, department, year').in('student_id', ids),
+      supabaseAdmin.from('booking_rounds').select('activity_id').eq('id', body.round_id as string).maybeSingle(),
+    ]);
     if (regError) throw regError;
+    if (roundError) throw roundError;
     const known = new Map((registered ?? []).map((r) => [r.student_id, r]));
     const missing = ids.find((id) => !known.has(id));
     if (missing) return NextResponse.json({ error: 'NOT_REGISTERED', detail: missing }, { status: 400 });
@@ -70,12 +72,6 @@ export async function POST(request: Request) {
 
     // The Haunted House also needs nickname, faculty, year and a 10-digit phone.
     // The database checks what both activities share; these are checked here.
-    const { data: roundRow, error: roundError } = await supabaseAdmin
-      .from('booking_rounds')
-      .select('activity_id')
-      .eq('id', body.round_id as string)
-      .maybeSingle();
-    if (roundError) throw roundError;
     const haunted = roundRow?.activity_id === 'haunted_house';
     if (haunted) {
       // The form only asks for nickname and phone: email, faculty and year are what

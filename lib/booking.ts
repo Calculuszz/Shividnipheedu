@@ -130,6 +130,17 @@ export function ruleError(error: { message?: string } | null, context: string) {
   return serverError();
 }
 
+/**
+ * Everyone gets the same answer, so Vercel's CDN may answer for 2 s (and serve the last
+ * answer for 3 s more while it fetches a new one): thousands of page opens become one
+ * Supabase call every couple of seconds. Browsers never cache it. Booking itself always
+ * checks seats live, so a count a few seconds old can't oversell.
+ */
+export const SHARED_CACHE = {
+  'Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'public, max-age=2, stale-while-revalidate=3',
+};
+
 export function serverError() {
   return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 });
 }

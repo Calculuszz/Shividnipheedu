@@ -1,4 +1,4 @@
-import type { ActivityId, BookResult } from '@/lib/bookingTypes';
+import type { ActivityId, BookResult, MyBooking } from '@/lib/bookingTypes';
 
 // What the browser remembers. Storage can be blocked (private mode, in-app
 // browsers), so every call is wrapped and the pages must work without it.
@@ -57,6 +57,7 @@ export function getRememberedCode(activity: ActivityId): string | null {
 export function forgetCode(activity: ActivityId) {
   try {
     localStorage.removeItem(codeKey(activity));
+    localStorage.removeItem(viewKey(activity));
   } catch {}
 }
 
@@ -93,4 +94,45 @@ export function parseLastBooking(raw: string | null): BookResult | null {
   } catch {
     return null;
   }
+}
+
+// ---- Last seen booking (My booking opens instantly, even with no signal at the booth) ----
+
+const viewKey = (activity: ActivityId) => `booking:view:${activity}`;
+type SavedView = { at: number; booking: MyBooking };
+
+/** Keep the booking the server just sent, for the next time the page opens. */
+export function saveBookingView(activity: ActivityId, booking: MyBooking) {
+  try {
+    writeOwned(localStorage, viewKey(activity), JSON.stringify({ at: Date.now(), booking } satisfies SavedView));
+  } catch {}
+}
+
+/** Raw saved booking, a stable snapshot for useSyncExternalStore (parse with parseBookingView). */
+export function readBookingViewRaw(activity: ActivityId): string | null {
+  try {
+    return readOwned(localStorage, viewKey(activity));
+  } catch {
+    return null;
+  }
+}
+
+export function parseBookingView(raw: string | null): SavedView | null {
+  try {
+    const data = raw ? (JSON.parse(raw) as SavedView) : null;
+    return data && typeof data.at === 'number' && typeof data.booking?.me?.code === 'string' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The last booking this device saw for the logged-in student, and when it was fetched. */
+export function readBookingView(activity: ActivityId): SavedView | null {
+  return parseBookingView(readBookingViewRaw(activity));
+}
+
+export function forgetBookingView(activity: ActivityId) {
+  try {
+    localStorage.removeItem(viewKey(activity));
+  } catch {}
 }

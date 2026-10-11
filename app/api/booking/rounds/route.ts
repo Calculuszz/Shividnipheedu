@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { PUBLIC_ROUND_FIELDS, serverError } from '@/lib/booking';
+import { PUBLIC_ROUND_FIELDS, SHARED_CACHE, serverError } from '@/lib/booking';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       online_left: Math.max(Number(r.online_left), 0),
       walkin_left: Math.max(Number(r.walkin_left), 0),
     }));
-    return NextResponse.json({ rounds, updated_at: new Date().toISOString() });
+    return NextResponse.json({ rounds, updated_at: new Date().toISOString() }, { headers: SHARED_CACHE });
   } catch (error) {
     console.error('Booking rounds error:', error);
     return serverError();
