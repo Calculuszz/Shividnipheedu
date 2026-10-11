@@ -1,4 +1,4 @@
-import { StickyNote, InfoNotice, Card, Markdown } from '@/components/booking';
+import { StickyNote, InfoNotice, Markdown } from '@/components/booking';
 import Doodle, { type DoodleName } from '@/components/Doodle';
 import type { ActivityInfo } from '@/lib/bookingTypes';
 
@@ -125,16 +125,5 @@ export function HealthRows({ activity }: { activity: Pick<ActivityInfo, 'health_
         </p>
       )}
     </>
-  );
-}
-
-// Landing's own card: "Health & safety" in the display font, per Main.dc.html.
-export function HealthCard({ activity }: { activity: Pick<ActivityInfo, 'health_notice'> }) {
-  if (!activity.health_notice) return null;
-  return (
-    <Card tone="orange" className="flex flex-col gap-4">
-      <h2 className="display-font text-2xl text-halloween-orange -rotate-2 origin-left">Health &amp; safety</h2>
-      <HealthRows activity={activity} />
-    </Card>
   );
 }

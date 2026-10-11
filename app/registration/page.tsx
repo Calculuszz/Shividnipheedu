@@ -90,9 +90,13 @@ export default function RegistrationPage() {
 
     if (!formData.studentId.trim()) {
       newErrors.studentId = 'ยังไม่ได้ใส่รหัสนิสิตเลยนะ';
+    } else if (!/^[0-9]{10}$/.test(formData.studentId.replace(/\s/g, ''))) {
+      newErrors.studentId = 'รหัสนิสิตต้องเป็นตัวเลข 10 หลัก';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'ขออีเมลด้วยนะ ไว้ส่งตั๋วกับข่าวงานให้';
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email.trim())) {
+      newErrors.email = 'อีเมลไม่ถูกต้อง ลองตรวจอีกครั้งนะ';
     }
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'ผีอยากรู้จักคุณ ใส่ชื่อ-นามสกุลด้วยนะ';

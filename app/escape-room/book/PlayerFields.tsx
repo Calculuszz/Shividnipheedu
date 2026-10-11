@@ -29,7 +29,7 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
             Player {number} {leader && <LeaderBadge />}
             {complete && <span className="rounded-[4px_9px_5px_8px] bg-halloween-moon px-2 py-0.5 text-[12px] text-halloween-dark">Complete</span>}
           </span>
-          {!player.expanded && <span className="max-w-full break-words text-sm text-halloween-gray">{player.full_name || 'ยังไม่ได้กรอกชื่อ'}{player.student_id && ` · ${maskStudentId(player.student_id)}`}</span>}
+          {!player.expanded && <span className="max-w-full break-words text-sm text-halloween-gray">{player.student_id ? maskStudentId(player.student_id) : 'ยังไม่ได้กรอกรหัสนิสิต'}</span>}
         </button>
         {!leader && <button type="button" disabled={!canRemove || disabled} onClick={onRemove} aria-label={`Remove player ${number}`}
           className="min-h-11 px-1 text-sm font-bold text-halloween-error disabled:opacity-40">Remove</button>}
@@ -41,11 +41,9 @@ export default function PlayerFields({ player, number, errors, disabled, canRemo
       <div id={`${prefix}-fields`} hidden={!player.expanded}>
         <fieldset disabled={disabled} className="mt-3 flex min-w-0 flex-col gap-3 border-0 p-0">
           {leader && <p className="text-sm text-halloween-gray">คุณคือผู้จองและหัวหน้าทีม — ลบตัวเองออกจากฟอร์มไม่ได้</p>}
-          <TextField id={`${prefix}-name`} label="Full name" required maxLength={120} autoComplete="name" value={player.full_name}
-            onChange={e => onChange('full_name', e.target.value)} onBlur={() => onBlur('full_name')} error={shown('full_name')} />
           <TextField id={`${prefix}-sid`} label="Student ID" required inputMode="numeric" maxLength={10} mono readOnly={leader}
             value={player.student_id} onChange={e => onChange('student_id', e.target.value)} onBlur={() => onBlur('student_id')}
-            error={shown('student_id')} hint={leader ? 'รหัสนิสิตหัวหน้าทีมจากขั้นตอนก่อนหน้า' : 'รหัสนิสิต 10 หลัก'} />
+            error={shown('student_id')} hint={leader ? 'รหัสนิสิตของคุณ ชื่อจะใช้ตามที่ลงทะเบียนเข้างาน' : 'รหัสนิสิต 10 หลัก ชื่อจะใช้ตามที่เพื่อนลงทะเบียนเข้างาน'} />
           <div aria-live="polite" className="text-sm text-halloween-gray">
             {player.check.status === 'checking' && 'กำลังตรวจสอบรหัสนิสิต…'}
             {player.check.warning && <p className="rounded-lg border border-halloween-orange bg-halloween-orange/10 p-3 text-halloween-cream">

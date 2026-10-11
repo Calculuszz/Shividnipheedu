@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import QRCode from 'qrcode';
 import { cleanTravel } from '@/lib/travel';
@@ -35,15 +35,16 @@ export async function POST(request: Request) {
     });
 
     const {
-      studentId,
-      fullName,
       faculty,
       gender,
       year,
       referralSource,
       interestedActivities,
-      email,
     } = body;
+    // Login and booking look the student ID up exactly, so store it clean: 10 digits, no spaces
+    const studentId = String(body.studentId ?? '').replace(/\s/g, '');
+    const fullName = String(body.fullName ?? '').trim().slice(0, 120);
+    const email = String(body.email ?? '').trim().slice(0, 200);
 
     // Validate required fields
     if (!studentId || !email || !fullName) {
@@ -51,6 +52,12 @@ export async function POST(request: Request) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+    if (!/^[0-9]{10}$/.test(studentId)) {
+      return NextResponse.json({ error: 'รหัสนิสิตต้องเป็นตัวเลข 10 หลัก', field: 'studentId' }, { status: 400 });
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return NextResponse.json({ error: 'อีเมลไม่ถูกต้อง ลองตรวจอีกครั้งนะ', field: 'email' }, { status: 400 });
     }
 
     // Travel answers go into a report read by exact text, so only values from lib/travel.ts are kept
@@ -284,8 +291,8 @@ export async function POST(request: Request) {
         </html>
       `;
 
-    // Send email in background (don't block the response)
-    sendEmail({
+    // Send after the response; after() keeps the serverless function alive until it's done
+    after(() => sendEmail({
       to: email,
       subject: 'ยืนยันการลงทะเบียน SHIVIDNI PHEEDU',
       html: emailHtml,
@@ -303,7 +310,7 @@ export async function POST(request: Request) {
       }
     }).catch(err => {
       console.error('❌ Email exception:', err);
-    });
+    }));
 
     console.log('✅ Registration completed successfully (email sending in background)');
     return NextResponse.json({

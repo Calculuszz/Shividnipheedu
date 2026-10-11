@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { badRequest, readJson, serverError, str } from '@/lib/booking';
-import { clientIp, hit, underLimit } from '@/lib/rateLimit';
+import { hit, underLimit } from '@/lib/rateLimit';
+import { sessionStudent } from '@/lib/studentAuth';
 
-const LIMIT = 40;
+// Per logged-in student, not per IP (campus Wi-Fi shares IPs). A team form checks up to
+// 5 IDs and may re-check after edits; this still stops anyone sweeping through IDs.
+const LIMIT = 60;
 const WINDOW_MS = 60_000;
 
-// POST { activity, student_id } -> { taken, registered } only. Never says which round (page 2a, form 3).
+// POST { activity, student_id } -> { taken, registered } only. Never says which round.
+// Logged-in students only: the rounds page and the booking form are behind login.
 export async function POST(request: Request) {
-  const key = `check-student:${clientIp(request)}`;
+  const me = sessionStudent(request);
+  if (!me) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+
+  const key = `check-student:${me}`;
   if (!underLimit(key, LIMIT)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
   hit(key, WINDOW_MS);
 

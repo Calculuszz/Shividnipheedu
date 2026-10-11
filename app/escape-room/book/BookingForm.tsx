@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookingPage, Button, Card, CheckField, ErrorNotice } from '@/components/booking';
+import { BookingPage, Button, Card, ChangeRoundSheet, CheckField, ErrorNotice } from '@/components/booking';
 import { useBookingState, useRounds } from '@/hooks/useBooking';
 import { book, BookingApiError, studentStatus } from '@/lib/bookingClient';
 import { bookingPaths, isStudentId, roundPick } from '@/lib/bookingRules';
@@ -22,8 +22,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default function BookingForm({ initialRoundId, leaderId }: { initialRoundId: string; leaderId: string }) {
   const router = useRouter();
   const paths = bookingPaths(ACTIVITY);
-  // Keep the chosen round independent of player drafts so the upcoming sheet can change it without resetting the form.
-  const [roundId] = useState(initialRoundId);
+  // Keep the chosen round independent of player drafts so the sheet can change it without resetting the form.
+  const [roundId, setRoundId] = useState(initialRoundId);
+  const [picking, setPicking] = useState(false);
   const [players, setPlayers] = useState<PlayerDraft[]>(() => [newPlayer('leader', leaderId)]);
   const [notes, setNotes] = useState('');
   const [pdpa, setPdpa] = useState(false);
@@ -155,9 +156,20 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
     }
   }
 
-  // Integration points for issue #5: replace these alerts with sheets, preserving players and notes.
+  // Pick another round in a sheet: players and notes stay as typed
   function changeRound() {
-    window.alert('เปลี่ยนรอบ: ทีมจะเชื่อมหน้าต่างเลือกรอบให้ภายหลัง ข้อมูลผู้เล่นที่กรอกไว้ยังอยู่ครบ');
+    if (busy) return;
+    setPicking(true);
+  }
+
+  function pickRound(id: string) {
+    setRoundId(id);
+    setPicking(false);
+    setSeatLimit(null);
+    setSeatsBlocked(false);
+    setAddError('');
+    setFormError('');
+    router.replace(`${paths.book}?${new URLSearchParams({ round: id, leader: leaderId })}`, { scroll: false });
   }
 
   async function confirm(event: FormEvent<HTMLFormElement>) {
@@ -206,7 +218,7 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
   /** Shows every problem under its field and jumps to the first one. True when all is filled in. */
   function checkFields() {
     setPlayers(current => current.map((p, i) => Object.keys(errors[i]).length > 0
-      ? { ...p, expanded: true, touched: { ...p.touched, full_name: true, student_id: true, phone: true, email: true } } : p));
+      ? { ...p, expanded: true, touched: { ...p.touched, student_id: true, phone: true, email: true } } : p));
     setConsentTouched(true);
     let target: string | null = null;
     for (const [i, p] of players.entries()) {
@@ -292,6 +304,16 @@ export default function BookingForm({ initialRoundId, leaderId }: { initialRound
           <Button type="submit" disabled={!ready} loading={submitting} loadingText="Confirming booking…">{submitted ? 'จองสำเร็จ กำลังเปิดหน้ายืนยัน…' : 'Confirm booking'}</Button>
         </div>
       </form>
+      {picking && (
+        <ChangeRoundSheet
+          activity={ACTIVITY}
+          teamSize={players.length}
+          currentRoundId={roundId}
+          bookingClosesAt={activity?.booking_closes_at}
+          onPick={pickRound}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </BookingPage>
   );
 }

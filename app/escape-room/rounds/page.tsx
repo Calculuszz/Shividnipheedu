@@ -26,7 +26,8 @@ function RoundPageContent() {
 
   // Straight from "Book a slot": the logged-in student is the leader. Look up whether they
   // already have a booking (1 person, 1 round), then show the rounds to pick or to view.
-  const needsCheck = !searchParams.get('leader') && searchParams.get('view') !== 'readonly';
+  // Only while online booking is open: on event day this page just lists walk-in seats.
+  const needsCheck = !searchParams.get('leader') && searchParams.get('view') !== 'readonly' && stateResult.data?.state === 'open';
   useEffect(() => {
     if (!needsCheck) return;
     if (!rulesAccepted()) {

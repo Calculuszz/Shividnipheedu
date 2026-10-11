@@ -6,9 +6,10 @@ import { clearStudentSession, sessionStudent, setStudentSession } from '@/lib/st
 // Only what the student pages use (menu, my ticket, ghost quiz) - never email etc.
 const PUBLIC_FIELDS = 'student_id, full_name, qr_code, attended, attended_at, ghost_result';
 
-// Only wrong attempts count, so a whole faculty on the same campus Wi-Fi can still log in
-// while someone looping through student IDs gets stopped quickly.
-const MISS_LIMIT = 20;
+// Only wrong attempts count. Campus Wi-Fi puts thousands of students behind a few IPs,
+// and everyone logs in when booking opens: typos from all of them share one budget, so
+// it has to be roomy. It still slows a script looping through student IDs.
+const MISS_LIMIT = 150;
 const MISS_WINDOW_MS = 60_000;
 
 // POST { studentId } -> log in (the registration desk checks who people are in person).

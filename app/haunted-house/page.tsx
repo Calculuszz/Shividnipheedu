@@ -1,22 +1,17 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import Doodle from '@/components/Doodle';
 import LoadingScreen from '@/components/LoadingScreen';
 import { BookingPage, Button, Card, ErrorNotice, InfoNotice, StickyNote, Tape } from '@/components/booking';
-import { useBookingState, useMyBooking, useRounds } from '@/hooks/useBooking';
-import { forgetCode, getRememberedCode } from '@/lib/bookingStorage';
+import { useBookingState, useMyBooking, useMyCode, useRounds } from '@/hooks/useBooking';
+import { forgetCode } from '@/lib/bookingStorage';
 import { formatDateTh, formatDayTimeEn, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
 import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
 import { ACTIVITY, Hero, REGISTER_POINT, VENUE_BUILDING, VENUE_FACULTY, paths, playMinutes, registerWindow } from './_shared';
 
-const noSubscription = () => () => {};
-function useRememberedCode() {
-  return useSyncExternalStore(noSubscription, () => getRememberedCode(ACTIVITY), () => null);
-}
-
 export default function HauntedHouseHome() {
-  const code = useRememberedCode();
+  const { code, checking } = useMyCode(ACTIVITY);
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
   const myBooking = useMyBooking(code, ACTIVITY);
@@ -26,7 +21,7 @@ export default function HauntedHouseHome() {
     if (code && (myBooking.error?.code === 'NOT_FOUND' || myBooking.error?.code === 'WRONG_ACTIVITY')) forgetCode(ACTIVITY);
   }, [code, myBooking.error]);
 
-  if (state.loading || rounds.loading || (code !== null && myBooking.loading)) {
+  if (checking || (state.loading && !state.data) || rounds.loading || (code !== null && myBooking.loading)) {
     return <LoadingScreen message="กำลังเปิดประตูบ้าน..." />;
   }
 
@@ -84,34 +79,6 @@ export default function HauntedHouseHome() {
           และมีรอบสำหรับคนที่มา walk-in โดยเฉพาะ มาต่อคิวได้ที่{REGISTER_POINT}
         </InfoNotice>
       )}
-
-      <Card className="flex flex-col gap-4">
-        <h2 className="display-font text-2xl text-halloween-orange -rotate-2 origin-left">Health &amp; safety</h2>
-        <div className="flex gap-3.5 items-start">
-          <Doodle name="moon" className="w-9 h-auto shrink-0" />
-          <div>
-            <b className="text-[17px]">มืดและแคบ</b>
-            <p className="text-[15px] text-halloween-gray">ไม่แนะนำสำหรับคนที่กลัวที่มืดและแคบ หรือมีภาวะวิตกกังวล</p>
-          </div>
-        </div>
-        <div className="flex gap-3.5 items-start">
-          <Doodle name="bat" className="w-9 h-auto shrink-0" />
-          <div>
-            <b className="text-[17px]">เสียงดัง แสงกะพริบ</b>
-            <p className="text-[15px] text-halloween-gray">ไม่แนะนำสำหรับคนที่แพ้แสงกะพริบหรือเสียงดัง</p>
-          </div>
-        </div>
-        <div className="flex gap-3.5 items-start">
-          <Doodle name="ghost" className="w-9 h-auto shrink-0" />
-          <div>
-            <b className="text-[17px]">ตกใจแรง</b>
-            <p className="text-[15px] text-halloween-gray">ไม่แนะนำสำหรับคนที่มีโรคหัวใจ ความดันผิดปกติ หรือลมชัก</p>
-          </div>
-        </div>
-        <p className="px-3.5 py-3 rounded-[10px_16px_8px_14px] border-2 border-dashed border-halloween-orange text-[15px] leading-relaxed text-halloween-orange">
-          <b>ไม่แนะนำสำหรับคนที่มีอาการเวียนหัว หน้ามืด หรือไม่สบาย</b>
-        </p>
-      </Card>
     </BookingPage>
   );
 }
