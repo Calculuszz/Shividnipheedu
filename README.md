@@ -2,7 +2,7 @@
 
 Official website for **SHIVIDNI PHEEDU**, a Halloween event co-hosted by the Faculty of Commerce and Accountancy, the Faculty of Engineering, and the Faculty of Communication Arts, Chulalongkorn University.
 
-Attendees register, receive a QR ticket, and explore the event from their phones. Staff check people in by scanning QR codes and can export the full attendee list to Excel.
+Attendees register, receive a QR ticket, book the **Escape Room** and **Haunted House**, and explore the event from their phones. Staff check people in by scanning QR codes, run each activity's rounds and walk-ins, and export lists to Excel.
 
 ---
 
@@ -14,18 +14,29 @@ Attendees register, receive a QR ticket, and explore the event from their phones
 | --- | --- |
 | **Registration** | 3-step form (event info → personal details → PDPA consent) with inline validation |
 | **Email confirmation** | Confirmation email with the QR ticket attached (optional, see [Email](#email-optional)) |
-| **Student ID login** | Log in with a student ID, no password needed |
-| **My Ticket** | QR code for check-in plus live check-in status |
+| **Student ID login** | Log in with a student ID, no password. A signed httpOnly cookie (14 days) says who is logged in; identity is checked against the student card at the desk |
+| **My Ticket** | QR code for event entry plus live check-in status. Shows the copy saved on the phone first, so it opens with no signal |
+| **Escape Room booking** | 3 steps: room rules → pick a round → team of 1–4 (student ID, phone, email per player; names come from registration). 9 rounds, 12 online + 3 walk-in seats each |
+| **Haunted House booking** | 3 steps: house rules → pick a round → nickname + phone (faculty, year, email come from registration). 11 rounds, 15 online + 10 walk-in seats, solo, can't be changed |
+| **My booking** | Paper note with the check-in window and countdown, big QR ticket, team list. Escape Room leaders change round, remove members or cancel; anyone cancels their own seat. Opens on a new phone from the login alone |
+| **Booking emails** | Confirmation with each player's own code and QR, change/cancel notices, and a reminder 10 minutes before check-in opens on event day |
 | **Ghost Quiz** | 10 questions, 7 ghost type results |
 | **Event Map** | Venue map and student vendor booth list *(content not yet updated for this event)* |
 | **Event Schedule** | Main stage timeline and performances *(content not yet updated for this event)* |
 
 ### For staff (`/admin`)
 
-- Password-protected dashboard
-- Real-time attendance table with search and stats (registered / checked in / played quiz)
-- Camera QR scanner for check-in (works on iPhone Safari)
-- **Download Excel**: exports every registration to `.xlsx`
+The password decides which dashboard opens.
+
+- **Registration team** (`/admin`): attendance table with search and stats, camera QR scanner for event entry (works on iPhone Safari), **Download Excel** of every registration
+- **Escape Room / Haunted House** (`/admin/escape-room`, `/admin/haunted-house`): five tabs
+  - **Check-in**: scan the booking QR or search by name / student ID, inside the round's check-in window only
+  - **List**: everyone in each round with their status
+  - **Overview**: every round's seats, refreshed every 5 s, Excel export (Haunted House: one sheet per round)
+  - **Walk-in**: add walk-ins; a free seat checks them in, otherwise they queue
+  - **Rounds**: change a round's seats or close it (not once its check-in has opened)
+
+Missing check-in releases the seat to walk-ins automatically.
 
 ---
 
@@ -35,7 +46,7 @@ Attendees register, receive a QR ticket, and explore the event from their phones
 | --- | --- |
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS 4, FC Iconic + Monster Fiesta fonts |
-| Database | Supabase (PostgreSQL + Realtime) |
+| Database | Supabase (PostgreSQL); booking rules live in SQL functions, reminders run on `pg_cron` |
 | QR codes | `qrcode` (generate), `jsqr` (scan) |
 | Excel export | `exceljs` (loaded on demand in the browser) |
 | Email | Nodemailer via Gmail SMTP |
@@ -59,7 +70,16 @@ pnpm install
 
 ### 2. Set up the database
 
-In the Supabase dashboard, open **SQL Editor** and run [`supabase/complete-schema.sql`](supabase/complete-schema.sql). This creates the `registrations` table, indexes and policies.
+In the Supabase dashboard, open **SQL Editor** and run these files in order (each is safe to re-run):
+
+| File | What it adds |
+| --- | --- |
+| [`complete-schema.sql`](supabase/complete-schema.sql) | `registrations` table, indexes, policies |
+| [`lockdown-registrations.sql`](supabase/lockdown-registrations.sql), [`travel-report.sql`](supabase/travel-report.sql) | Registration access rules, travel report |
+| [`booking-schema.sql`](supabase/booking-schema.sql) | Booking tables, views and every booking rule (book, change, cancel, check-in, walk-in), Escape Room data |
+| [`haunted-house.sql`](supabase/haunted-house.sql) | Haunted House rounds and its extra fields |
+| [`booking-view.sql`](supabase/booking-view.sql) | `booking_view()`: My booking in one call |
+| [`reminders.sql`](supabase/reminders.sql) | Check-in reminder emails: the claim function and the event-day `pg_cron` job (needs `CRON_SECRET`, below) |
 
 ### 3. Configure environment variables
 
@@ -117,18 +137,24 @@ app/
 ├── what-ghost/           # Ghost Quiz
 ├── event-map/            # Venue map + vendor booths
 ├── schedule/             # Event schedule
-├── admin/                # Staff dashboard (attendance, scanner, Excel export)
+├── escape-room/          # Landing, rules, rounds, book, confirmed, my-booking
+├── haunted-house/        # The same pages in the Haunted House theme
+├── admin/                # Staff: registration dashboard, escape-room/, haunted-house/
 ├── api/
 │   ├── register/         # Create registration, generate QR, send email
-│   ├── login/            # Student ID lookup
-│   ├── admin/login/      # Admin password check
+│   ├── login/            # Student login: POST logs in, GET who is logged in, DELETE logs out
+│   ├── booking/          # state, rounds, book, find, mine, change-round, cancel-*, remove-member, remind
+│   ├── staff/            # dashboard, check-in, attendance, walkin, rounds, export, purge
+│   ├── admin/login/      # Staff password check
 │   └── save-ghost-result/
 ├── layout.tsx            # Metadata, icons, fonts
 └── globals.css           # Theme tokens and shared styles
-components/               # EventName, FieldError, BackButton, LoadingScreen, …
-lib/                      # Supabase client, email helper
+components/booking/       # Booking kit: BookingPage, Button, StatusNote, BookingTicket, dialogs, …
+components/staff/         # Staff dashboard tabs and scanner
+lib/                      # Supabase client, sessions, booking helpers, emails
 public/brand/             # Event logo and partner logos
-supabase/                 # Database schema
+supabase/                 # Database schema and booking SQL
+docs/                     # booking-api.pdf, promo clips
 ```
 
 ---
@@ -146,7 +172,10 @@ Colors are defined as tokens in [`app/globals.css`](app/globals.css) and exposed
 | Cream | `#f5eee6` | Text |
 | Error | `#ff6b5b` | Validation and error messages |
 
+The Haunted House pages use the same tokens recoloured under `.theme-haunted` (blood red, bone, maroon).
+
 Fonts: **FC Iconic** for body and Thai text, **Monster Fiesta** for display headings.
+
 ---
 
 **Contact:** Instagram [@shividni.pheedu](https://www.instagram.com/shividni.pheedu/)
