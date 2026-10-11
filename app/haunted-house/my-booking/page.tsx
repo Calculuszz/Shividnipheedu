@@ -1,25 +1,24 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import Doodle from '@/components/Doodle';
 import { BookingPage, BookingTicket, Button, ErrorNotice, StatusNote, TextField } from '@/components/booking';
 import type { StatusNoteText } from '@/components/booking/StatusNote';
-import { useMyBooking, useNow } from '@/hooks/useBooking';
+import { useMyBooking, useMyCode, useNow } from '@/hooks/useBooking';
 import { BookingApiError, findBooking } from '@/lib/bookingClient';
-import { getRememberedCode, rememberCode } from '@/lib/bookingStorage';
+import { rememberCode } from '@/lib/bookingStorage';
 import { formatTimeRange } from '@/lib/bookingTime';
 import type { MyBooking } from '@/lib/bookingTypes';
 import { ACTIVITY, VENUE_BUILDING, paths } from '../_shared';
 
-const noSubscription = () => () => {};
-
 export default function HauntedMyBookingPage() {
-  const remembered = useSyncExternalStore(noSubscription, () => getRememberedCode(ACTIVITY), () => null);
+  // This device's booking, or the logged-in student's own (opened on a new phone)
+  const mine = useMyCode(ACTIVITY);
   const [typedCode, setTypedCode] = useState<string | null>(null);
-  const code = typedCode ?? remembered;
+  const code = typedCode ?? mine.code;
   const booking = useMyBooking(code, ACTIVITY);
 
-  if (code && booking.loading) {
+  if (mine.checking || (code && booking.loading)) {
     return (
       <BookingPage activity={ACTIVITY} backHref={paths.home} showMyBooking={false}>
         <p role="status" className="py-6 text-center text-halloween-gray">กำลังเปิดตั๋ว…</p>

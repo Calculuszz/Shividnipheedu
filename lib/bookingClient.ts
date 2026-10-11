@@ -89,6 +89,16 @@ export function book(request: BookRequest) {
 }
 
 /** `activity`: the page's own activity. Another activity's code answers WRONG_ACTIVITY. */
+/** The logged-in student's own booking code for this activity, or null when they have none */
+export async function myBookingCode(activity: ActivityId) {
+  try {
+    return (await call<{ code: string }>('/api/booking/mine', { body: { activity } })).code;
+  } catch (e) {
+    if (e instanceof BookingApiError && (e.code === 'NOT_FOUND' || e.code === 'UNAUTHORIZED')) return null;
+    throw e;
+  }
+}
+
 export function findBooking(code: string, activity?: ActivityId) {
   return call<MyBooking>('/api/booking/find', { body: { code, activity } });
 }

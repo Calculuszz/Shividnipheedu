@@ -9,8 +9,15 @@ import StatusNote, { type StatusNoteText } from '@/components/booking/StatusNote
 import Button from '@/components/booking/Button';
 import Card from '@/components/booking/Card';
 import { TextField } from '@/components/booking/Fields';
+import { ErrorNotice } from '@/components/booking/Card';
+import ChangeRoundSheet from '@/components/booking/ChangeRoundSheet';
+import CancelSeatDialog from '@/components/booking/CancelSeatDialog';
+import CancelTeamDialog from '@/components/booking/CancelTeamDialog';
+import RemoveMemberDialog from '@/components/booking/RemoveMemberDialog';
+import { isStaleError } from '@/components/booking/DialogParts';
 import { PlayerStatusChip } from '@/components/booking/Status';
-import { BookingApiError, findBooking } from '@/lib/bookingClient';
+import { BookingApiError, changeRound, findBooking, myBookingCode } from '@/lib/bookingClient';
+import { errorMessage } from '@/lib/bookingText';
 import { bookingPaths, DEFAULT_ACTIVITY } from '@/lib/bookingRules';
 import { forgetCode, getRememberedCode, rememberCode } from '@/lib/bookingStorage';
 import { formatDayTimeTh, formatTime, formatTimeRange, serverNow } from '@/lib/bookingTime';
@@ -116,7 +123,7 @@ function memberNote(member: TeamMember) {
 }
 
 // Team names stay folded away: the count is enough most of the time
-function TeamBox({ booking, canRemove }: { booking: MyBooking; canRemove: boolean }) {
+function TeamBox({ booking, canRemove, onRemove }: { booking: MyBooking; canRemove: boolean; onRemove?: (member: TeamMember) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <section className="hand-cut border-2 border-halloween-purple bg-halloween-charcoal">
@@ -149,7 +156,7 @@ function TeamBox({ booking, canRemove }: { booking: MyBooking; canRemove: boolea
                   <button
                     type="button"
                     className="min-h-11 px-1 text-sm font-bold text-halloween-error underline underline-offset-4"
-                    onClick={() => alert(`Remove ${member.full_name}`)}
+                    onClick={() => onRemove?.(member)}
                   >
                     นำออก
                   </button>
@@ -191,7 +198,7 @@ function ManageRow({ icon, title, note, tone, disabled, onClick }: {
   );
 }
 
-function ManageBox({ booking }: { booking: MyBooking }) {
+function ManageBox({ booking, onAction }: { booking: MyBooking; onAction: (action: 'change' | 'seat' | 'team') => void }) {
   const { me, can, round, activity } = booking;
   const cancelBy = `ทำได้ถึง ${formatTime(round.checkin_closes_at)} น.`;
   const leaderName = booking.team.find((member) => member.is_leader)?.full_name;
@@ -225,7 +232,7 @@ function ManageBox({ booking }: { booking: MyBooking }) {
           }
           tone="orange"
           disabled={!can.change_round}
-          onClick={() => alert('Change slot')}
+          onClick={() => onAction('change')}
         />
       )}
       <ManageRow
@@ -234,7 +241,7 @@ function ManageBox({ booking }: { booking: MyBooking }) {
         note={`ทีมยังเล่นต่อได้ ${cancelBy}`}
         tone="plain"
         disabled={!can.cancel_seat}
-        onClick={() => alert('Cancel my seat')}
+        onClick={() => onAction('seat')}
       />
       {me.is_leader && (
         <ManageRow
@@ -243,15 +250,44 @@ function ManageBox({ booking }: { booking: MyBooking }) {
           note={`ทุกคนในทีมเสียที่นั่ง ${cancelBy}`}
           tone="error"
           disabled={!can.cancel_team}
-          onClick={() => alert('Cancel whole team')}
+          onClick={() => onAction('team')}
         />
       )}
     </section>
   );
 }
 
-function ActiveBooking({ booking, now }: { booking: MyBooking; now: number }) {
+type Dialog = null | { kind: 'change' } | { kind: 'seat' } | { kind: 'team' } | { kind: 'remove'; member: TeamMember };
+
+function ActiveBooking({ booking, now, onChanged }: { booking: MyBooking; now: number; onChanged: () => void }) {
   const { me, round } = booking;
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState('');
+  const close = () => setDialog(null);
+  const done = () => {
+    setDialog(null);
+    onChanged();
+  };
+  // Team members still holding a seat, in team order (the next leader is the first after me)
+  const active = booking.team.filter((m) => m.status === 'booked' || m.status === 'checked_in');
+  const nextLeader = active.find((m) => !m.is_me)?.full_name ?? null;
+
+  async function moveTo(roundId: string) {
+    setMoving(true);
+    setMoveError('');
+    try {
+      await changeRound(me.code, roundId);
+      done();
+    } catch (e) {
+      setDialog(null);
+      setMoveError(e instanceof BookingApiError ? e.message : errorMessage('SERVER_ERROR'));
+      if (isStaleError(e)) onChanged();
+    } finally {
+      setMoving(false);
+    }
+  }
+
   return (
     <BookingPage backHref={paths.home} showMyBooking={false}>
       <StatusNote round={round} status={me.status} now={now} text={STATUS_TEXT} />
@@ -263,8 +299,44 @@ function ActiveBooking({ booking, now }: { booking: MyBooking; now: number }) {
         checkin={{ label: 'เช็กอินที่บูธ', value: formatTimeRange(round.checkin_opens_at, round.checkin_closes_at) }}
         place={{ label: 'จุดเช็กอิน', value: VENUE }}
       />
-      <TeamBox booking={booking} canRemove={me.is_leader && booking.can.remove_member} />
-      <ManageBox booking={booking} />
+      <TeamBox
+        booking={booking}
+        canRemove={me.is_leader && booking.can.remove_member}
+        onRemove={(member) => setDialog({ kind: 'remove', member })}
+      />
+      {moving && <p role="status" className="px-1 text-sm text-halloween-gray">กำลังย้ายรอบ…</p>}
+      {moveError && <ErrorNotice>{moveError}</ErrorNotice>}
+      <ManageBox booking={booking} onAction={(kind) => setDialog({ kind })} />
+
+      {dialog?.kind === 'change' && (
+        <ChangeRoundSheet
+          activity={DEFAULT_ACTIVITY}
+          teamSize={active.length}
+          currentRoundId={round.id}
+          bookingClosesAt={booking.activity?.booking_closes_at}
+          onPick={(roundId) => void moveTo(roundId)}
+          onClose={close}
+        />
+      )}
+      {dialog?.kind === 'seat' && (
+        <CancelSeatDialog
+          code={me.code}
+          isLeader={me.is_leader}
+          nextLeaderName={nextLeader}
+          round={round}
+          teamSize={active.length}
+          onChooseTeam={me.is_leader ? () => setDialog({ kind: 'team' }) : undefined}
+          onDone={done}
+          onClose={close}
+          onStale={onChanged}
+        />
+      )}
+      {dialog?.kind === 'team' && (
+        <CancelTeamDialog code={me.code} members={active} round={round} onDone={done} onClose={close} onStale={onChanged} />
+      )}
+      {dialog?.kind === 'remove' && (
+        <RemoveMemberDialog code={me.code} member={dialog.member} round={round} onDone={done} onClose={close} onStale={onChanged} />
+      )}
     </BookingPage>
   );
 }
@@ -342,7 +414,8 @@ export default function MyBookingPage() {
   useEffect(() => {
     const restoreRememberedBooking = async () => {
       await Promise.resolve();
-      const remembered = getRememberedCode(DEFAULT_ACTIVITY);
+      // This device's booking, or the logged-in student's own (new phone, a teammate)
+      const remembered = getRememberedCode(DEFAULT_ACTIVITY) ?? (await myBookingCode(DEFAULT_ACTIVITY).catch(() => null));
       if (remembered) {
         setCode(remembered);
         await load(remembered, true);
@@ -361,7 +434,7 @@ export default function MyBookingPage() {
     return () => window.clearInterval(timer);
   }, [view]);
 
-  if (view === 'booking' && booking) return <ActiveBooking booking={booking} now={now} />;
+  if (view === 'booking' && booking) return <ActiveBooking booking={booking} now={now} onChanged={() => void load(booking.me.code)} />;
   if (view === 'released' && booking) return <ReleasedBooking booking={booking} />;
   if (view === 'cancelled') return <CancelledBooking status={cancelledStatus} />;
 

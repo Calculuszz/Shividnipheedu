@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BookingPage, Card, Tape, InfoNotice, ErrorNotice, Button, PlayerStatusChip } from '@/components/booking';
-import { ChulaOnlyNote, CheckInRuleNotice, HealthCard, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
+import { ChulaOnlyNote, CheckInRuleNotice, VENUE_BUILDING, VENUE_FACULTY } from './_shared';
 import Doodle from '@/components/Doodle';
 import LoadingScreen from '@/components/LoadingScreen';
-import { useBookingState, useRounds, useMyBooking } from '@/hooks/useBooking';
-import { forgetCode, getRememberedCode } from '@/lib/bookingStorage';
+import { useBookingState, useRounds, useMyBooking, useMyCode } from '@/hooks/useBooking';
+import { forgetCode } from '@/lib/bookingStorage';
 import { bookingPaths } from '@/lib/bookingRules';
 import { formatDateTh, formatDayTimeEn, formatDayTimeTh, formatTimeRange } from '@/lib/bookingTime';
 import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
@@ -14,15 +14,10 @@ import type { ActivityInfo, MyBooking, Round } from '@/lib/bookingTypes';
 const ACTIVITY = 'escape_room';
 const paths = bookingPaths(ACTIVITY);
 
-// useSyncExternalStore (not useState+useEffect) to read localStorage: the server
-// snapshot is null, so there's no hydration mismatch warning.
-const noSubscription = () => () => {};
-function useRememberedCode() {
-  return useSyncExternalStore(noSubscription, () => getRememberedCode(ACTIVITY), () => null);
-}
 
 export default function EscapeRoomHome() {
-  const code = useRememberedCode();
+  // This device's booking, or the logged-in student's own (new phone, teammate)
+  const { code, checking } = useMyCode(ACTIVITY);
 
   const state = useBookingState(ACTIVITY);
   const rounds = useRounds(ACTIVITY);
@@ -33,7 +28,7 @@ export default function EscapeRoomHome() {
     if (code && (myBooking.error?.code === 'NOT_FOUND' || myBooking.error?.code === 'WRONG_ACTIVITY')) forgetCode(ACTIVITY);
   }, [code, myBooking.error]);
 
-  const stillChecking = state.loading || rounds.loading || (code !== null && myBooking.loading);
+  const stillChecking = checking || (state.loading && !state.data) || rounds.loading || (code !== null && myBooking.loading);
   if (stillChecking) return <LoadingScreen message="กำลังโหลดข้อมูลกิจกรรม..." />;
 
   if (state.error || !state.data) {
@@ -97,7 +92,6 @@ export default function EscapeRoomHome() {
         </div>
       )}
 
-      <HealthCard activity={activity} />
 
     </BookingPage>
   );

@@ -22,6 +22,9 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions) {
+  // .invalid is reserved and never delivers (RFC 2606): load-test accounts use it, so
+  // they don't spend the Gmail daily quota or bounce back to the inbox
+  if (/\.invalid$/i.test(options.to.trim())) return { success: true, messageId: 'skipped-invalid-domain' };
   try {
     const info = await transporter.sendMail({
       from: `"SHIVIDNI PHEEDU" <${process.env.GMAIL_USER}>`,

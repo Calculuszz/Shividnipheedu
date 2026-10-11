@@ -12,7 +12,7 @@ export type PlayerErrors = Partial<Record<keyof PlayerInput, string>>;
 
 /** Fields in the order they sit on screen: the first one with a problem gets the focus */
 export const FIELD_ORDER = [
-  ['full_name', 'name'], ['student_id', 'sid'], ['phone', 'phone'], ['email', 'email'],
+  ['student_id', 'sid'], ['phone', 'phone'], ['email', 'email'],
 ] as const;
 
 export function newPlayer(key: string, studentId = ''): PlayerDraft {
@@ -22,7 +22,6 @@ export function newPlayer(key: string, studentId = ''): PlayerDraft {
 
 export function playerErrors(player: PlayerDraft, players: PlayerDraft[]): PlayerErrors {
   const errors: PlayerErrors = {};
-  if (!player.full_name.trim()) errors.full_name = 'กรุณากรอกชื่อ–นามสกุล';
   if (!player.student_id) errors.student_id = 'กรุณากรอกรหัสนิสิต';
   else if (!isStudentId(player.student_id)) errors.student_id = errorMessage('INVALID_STUDENT_ID');
   else {
@@ -52,6 +51,7 @@ export function playerComplete(player: PlayerDraft, players: PlayerDraft[]) {
 }
 
 export function toPlayerInput(player: PlayerDraft, consent: { pdpa: boolean; rules: boolean }): PlayerInput {
-  return { student_id: player.student_id, full_name: player.full_name.trim(), phone: normalizePhone(player.phone),
+  // full_name: the server fills in each player's registered name
+  return { student_id: player.student_id, full_name: '', phone: normalizePhone(player.phone),
     email: player.email.trim(), pdpa: consent.pdpa, rules: consent.rules };
 }

@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { BookingIcon, BookingPage, Button, Card, CheckField, ErrorNotice, Sheet, Tape, TextField } from '@/components/booking';
 import { useRounds } from '@/hooks/useBooking';
 import { BookingApiError, book } from '@/lib/bookingClient';
-import { roundPick } from '@/lib/bookingRules';
+import { isEmail, roundPick } from '@/lib/bookingRules';
 import { rememberCode, saveLastBooking } from '@/lib/bookingStorage';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
 import type { Round } from '@/lib/bookingTypes';
 import { ACTIVITY, paths, rulesAccepted, useStudent } from '../_shared';
 
-type Field = 'nickname' | 'phone' | 'pdpa' | 'confirm';
+type Field = 'nickname' | 'phone' | 'email' | 'pdpa' | 'confirm';
 
 const digits = (v: string) => v.replace(/[^0-9]/g, '');
 
@@ -91,7 +91,9 @@ function BookForm() {
   const rounds = useRounds(ACTIVITY);
 
   const [roundId, setRoundId] = useState(params.get('round') ?? '');
-  const [form, setForm] = useState({ nickname: '', phone: '' });
+  const [form, setForm] = useState({ nickname: '', phone: '', email: '' });
+  // Only when the email from event registration can't be used (the server says EMAIL_NEEDED)
+  const [needEmail, setNeedEmail] = useState(false);
   const [pdpa, setPdpa] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -135,6 +137,7 @@ function BookForm() {
     const e: Partial<Record<Field, string>> = {};
     if (!form.nickname.trim()) e.nickname = 'ใส่ชื่อเล่นด้วยนะ';
     if (!/^0[0-9]{9}$/.test(digits(form.phone))) e.phone = 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก เช่น 0812345678';
+    if (needEmail && !isEmail(form.email)) e.email = 'อีเมลไม่ถูกต้อง';
     if (!pdpa) e.pdpa = 'ติ๊กยินยอมการเก็บข้อมูลก่อนนะ';
     if (!confirm) e.confirm = 'ติ๊กยืนยันความถูกต้องก่อนนะ';
     setErrors(e);
@@ -154,7 +157,7 @@ function BookForm() {
             full_name: student.full_name,
             phone: digits(form.phone),
             // Email, faculty and year come from the event registration (filled in on the server)
-            email: '',
+            email: needEmail ? form.email.trim() : '',
             pdpa: true,
             rules: rulesAccepted(),
             nickname: form.nickname.trim(),
@@ -170,6 +173,10 @@ function BookForm() {
         // Someone took the last seat first: offer other rounds, keep everything typed
         await rounds.refresh();
         setFullRound(round);
+      } else if (code === 'EMAIL_NEEDED') {
+        setNeedEmail(true);
+        setErrors((x) => ({ ...x, email: 'ใส่อีเมลที่ใช้ได้ ตั๋วจะส่งไปที่อีเมลนี้' }));
+        requestAnimationFrame(() => document.getElementById('hh-email')?.focus());
       } else if (code === 'ALREADY_BOOKED') {
         setSubmitError('รหัสนิสิตนี้จองบ้านผีสิงไว้แล้ว (1 คน จองได้ 1 สิทธิ์) ดูตั๋วได้ในอีเมลยืนยัน');
       } else {
@@ -228,6 +235,21 @@ function BookForm() {
         onChange={(e) => set('phone', e.target.value)}
         error={errors.phone}
       />
+
+      {needEmail && (
+        <TextField
+          id="hh-email"
+          label="อีเมล"
+          required
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          value={form.email}
+          onChange={(e) => set('email', e.target.value)}
+          hint="อีเมลตอนลงทะเบียนเข้างานใช้ไม่ได้ ตั๋วจะส่งไปที่อีเมลนี้แทน"
+          error={errors.email}
+        />
+      )}
 
       <CheckField id="hh-pdpa" checked={pdpa} onChange={(v) => { setPdpa(v); setErrors((e) => ({ ...e, pdpa: undefined })); }} error={errors.pdpa}>
         ยินยอมให้เก็บชื่อเล่นและเบอร์โทร และใช้ข้อมูลจากตอนลงทะเบียนงาน (ชื่อ รหัสนิสิต คณะ ชั้นปี อีเมล) เพื่อจัดกิจกรรมบ้านผีสิงเท่านั้น และลบหลังจบงาน

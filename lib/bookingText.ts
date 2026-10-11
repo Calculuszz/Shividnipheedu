@@ -60,6 +60,8 @@ export function errorMessage(code: string, detail?: string, ctx: Ctx = {}): stri
       return 'ยังลบข้อมูลไม่ได้ ต้องรอให้รอบสุดท้ายจบก่อน';
     case 'CONFIRM_REQUIRED':
       return 'พิมพ์ข้อความยืนยันให้ถูกต้องก่อน';
+    case 'EMAIL_NEEDED':
+      return 'อีเมลตอนลงทะเบียนเข้างานใช้ไม่ได้ ใส่อีเมลที่ใช้ได้เพื่อรับตั๋ว';
     case 'RATE_LIMITED':
       return 'ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่นะ';
     case 'UNAUTHORIZED':

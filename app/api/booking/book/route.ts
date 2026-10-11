@@ -2,12 +2,14 @@ import { NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { badRequest, isUuid, readJson, ruleError, serverError, str } from '@/lib/booking';
 import { bookingConfirmed, hauntedConfirmed, roundInfo, sendAll } from '@/lib/bookingEmail';
+import { isEmail } from '@/lib/bookingRules';
 import { FACULTIES, YEARS } from '@/lib/registrationOptions';
-import { clientIp, hit, underLimit } from '@/lib/rateLimit';
+import { hit, underLimit } from '@/lib/rateLimit';
 import { sessionStudent } from '@/lib/studentAuth';
 
-// Generous: a whole faculty may book from the same campus IP when booking opens.
-const LIMIT = 30;
+// Counted per logged-in student, not per IP: the whole campus Wi-Fi shares a few IPs
+// and everyone books at once when booking opens.
+const LIMIT = 10;
 const WINDOW_MS = 60_000;
 
 type BookedPlayer = { full_name: string; email: string; code: string; is_leader: boolean };
@@ -17,12 +19,12 @@ type BookedPlayer = { full_name: string; email: string; code: string; is_leader:
 // registered for the event. Seats, team size, duplicates and one-round-per-person
 // are all checked inside booking_book_team under a lock on the round.
 export async function POST(request: Request) {
-  const key = `book:${clientIp(request)}`;
-  if (!underLimit(key, LIMIT)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
-  hit(key, WINDOW_MS);
-
   const me = sessionStudent(request);
   if (!me) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+
+  const key = `book:${me}`;
+  if (!underLimit(key, LIMIT)) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 });
+  hit(key, WINDOW_MS);
 
   const body = await readJson(request);
   if (!isUuid(body.round_id) || !Array.isArray(body.players) || body.players.length === 0 || body.players.length > 20) {
@@ -52,12 +54,19 @@ export async function POST(request: Request) {
     const ids = players.map((p) => p.student_id);
     const { data: registered, error: regError } = await supabaseAdmin
       .from('registrations')
-      .select('student_id, email, department, year')
+      .select('student_id, full_name, email, department, year')
       .in('student_id', ids);
     if (regError) throw regError;
     const known = new Map((registered ?? []).map((r) => [r.student_id, r]));
     const missing = ids.find((id) => !known.has(id));
     if (missing) return NextResponse.json({ error: 'NOT_REGISTERED', detail: missing }, { status: 400 });
+
+    // Staff check names against student cards at the booth, so every player goes in under
+    // the real name they registered with, never a name typed on the booking form.
+    for (const p of players) {
+      const name = known.get(p.student_id)!.full_name?.trim();
+      if (name) p.full_name = name.slice(0, 120);
+    }
 
     // The Haunted House also needs nickname, faculty, year and a 10-digit phone.
     // The database checks what both activities share; these are checked here.
@@ -73,7 +82,9 @@ export async function POST(request: Request) {
       // the student gave when registering for the event.
       for (const p of players) {
         const reg = known.get(p.student_id)!;
-        p.email = reg.email || p.email;
+        // A broken registration email can't carry the ticket: the form then asks for one
+        if (isEmail(reg.email ?? '')) p.email = reg.email!.trim();
+        else if (!isEmail(p.email)) return NextResponse.json({ error: 'EMAIL_NEEDED' }, { status: 400 });
         p.faculty = reg.department || p.faculty;
         p.year = reg.year || p.year;
       }
