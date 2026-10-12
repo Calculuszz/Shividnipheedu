@@ -17,6 +17,10 @@ const SPONSORS = [
   { id: 'jejuvita', name: 'Jejuvita', w: 56, h: 14 },
 ] as const;
 
+// Phones keep /sponsors/* for a week (next.config.ts): bump this when a logo file is swapped
+// so everyone gets the new one straight away.
+const LOGO_VERSION = 2;
+
 type SponsorsProps = {
   /** "fixed" pins it to the bottom of the screen (admin QR scanner) */
   placement?: 'inline' | 'fixed';
@@ -32,7 +36,7 @@ export default function Sponsors({ placement = 'inline', className = '' }: Spons
       <ul className="grid grid-cols-5 gap-y-2 rounded-[18px] bg-halloween-cream px-2 py-2.5 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)]">
         {SPONSORS.map(({ id, name, w, h }) => (
           <li key={id} className="flex h-[34px] items-center justify-center [&:not(:nth-child(5n))]:border-r [&:not(:nth-child(5n))]:border-halloween-purple/20">
-            <img src={`/sponsors/${id}.webp`} alt={name} width={w} height={h} loading="lazy" />
+            <img src={`/sponsors/${id}.webp?v=${LOGO_VERSION}`} alt={name} width={w} height={h} loading="lazy" />
           </li>
         ))}
       </ul>
