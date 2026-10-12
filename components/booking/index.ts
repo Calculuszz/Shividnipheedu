@@ -17,3 +17,4 @@ export { default as RemoveMemberDialog } from './RemoveMemberDialog';
 export { default as BookingIcon, ArrowRight } from './Icons';
 export { default as StatusNote } from './StatusNote';
 export { default as BookingTicket } from './BookingTicket';
+export { default as SaveQrButton } from './SaveQrButton';

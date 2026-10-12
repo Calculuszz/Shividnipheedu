@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import LoadingScreen from '@/components/LoadingScreen';
+import SaveQrButton from '@/components/booking/SaveQrButton';
 import { checkSession, type SessionUser } from '@/lib/studentSession';
+
+const QR_COLORS = { dark: '#ea7b29', light: '#1a0229' };
 
 export default function MyTicketPage() {
   const router = useRouter();
@@ -17,10 +20,7 @@ export default function MyTicketPage() {
       QRCode.toDataURL(data.qr_code, {
         width: 400,
         margin: 2,
-        color: {
-          dark: '#ea7b29',
-          light: '#1a0229',
-        },
+        color: QR_COLORS,
       }).then((url) => setQrCodeUrl(url));
     };
 
@@ -108,13 +108,27 @@ export default function MyTicketPage() {
               </p>
 
               {qrCodeUrl && (
-                <div className="bg-halloween-dark p-4 sm:p-6 rounded-lg inline-block mb-6">
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code"
-                    className="border-4 border-halloween-orange rounded w-full max-w-xs mx-auto"
+                <>
+                  <div className="bg-halloween-dark p-4 sm:p-6 rounded-lg inline-block mb-3.5">
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="border-4 border-halloween-orange rounded w-full max-w-xs mx-auto"
+                    />
+                  </div>
+                  <SaveQrButton
+                    className="mb-6"
+                    fileName={`ticket-${userData.student_id}.png`}
+                    version={[userData.qr_code, userData.full_name, userData.student_id].join('|')}
+                    ticket={() => ({
+                      title: 'My Ticket',
+                      hint: 'แสดง QR Code นี้เมื่อเข้างาน',
+                      qr: { text: userData.qr_code, ...QR_COLORS },
+                      name: { label: 'ชื่อ-นามสกุล', value: userData.full_name },
+                      code: { label: 'รหัสนิสิต', value: userData.student_id },
+                    })}
                   />
-                </div>
+                </>
               )}
 
               <div className="bg-halloween-dark p-4 sm:p-5 rounded border border-halloween-purple space-y-3">
