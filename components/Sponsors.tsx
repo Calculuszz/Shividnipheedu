@@ -6,13 +6,13 @@
 const SPONSORS = [
   { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 50, h: 15 },
   { id: 'major', name: 'Major Cineplex', w: 19, h: 30 },
-  { id: 'cunex', name: 'CUNEX', w: 58, h: 11 },
-  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 53, h: 14 },
+  { id: 'cunex', name: 'CUNEX', w: 31, h: 21 },
+  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 26, h: 26 },
   { id: 'nk-boardgame', name: 'NK Board Game', w: 34, h: 22 },
   { id: 'codec', name: 'Codec Creation', w: 28, h: 27 },
   { id: 'merge-clinic', name: 'Merge Clinic', w: 21, h: 30 },
   { id: 'hand-wrap', name: 'Hand Wrap', w: 35, h: 22 },
-  { id: 'lesgo', name: 'LesGO Clothing', w: 58, h: 10 },
+  { id: 'lesgo', name: 'LesGO Clothing', w: 35, h: 20 },
   // Supplied white-only; recoloured to the site's plum so it shows on the cream ribbon
   { id: 'jejuvita', name: 'Jejuvita', w: 56, h: 14 },
 ] as const;
