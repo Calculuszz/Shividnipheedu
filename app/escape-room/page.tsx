@@ -230,12 +230,58 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// The room's story from the brief, set in different voices so it reads like a scene
-// (the room has no name, so there's no title above it).
-function Story() {
+// Drips run off upright stems of FC Iconic Bold at 64px, measured in the browser
+// ([x, length] in the 320-wide box). They only fit these words; any other name gets plain text.
+const INK_NAME = 'น้ำหมึกสีแดง';
+const DRIPS = [
+  [30.4, 30],
+  [90.9, 16],
+  [139.5, 44],
+  [195.2, 22],
+  [267.4, 34],
+] as const;
+
+/** The room's name in wet red ink, running off the letters */
+function RoomTitle({ name }: { name: string }) {
+  if (name !== INK_NAME) return <h2 className="-mt-1 text-[28px] leading-tight font-bold text-[#d11a1a]">{name}</h2>;
+  const base = 61;
+  const w = 3.6;
+  return (
+    <h2 className="-mt-1">
+      <svg viewBox="0 0 320 130" role="img" aria-label={name} className="block h-auto w-full max-w-[320px]">
+        <defs>
+          <filter id="ink-rough" x="-5%" y="-10%" width="110%" height="130%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves={2} seed={4} result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale={1.6} />
+          </filter>
+          <linearGradient id="ink-fill" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="120">
+            <stop offset="0" stopColor="#d11a1a" />
+            <stop offset="1" stopColor="#5e0404" />
+          </linearGradient>
+        </defs>
+        <g filter="url(#ink-rough)" fill="url(#ink-fill)">
+          <text x="2" y="66" fontFamily="'FC Iconic', sans-serif" fontSize="64" fontWeight="700">
+            {name}
+          </text>
+          {DRIPS.map(([x, len]) => (
+            <g key={x}>
+              <path d={`M${x - w} ${base} C${x - w} ${base + len * 0.6} ${x - w * 0.45} ${base + len} ${x} ${base + len} C${x + w * 0.45} ${base + len} ${x + w} ${base + len * 0.6} ${x + w} ${base} Z`} />
+              <ellipse cx={x} cy={base + len + 7} rx={3.1} ry={4.1} />
+            </g>
+          ))}
+        </g>
+      </svg>
+    </h2>
+  );
+}
+
+// The room's story from the brief, set in different voices so it reads like a scene,
+// under the room's name (booking_activities.room_name).
+function Story({ name }: { name: string | null }) {
   return (
     <div className="flex flex-col gap-2">
       <span className="display-font text-[17px] text-halloween-moon">THE ROOM</span>
+      {name && <RoomTitle name={name} />}
       <div>
         <p className="text-2xl leading-snug font-bold text-halloween-moon">ทุกโรงเรียนมีเรื่องเล่า…</p>
         <p className="mt-1 text-[19px] leading-normal font-bold text-halloween-cream">
@@ -253,17 +299,16 @@ function Story() {
       <div className="relative mx-1.5 mt-3.5 mb-1 rotate-[1.2deg] rounded-[6px_14px_8px_16px] bg-halloween-cream p-4 text-[15px] leading-relaxed text-halloween-charcoal shadow-[0_10px_20px_-8px_rgba(0,0,0,0.5)]">
         <Tape className="left-1/2 -translate-x-1/2 -rotate-[4deg] !bg-[#cdb98f]/80" />
         ในห้องเรียนหนึ่ง พวกคุณพบ <b>ลิสต์รายชื่อ</b> ในนั้นมีชื่อของผู้ที่เคยเข้ามาในโรงเรียนนี้และไม่เคยได้ออกไปอีกเลย
-        ทุกชื่อถูกขีดฆ่าด้วย<span className="mx-0.5 text-[17px] font-bold text-[#c0261d] underline decoration-[#c0261d] decoration-2 underline-offset-4">หมึกสีแดง</span>ทีละคน ผ่านมาหลายสิบปี
+        ทุกชื่อถูกขีดฆ่าด้วย<span className="mx-0.5 text-[17px] font-bold text-[#c0261d] underline decoration-[#c0261d] decoration-2 underline-offset-4">หมึกสีแดง</span> ผ่านมาหลายสิบปี
         รายชื่อนั้นถูกเติมต่อเรื่อยมา
       </div>
       <div className="px-1 pt-3 pb-1 text-center">
         <p className="text-[15px] text-halloween-gray">เมื่อไล่ลงไปจนถึงบรรทัดสุดท้าย พวกคุณก็นิ่งงัน</p>
         <p className="mt-1.5 text-[21px] leading-snug font-bold text-halloween-orange -rotate-[1.5deg] [text-shadow:0_0_16px_rgba(234,123,41,0.4)]">
-          ชื่อ 15 ชื่อสุดท้าย
+          ชื่อสุดท้าย
           <br />
           คือชื่อของพวกคุณทุกคน
         </p>
-        <p className="mt-1 text-base font-bold text-halloween-moon">และหมึกของมันยังไม่แห้ง</p>
       </div>
       <p className="text-base leading-relaxed">
         ทุกคนในรายชื่อก่อนหน้านี้ตายไปแล้วโดยฝีมือ “ใครบางคน” แต่ไม่มีใครรู้ว่าคือใคร
@@ -282,7 +327,7 @@ function RoomCard({ activity, rounds }: { activity: ActivityInfo; rounds?: Round
 
   return (
     <Card tone="orange" className="flex flex-col gap-4">
-      <Story />
+      <Story name={activity.room_name} />
       <dl className="border-t-2 border-dashed border-halloween-cream/25">
         {playMinutes !== null && <StatRow label="Play time" value={`${playMinutes} min / round`} />}
         <StatRow label="Team size" value={`${activity.online_seats + activity.walkin_seats} players / round`} />
