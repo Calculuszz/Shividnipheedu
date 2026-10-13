@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookingApiError, staff } from '@/lib/bookingClient';
 import { formatTime, formatTimeRange } from '@/lib/bookingTime';
-import type { AttendanceResponse, StaffPlayer } from '@/lib/bookingTypes';
+import type { AttendanceResponse, StaffPlayer, Walkin } from '@/lib/bookingTypes';
 import type { StaffWords } from '@/lib/staffWords';
 import { focusRound, minutesText, roundName, roundPhase, staffCheckinError } from '@/lib/staffRounds';
 import type { StaffCtx } from './StaffApp';
@@ -94,15 +94,23 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
   const shown = data && data.round.id === roundId ? data : null;
   const teams = shown ? teamsOf(shown) : [];
   const all = shown?.players ?? [];
+  const walkins = shown?.walkins ?? [];
+  const walkinsIn = walkins.filter((x) => x.status === 'checked_in');
+  const walkinQueue = walkins.filter((x) => x.status === 'queued').sort((a, b) => a.queue_no - b.queue_no);
+  // Everyone in the room: booked players who checked in and walk-ins let in, in the order they arrived
+  const arrived: ({ kind: 'booked'; p: StaffPlayer } | { kind: 'walkin'; p: Walkin })[] = [
+    ...all.filter((p) => p.live_status === 'checked_in').map((p) => ({ kind: 'booked' as const, p })),
+    ...walkinsIn.map((p) => ({ kind: 'walkin' as const, p })),
+  ].sort((a, b) => (a.p.checked_in_at ?? '').localeCompare(b.p.checked_in_at ?? ''));
   const count = {
     waiting: all.filter((p) => p.live_status === 'booked').length,
-    in: all.filter((p) => p.live_status === 'checked_in').length,
+    in: arrived.length,
     released: all.filter((p) => p.live_status === 'released').length,
   };
   const phase = round ? roundPhase(round, now) : null;
   const canCheckIn = phase === 'checkin';
-  const walkinIn = shown?.walkins.filter((w) => w.status === 'checked_in').length ?? 0;
-  const walkinQueued = shown?.walkins.filter((w) => w.status === 'queued').length ?? 0;
+  const walkinIn = walkinsIn.length;
+  const walkinQueued = walkinQueue.length;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -251,6 +259,22 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
               หลัง {formatTime(round.checkin_closes_at)} คนที่ยังไม่มาจะย้ายไปแท็บ “{w.released}” เอง และที่นั่งจะกลายเป็นที่ว่างสำหรับ walk-in
             </p>
           )}
+          {walkinQueue.length > 0 && (
+            <div className={`${card} py-0.5 md:max-w-xl`}>
+              <b className="block pt-3 text-[15px]">คิว walk-in {walkinQueue.length} คน</b>
+              {walkinQueue.map((x) => (
+                <div key={x.id} className="flex items-center gap-2.5 border-b border-halloween-purple/80 py-2.5 last:border-b-0">
+                  <span className="w-8 shrink-0 text-center font-bold text-halloween-moon">#{x.queue_no}</span>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <b className="text-base">{x.full_name}</b>
+                    {x.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {x.nickname}</span>}
+                    <PhoneLink phone={x.phone} />
+                  </div>
+                </div>
+              ))}
+              <p className="pb-3 text-[13px] text-halloween-gray">เรียกคิวได้ที่แท็บ Walk-in</p>
+            </div>
+          )}
         </>
       )}
 
@@ -259,14 +283,16 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
           <Empty title={w.solo ? 'ยังไม่มีใครมา' : 'ยังไม่มีใครเช็กอิน'} text="" />
         ) : (
           <div className={`${card} grid gap-x-6 py-0.5 md:grid-cols-2`}>
-            {all
-              .filter((p) => p.live_status === 'checked_in')
-              .sort((a, b) => (a.checked_in_at ?? '').localeCompare(b.checked_in_at ?? ''))
-              .map((p) => (
+            {arrived.map(({ kind, p }) => (
                 <div key={p.id} className="flex items-center gap-2.5 border-b border-halloween-purple/80 py-2.5">
                   <div className="flex flex-1 flex-col">
-                    <b className="text-base">{p.full_name}</b>
-                    {w.solo ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <b className="text-base">{p.full_name}</b>
+                      {kind === 'walkin' && (
+                        <span className="rounded-md bg-halloween-moon/15 px-2 py-0.5 text-xs font-bold text-halloween-moon">walk-in</span>
+                      )}
+                    </div>
+                    {w.solo || kind === 'walkin' ? (
                       p.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {p.nickname}</span>
                     ) : (
                       <span className="text-sm text-halloween-gray">ทีมของ {teams.find((t) => t.bookingId === p.booking_id)?.leader}</span>
