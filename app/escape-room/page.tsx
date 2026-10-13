@@ -241,25 +241,59 @@ const DRIPS = [
   [267.4, 34],
 ] as const;
 
-/** The room's name in wet red ink, running off the letters */
+/** The room's name in red ink running off the letters, on a scrap of old torn paper */
 function RoomTitle({ name }: { name: string }) {
   if (name !== INK_NAME) return <h2 className="-mt-1 text-[28px] leading-tight font-bold text-[#d11a1a]">{name}</h2>;
   const base = 61;
   const w = 3.6;
   return (
-    <h2 className="-mt-1">
-      <svg viewBox="0 0 320 130" role="img" aria-label={name} className="block h-auto w-full max-w-[320px]">
+    <h2 className="-mx-1.5 my-1">
+      <svg viewBox="0 0 350 160" role="img" aria-label={name} className="block h-auto w-full -rotate-[1.5deg]">
         <defs>
+          {/* Paper: torn edge (displacement), fibre grain (noise lit from the top left), drop shadow */}
+          <filter id="paper" x="-4%" y="-6%" width="108%" height="112%" colorInterpolationFilters="sRGB">
+            <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves={3} seed={7} result="edge" />
+            <feDisplacementMap in="SourceGraphic" in2="edge" scale={9} xChannelSelector="R" yChannelSelector="G" result="torn" />
+            <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves={3} seed={3} result="grain" />
+            <feDiffuseLighting in="grain" lightingColor="#ffffff" surfaceScale={0.9} result="lit0">
+              <feDistantLight azimuth={45} elevation={70} />
+            </feDiffuseLighting>
+            <feComponentTransfer in="lit0" result="lit">
+              <feFuncR type="linear" slope={0.3} intercept={0.72} />
+              <feFuncG type="linear" slope={0.3} intercept={0.72} />
+              <feFuncB type="linear" slope={0.3} intercept={0.72} />
+            </feComponentTransfer>
+            <feComposite in="lit" in2="torn" operator="in" result="litIn" />
+            <feBlend in="torn" in2="litIn" mode="multiply" />
+            <feDropShadow dx={0} dy={6} stdDeviation={6} floodColor="#000" floodOpacity={0.55} />
+          </filter>
+          <radialGradient id="paper-burn" cx="50%" cy="48%" r="70%">
+            <stop offset="0.55" stopColor="#7a4a1c" stopOpacity={0} />
+            <stop offset="0.85" stopColor="#7a4a1c" stopOpacity={0.28} />
+            <stop offset="1" stopColor="#4a2a0c" stopOpacity={0.6} />
+          </radialGradient>
+          <filter id="paper-stain" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation={5} />
+          </filter>
           <filter id="ink-rough" x="-5%" y="-10%" width="110%" height="130%">
             <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves={2} seed={4} result="n" />
             <feDisplacementMap in="SourceGraphic" in2="n" scale={1.6} />
           </filter>
           <linearGradient id="ink-fill" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="120">
-            <stop offset="0" stopColor="#d11a1a" />
-            <stop offset="1" stopColor="#5e0404" />
+            <stop offset="0" stopColor="#b80f0f" />
+            <stop offset="1" stopColor="#4e0303" />
           </linearGradient>
         </defs>
-        <g filter="url(#ink-rough)" fill="url(#ink-fill)">
+        <g filter="url(#paper)">
+          <rect x="8" y="8" width="334" height="140" fill="#ece0c6" />
+          <rect x="8" y="8" width="334" height="140" fill="url(#paper-burn)" />
+          <g filter="url(#paper-stain)" fill="#8a5a2b" opacity={0.18}>
+            <ellipse cx="300" cy="40" rx="26" ry="18" />
+            <ellipse cx="60" cy="128" rx="34" ry="10" />
+          </g>
+          <path d="M8 104 L342 98" stroke="#7a5a33" strokeOpacity={0.18} strokeWidth={1.2} />
+        </g>
+        <g transform="translate(14 18)" filter="url(#ink-rough)" fill="url(#ink-fill)">
           <text x="2" y="66" fontFamily="'FC Iconic', sans-serif" fontSize="64" fontWeight="700">
             {name}
           </text>
@@ -285,9 +319,7 @@ function Story({ name }: { name: string | null }) {
       <div>
         <p className="text-2xl leading-snug font-bold text-halloween-moon">ทุกโรงเรียนมีเรื่องเล่า…</p>
         <p className="mt-1 text-[19px] leading-normal font-bold text-halloween-cream">
-          แต่โรงเรียนร้างแห่งนี้มี <span className="text-halloween-orange">“รายชื่อ”</span>
-          <br />
-          ที่ไม่เคยถูกลบออกไป
+          แต่โรงเรียนร้างแห่งนี้มี <span className="whitespace-nowrap text-halloween-orange">“รายชื่อ”</span> ที่ไม่เคยถูกลบออกไป
         </p>
       </div>
       <p className="text-base leading-relaxed">
