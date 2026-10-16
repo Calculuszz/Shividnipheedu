@@ -4,17 +4,18 @@
 // w × h is the display size: each logo gets the same area (wide ones shorter, tall ones
 // taller) so none of them shouts louder than the rest. Files are 3× that for sharp screens.
 const SPONSORS = [
-  { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 50, h: 15 },
-  { id: 'major', name: 'Major Cineplex', w: 19, h: 30 },
-  { id: 'cunex', name: 'CUNEX', w: 31, h: 21 },
-  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 26, h: 26 },
-  { id: 'nk-boardgame', name: 'NK Board Game', w: 34, h: 22 },
-  { id: 'codec', name: 'Codec Creation', w: 28, h: 27 },
+  // Shown in this order, five per row
   { id: 'merge-clinic', name: 'Merge Clinic', w: 21, h: 30 },
-  { id: 'hand-wrap', name: 'Hand Wrap', w: 35, h: 22 },
-  { id: 'lesgo', name: 'LesGO Clothing', w: 35, h: 20 },
   // Supplied white-only; recoloured to the site's plum so it shows on the cream ribbon
   { id: 'jejuvita', name: 'Jejuvita', w: 56, h: 14 },
+  { id: 'ice-house', name: 'ICE HOUSE Ice Bath & Sauna', w: 26, h: 26 },
+  { id: 'major', name: 'Major Cineplex', w: 19, h: 30 },
+  { id: 'codec', name: 'Codec Creation', w: 28, h: 27 },
+  { id: 'hand-wrap', name: 'Hand Wrap', w: 35, h: 22 },
+  { id: 'nk-boardgame', name: 'NK Board Game', w: 34, h: 22 },
+  { id: 'cunex', name: 'CUNEX', w: 31, h: 21 },
+  { id: 'escape-room-thailand', name: 'Escape Room Thailand', w: 50, h: 15 },
+  { id: 'lesgo', name: 'LesGO Clothing', w: 35, h: 20 },
 ] as const;
 
 // Phones keep /sponsors/* for a week (next.config.ts): bump this when a logo file is swapped
