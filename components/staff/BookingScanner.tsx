@@ -12,7 +12,7 @@ import { Icon, Svg, btn } from './ui';
 import { staffFail } from './useStaffRounds';
 
 type Result =
-  | { ok: true; name: string; round: StaffRound | undefined; detail?: string }
+  | { ok: true; name: string; nickname?: string; round: StaffRound | undefined; detail?: string }
   | { ok: false; title: string; action: string; walkin?: boolean; warn?: boolean };
 
 // Event entry tickets (from /register) look like SHIVIDNIPHEEDU-<id>-<time>
@@ -89,6 +89,7 @@ export default function BookingScanner({
         show({
           ok: true,
           name: data.full_name,
+          nickname: data.nickname ?? undefined,
           detail: [data.faculty, data.year].filter(Boolean).join(' '),
           round: roundsRef.current.find((r) => r.round_no === data.round_no),
         });
@@ -202,6 +203,7 @@ export default function BookingScanner({
               </span>
               <b className="text-[26px] text-halloween-moon">{w.checkedIn}</b>
               <b className="text-[22px]">{result.name}</b>
+              {result.nickname && <b className="text-lg text-halloween-moon">ชื่อเล่น {result.nickname}</b>}
               {result.detail && <span className="text-sm text-halloween-gray">{result.detail}</span>}
               {result.round && (
                 <>

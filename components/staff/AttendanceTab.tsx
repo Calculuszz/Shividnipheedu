@@ -262,9 +262,9 @@ export default function AttendanceTab({ ctx }: { ctx: StaffCtx }) {
           {walkinQueue.length > 0 && (
             <div className={`${card} py-0.5 md:max-w-xl`}>
               <b className="block pt-3 text-[15px]">คิว walk-in {walkinQueue.length} คน</b>
-              {walkinQueue.map((x) => (
+              {walkinQueue.map((x, i) => (
                 <div key={x.id} className="flex items-center gap-2.5 border-b border-halloween-purple/80 py-2.5 last:border-b-0">
-                  <span className="w-8 shrink-0 text-center font-bold text-halloween-moon">#{x.queue_no}</span>
+                  <span className="w-8 shrink-0 text-center font-bold text-halloween-moon">#{i + 1}</span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <b className="text-base">{x.full_name}</b>
                     {x.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {x.nickname}</span>}

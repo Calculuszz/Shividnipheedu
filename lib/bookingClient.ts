@@ -122,7 +122,14 @@ export function removeMember(code: string, playerId: string) {
 // ---- Staff side (needs the activity group's login cookie) ----
 
 /** Faculty and year come back for the Haunted House only */
-type CheckInResult = { player_id: string; full_name: string; round_no: number; faculty?: string | null; year?: string | null };
+type CheckInResult = {
+  player_id: string;
+  full_name: string;
+  round_no: number;
+  nickname?: string | null;
+  faculty?: string | null;
+  year?: string | null;
+};
 
 export const staff = {
   dashboard: () => call<{ rounds: StaffRound[]; now: string }>('/api/staff/dashboard'),

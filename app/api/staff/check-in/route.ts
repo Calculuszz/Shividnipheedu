@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     if (error) return ruleError(error, 'Staff check-in');
     if (staff.activity !== 'haunted_house') return NextResponse.json(data);
 
-    // The Haunted House result card also shows faculty and year
-    const { data: extra } = await supabaseAdmin.from('booking_players').select('faculty, year').eq('id', playerId).maybeSingle();
-    return NextResponse.json({ ...data, faculty: extra?.faculty ?? null, year: extra?.year ?? null });
+    // The Haunted House result card also shows the nickname staff call people by, faculty and year
+    const { data: extra } = await supabaseAdmin.from('booking_players').select('nickname, faculty, year').eq('id', playerId).maybeSingle();
+    return NextResponse.json({ ...data, nickname: extra?.nickname ?? null, faculty: extra?.faculty ?? null, year: extra?.year ?? null });
   } catch (error) {
     console.error('Staff check-in error:', error);
     return serverError();

@@ -38,7 +38,7 @@ export default function WalkinTab({ ctx }: { ctx: StaffCtx }) {
   const [walkins, setWalkins] = useState<Walkin[] | null>(null);
   const [queueError, setQueueError] = useState('');
   const [calling, setCalling] = useState(false);
-  const [called, setCalled] = useState<{ name: string; phone: string; no: number } | null>(null);
+  const [called, setCalled] = useState<{ name: string; phone: string } | null>(null);
   const [leavingId, setLeavingId] = useState<string | null>(null);
 
   const current = useRef(roundId);
@@ -126,7 +126,7 @@ export default function WalkinTab({ ctx }: { ctx: StaffCtx }) {
     setQueueError('');
     try {
       const { walkin } = await staff.callNextWalkin(round.id);
-      if (walkin) setCalled({ name: walkin.full_name, phone: walkin.phone, no: walkin.queue_no });
+      if (walkin) setCalled({ name: walkin.full_name, phone: walkin.phone });
       else setQueueError('ไม่มีคนในคิวแล้ว');
     } catch (e) {
       setQueueError(e instanceof BookingApiError && e.code === 'NOT_ENOUGH_SEATS' ? 'ตอนนี้ยังไม่มีที่ว่าง' : staffFail(e));
@@ -294,7 +294,7 @@ export default function WalkinTab({ ctx }: { ctx: StaffCtx }) {
 
             {called && (
               <Notice tone="ok">
-                เรียกคิวที่ {called.no}: {called.name}
+                เรียก {called.name} แล้ว
                 <span className="block font-normal text-halloween-cream">
                   {w.checkin}ให้แล้ว {w.solo ? w.waitAt : 'ให้เข้าห้องได้เลย'} (เบอร์ {called.phone})
                 </span>
@@ -329,9 +329,10 @@ export default function WalkinTab({ ctx }: { ctx: StaffCtx }) {
                     )}
                   </span>
                 )}
-                {queue.map((q) => (
+                {/* queue_no counts across every round; staff see the place in this round's line */}
+                {queue.map((q, i) => (
                   <div key={q.id} className="flex items-center gap-2.5 border-t border-halloween-purple/80 pt-2.5">
-                    <b className="w-9 text-lg text-halloween-orange">#{q.queue_no}</b>
+                    <b className="w-9 text-lg text-halloween-orange">#{i + 1}</b>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <b className="text-[15px]">{q.full_name}</b>
                       {q.nickname && <span className="text-sm font-bold text-halloween-moon">ชื่อเล่น {q.nickname}</span>}
@@ -358,7 +359,7 @@ export default function WalkinTab({ ctx }: { ctx: StaffCtx }) {
             <p className="text-[13px] leading-relaxed text-halloween-gray">
               walk-in ที่{w.solo ? 'เข้าบ้าน' : 'เข้าเล่น'}รอบนี้แล้ว {inCount} คน
               <br />
-              ดูรายชื่อทั้งหมดได้ในไฟล์ Export (หน้าภาพรวม)
+              ดูรายชื่อได้ที่แท็บรายชื่อ
             </p>
           </div>
         </div>

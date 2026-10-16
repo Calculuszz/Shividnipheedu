@@ -21,10 +21,7 @@ export function staffFail(e: unknown) {
   return 'ระบบขัดข้อง ลองใหม่อีกครั้ง';
 }
 
-/**
- * Every round with its seat numbers, fetched again every 5 s while the tab is visible.
- * (The dashboard route also sends the "seat released" emails, so polling matters.)
- */
+/** Every round with its seat numbers, fetched again every 5 s while the tab is visible. */
 export function useStaffRounds(enabled: boolean) {
   const [rounds, setRounds] = useState<StaffRound[] | null>(null);
   const [error, setError] = useState('');
