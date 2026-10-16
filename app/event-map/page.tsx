@@ -7,11 +7,17 @@ import LoadingScreen from '@/components/LoadingScreen';
 import BoothMap from './BoothMap';
 import { KINDS, SHOPS, type ShopKind } from './booths';
 
+const ZOOMS = [1, 1.5, 2.2];
+
 export default function EventMapPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const mapBox = useRef<HTMLDivElement>(null);
+  // Map width as a multiple of its box: 1 = the whole plan fits. Phones start zoomed in so the
+  // booth numbers can be read; the − / + buttons switch between the levels.
+  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 2 : 0));
+  const level = ZOOMS[zoom];
 
   // From the list: bring the map into view and slide it so the booth is in the middle
   const showOnMap = (no: number) => {
@@ -112,10 +118,31 @@ export default function EventMapPage() {
 
           {/* Shop plan: wider than a phone so the booth numbers stay readable; slides sideways */}
           <section className="w-full max-w-6xl lg:max-w-4xl mb-4 sm:mb-6 hand-cut border-2 border-halloween-orange bg-halloween-charcoal/95 py-4">
-            <h3 className="px-4 text-lg font-bold">แผนผังร้านค้า {SHOPS.length} ร้าน</h3>
-            <p className="px-4 pb-2 text-sm text-halloween-gray sm:hidden">เลื่อนซ้าย–ขวาเพื่อดูทั้งลาน</p>
+            <div className="flex items-center gap-3 px-4 pb-2">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold">แผนผังร้านค้า {SHOPS.length} ร้าน</h3>
+                <p className="text-sm text-halloween-gray">{level > 1 ? 'เลื่อนซ้าย–ขวาเพื่อดูทั้งลาน' : 'กด + เพื่อซูมดูเลขร้าน'}</p>
+              </div>
+              <div className="flex shrink-0 overflow-hidden rounded-lg border-2 border-halloween-purple">
+                {[
+                  { label: 'ซูมออก', text: '−', to: zoom - 1 },
+                  { label: 'ซูมเข้า', text: '+', to: zoom + 1 },
+                ].map((b) => (
+                  <button
+                    key={b.label}
+                    type="button"
+                    aria-label={b.label}
+                    disabled={b.to < 0 || b.to >= ZOOMS.length}
+                    onClick={() => setZoom(b.to)}
+                    className="flex h-11 w-11 items-center justify-center text-2xl font-bold text-halloween-orange disabled:text-halloween-gray/40 [&:first-child]:border-r-2 [&:first-child]:border-halloween-purple"
+                  >
+                    {b.text}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div ref={mapBox} className="overflow-x-auto px-2">
-              <div className="w-[760px] sm:w-full">
+              <div style={{ width: `${level * 100}%` }}>
                 <BoothMap selected={selected} onSelect={(no) => setSelected(no === selected ? null : no)} />
               </div>
             </div>
