@@ -1,14 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Sponsors from '@/components/Sponsors';
 import LoadingScreen from '@/components/LoadingScreen';
+import BoothMap from './BoothMap';
+import { KINDS, SHOPS, type ShopKind } from './booths';
 
 export default function EventMapPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const mapBox = useRef<HTMLDivElement>(null);
+
+  // From the list: bring the map into view and slide it so the booth is in the middle
+  const showOnMap = (no: number) => {
+    setSelected(no);
+    const box = mapBox.current;
+    const shop = SHOPS.find((s) => s.no === no);
+    if (!box || !shop) return;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const inner = box.firstElementChild as HTMLElement;
+    const x = ((shop.x + 18 - 230) / 1060) * inner.offsetWidth;
+    box.scrollTo({ left: x - box.clientWidth / 2, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     const studentId = localStorage.getItem('studentId');
@@ -95,45 +110,69 @@ export default function EventMapPage() {
             </div>
           </div>
 
-          {/* Map Image - Full width */}
-          <div className="relative w-full max-w-6xl lg:max-w-4xl mb-4 sm:mb-6">
-            <Image
-              src="/event-map.png"
-              alt="Event Map"
-              width={1200}
-              height={1200}
-              className="w-full h-auto rounded-lg"
-              quality={75}
-              priority
-              unoptimized
-            />
-          </div>
-
-          {/* Student Vendor Booths */}
-          <div className="w-full max-w-6xl lg:max-w-4xl">
-            <div className="bg-halloween-purple/40 border-2 border-halloween-purple/80 rounded-lg p-4 sm:p-6">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <svg className="w-5 h-5 text-halloween-cream" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 7h-4V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 5h4v2h-4V5zm10 14H4V9h16v10z"/>
-                </svg>
-                <h3 className="font-bold text-halloween-cream text-base sm:text-lg text-center">Student Vendor Booths</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-halloween-orange font-iannnnn-owl">
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A01</span> - ปุ๊กปิ๊กจิ๊กมัน</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A02</span> - BOO-Bap 부 밥</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A03</span> - KINTIEKYEROT</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A04</span> - พาสต้าเดบิต เครดิตเรเวนิว</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A05</span> - ราชาหิมะ</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A06</span> - bro_ok (โบร - โอ - เค)</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A07</span> - กรี้ก ! โยเกิร์ต</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A08</span> - ละครวิดวะ</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A09</span> - บาร์ลับต้องมนต์</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A10</span> - Milk & Tea</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A11</span> - Disney villain soda</div>
-                <div className="text-sm sm:text-base whitespace-nowrap px-2 py-1.5 bg-halloween-dark/70 rounded"><span className="font-bold text-halloween-cream">A12</span> - MILOWEEN</div>
+          {/* Shop plan: wider than a phone so the booth numbers stay readable; slides sideways */}
+          <section className="w-full max-w-6xl lg:max-w-4xl mb-4 sm:mb-6 hand-cut border-2 border-halloween-orange bg-halloween-charcoal/95 py-4">
+            <h3 className="px-4 text-lg font-bold">แผนผังร้านค้า {SHOPS.length} ร้าน</h3>
+            <p className="px-4 pb-2 text-sm text-halloween-gray sm:hidden">เลื่อนซ้าย–ขวาเพื่อดูทั้งลาน</p>
+            <div ref={mapBox} className="overflow-x-auto px-2">
+              <div className="w-[760px] sm:w-full">
+                <BoothMap selected={selected} onSelect={(no) => setSelected(no === selected ? null : no)} />
               </div>
             </div>
-          </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 px-4 pt-3 text-[13px]">
+              {Object.values(KINDS).map((k) => (
+                <span key={k.label} className="inline-flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 rounded" style={{ background: k.fill }} />
+                  {k.label}
+                </span>
+              ))}
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ff4b3e]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ffd34d]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#3ccf7a]" />
+                &nbsp;ถังขยะ
+              </span>
+            </div>
+          </section>
+
+          {/* Shops by kind: tap one to find it on the plan */}
+          <section className="w-full max-w-6xl lg:max-w-4xl hand-cut border-2 border-halloween-purple bg-halloween-charcoal/95 px-4 py-4">
+            <h3 className="text-lg font-bold">รายชื่อร้าน</h3>
+            <p className="text-sm text-halloween-gray">กดชื่อร้านเพื่อดูว่าอยู่ตรงไหน</p>
+            <div className="sm:grid sm:grid-cols-2 sm:gap-x-6">
+              {(Object.keys(KINDS) as ShopKind[]).map((kind) => {
+                const shops = SHOPS.filter((s) => s.kind === kind);
+                return (
+                  <div key={kind} className="mt-4">
+                    <p className="flex items-center gap-2 text-[15px] font-bold" style={{ color: KINDS[kind].fill }}>
+                      <span className="h-3 w-3 rounded-sm" style={{ background: KINDS[kind].fill }} />
+                      {KINDS[kind].label} {shops.length} ร้าน
+                    </p>
+                    {shops.map((s) => (
+                      <button
+                        key={s.no}
+                        type="button"
+                        onClick={() => showOnMap(s.no)}
+                        aria-pressed={selected === s.no}
+                        className={`flex min-h-12 w-full items-center gap-3 border-t border-dashed border-halloween-gray/30 px-1 py-1.5 text-left text-base ${
+                          selected === s.no ? 'rounded-lg bg-white/10' : ''
+                        }`}
+                      >
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[15px] font-bold text-halloween-dark"
+                          style={{ background: KINDS[kind].fill }}
+                        >
+                          {s.no}
+                        </span>
+                        <span className="flex-1">{s.name}</span>
+                        {selected === s.no && <span className="text-xs font-bold">ดูบนแผนที่ ↑</span>}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
         </div>
 

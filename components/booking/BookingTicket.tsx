@@ -16,7 +16,7 @@ type Props = {
   place: { label: string; value: string };
 };
 
-const MAP_HREF = '/event-map.png';
+const MAP_HREF = '/event-map';
 
 // The personal ticket on My booking, in the My Ticket design: big QR on a dark tile,
 // then name, booking code, round, check-in time and where to go.
@@ -83,8 +83,6 @@ export default function BookingTicket({ code, fullName, hint, round, checkin, pl
           </div>
           <a
             href={MAP_HREF}
-            target="_blank"
-            rel="noreferrer"
             className="flex min-h-11 items-center text-sm font-bold text-halloween-orange underline underline-offset-4"
           >
             ดูแผนที่
