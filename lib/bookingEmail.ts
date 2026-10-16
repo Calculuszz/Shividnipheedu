@@ -121,6 +121,7 @@ async function qrAttachment(code: string) {
 
 async function send(to: Person, subject: string, heading: string, body: string, r: RoundInfo, code?: string) {
   const result = await sendEmail({
+    from: 'booking',
     to: to.email,
     subject: `${subject} (${r.activity_name})`,
     html: layout(to.full_name, heading, body, r.activity_id),

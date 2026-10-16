@@ -99,6 +99,9 @@ ADMIN_PASSWORD_HAUNTED_HOUSE=a-third-password       # /admin/haunted-house
 # Optional: confirmation emails
 GMAIL_USER=your-account@gmail.com
 GMAIL_APP_PASSWORD=your-16-char-app-password
+# Optional: a second account for booking emails (falls back to the one above)
+GMAIL_USER_BOOKING=booking-account@gmail.com
+GMAIL_APP_PASSWORD_BOOKING=its-16-char-app-password
 
 # Optional: base URL for the login link in emails
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
@@ -112,6 +115,7 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 | `ADMIN_PASSWORD` | ✅ | Registration team password. Always set this in production |
 | `ADMIN_PASSWORD_ESCAPE_ROOM` / `ADMIN_PASSWORD_HAUNTED_HOUSE` | ➖ | Escape Room / Haunted House staff. Each password must be different |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | ➖ | Without them, registration still works but no email is sent |
+| `GMAIL_USER_BOOKING` / `GMAIL_APP_PASSWORD_BOOKING` | ➖ | Sends the Escape Room and Haunted House emails, so registration can't use up their daily quota. Falls back to `GMAIL_USER` |
 | `NEXT_PUBLIC_SITE_URL` | ➖ | Falls back to the Vercel production domain, then `http://localhost:3000` |
 | `STUDENT_SESSION_SECRET` | ➖ | Signs the student login cookie. Falls back to `ADMIN_SESSION_SECRET`, then the service role key |
 | `CRON_SECRET` | ➖ | Bearer token for `/api/booking/remind`. Copy it from Supabase › Vault › `reminder_cron_secret` |
