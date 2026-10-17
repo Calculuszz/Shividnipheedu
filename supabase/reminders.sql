@@ -56,7 +56,7 @@ WHERE NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'reminder_cron_secret
 
 SELECT cron.schedule('booking-reminders', '* 9-13 22 10 *', $job$
   SELECT net.http_post(
-    url := 'https://shividnipheedu.vercel.app/api/booking/remind',
+    url := 'https://shividnipheedu.intania.org/api/booking/remind',
     headers := jsonb_build_object('Authorization', 'Bearer ' ||
       (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'reminder_cron_secret')),
     timeout_milliseconds := 10000
