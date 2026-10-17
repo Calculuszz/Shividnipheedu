@@ -21,7 +21,7 @@ Attendees register, receive a QR ticket, book the **Escape Room** and **Haunted 
 | **My booking** | Paper note with the check-in window and countdown, big QR ticket, team list. Escape Room leaders change round, remove members or cancel; anyone cancels their own seat. Opens on a new phone from the login alone |
 | **Booking emails** | Confirmation with each player's own code and QR, change/cancel notices, and a reminder 10 minutes before check-in opens on event day |
 | **Pick a Boo** | 5-question quiz that picks one of 4 boos (boo-pid, boo-ming cash, boo-kworm, boo-ster) and reveals its letter on a result card; the result is saved to the account and shown on the menu |
-| **Event Map** | Venue map and student vendor booth list *(content not yet updated for this event)* |
+| **Event Map** | Venue map and student vendor booth list |
 | **Event Schedule** | Main stage line-up from 17:33 (bands, dance, collab), the 19:30 outdoor movie with its poster, and the night's activities |
 
 ### For staff (`/admin`)
